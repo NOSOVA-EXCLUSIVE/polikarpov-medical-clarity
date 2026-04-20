@@ -1,0 +1,29 @@
+{
+  "submissionId": "local-1776466118437-28ddcade",
+  "submittedAt": "2026-04-17T22:48:38.163Z",
+  "communication": {
+    "primaryChannel": "EMAIL",
+    "firstTouch": {
+      "templateKey": "firstMessage",
+      "earliestAt": "2026-04-18T01:48:38.437Z",
+      "latestAt": "2026-04-18T10:48:38.437Z",
+      "nextStatus": "contacted"
+    },
+    "reminders": [
+      {
+        "templateKey": "firstReminder",
+        "sendAt": "2026-04-18T22:48:38.437Z",
+        "nextStatus": "waiting_reply"
+      },
+      {
+        "templateKey": "secondReminder",
+        "sendAt": "2026-04-19T22:48:38.437Z",
+        "nextStatus": "waiting_reply"
+      }
+    ],
+    "replyBridge": {
+      "templateKey": "replyBridge",
+      "nextStatus": "offer_sent"
+    }
+  }
+}

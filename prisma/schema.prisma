@@ -1,0 +1,539 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductCode {
+  SECOND_OPINION
+  MEDICAL_ROUTE
+  RECOVERY_4_WEEKS
+  PERSONAL_SUPPORT
+}
+
+enum ApplicationStatus {
+  NEW
+  UNDER_REVIEW
+  NEEDS_UPLOAD
+  NEEDS_IMAGING_ACCESS
+  REJECTED
+  BOOKING_SENT
+  PAID
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum PreferredContact {
+  EMAIL
+  PHONE
+  WHATSAPP
+  TELEGRAM
+}
+
+enum UserRole {
+  DOCTOR
+  ADMIN
+}
+
+enum UploadCategory {
+  DOCUMENT
+  IMAGE
+  VIDEO
+}
+
+enum UploadStatus {
+  PENDING
+  ATTACHED
+  DELETED
+}
+
+enum ExternalLinkKind {
+  IMAGING
+  VIDEO
+  CLOUD
+}
+
+enum ImagingSourceType {
+  UPLOADED
+  EXTERNAL_LINK_ONLY
+  MIXED
+}
+
+enum RequirementType {
+  UPLOAD
+  IMAGING_ACCESS
+}
+
+enum RequirementStatus {
+  OPEN
+  RESOLVED
+}
+
+enum ChargeModel {
+  ONE_TIME
+  PACKAGE
+  RECURRING_READY
+}
+
+enum OfferStatus {
+  OPEN
+  HELD
+  PAID
+  EXPIRED
+  CANCELLED
+}
+
+enum SlotStatus {
+  AVAILABLE
+  HELD
+  BOOKED
+  BLOCKED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum MessageMode {
+  CLARIFICATION_WINDOW
+  SUPPORT_PACKAGE
+}
+
+enum ThreadStatus {
+  INACTIVE
+  ACTIVE
+  READ_ONLY
+  CLOSED
+}
+
+enum ReadOnlyReason {
+  WINDOW_EXPIRED
+  MESSAGE_LIMIT_REACHED
+  PACKAGE_ENDED
+  MANUAL_LOCK
+  CASE_STATUS_CHANGE
+}
+
+enum CloseReason {
+  CASE_COMPLETED
+  CASE_ARCHIVED
+  MANUAL_CLOSE
+  REJECTED
+}
+
+enum MessageAuthorRole {
+  PATIENT
+  DOCTOR
+  ADMIN
+  SYSTEM
+}
+
+enum TokenPurpose {
+  BOOKING
+  PORTAL_ACCESS
+  MATERIALS
+}
+
+enum AuditActorType {
+  SYSTEM
+  USER
+  PATIENT
+}
+
+enum AuditEntityType {
+  APPLICATION
+  REQUIREMENT
+  OFFER
+  SLOT
+  PAYMENT
+  THREAD
+  MESSAGE
+  TOKEN
+  UPLOAD
+  EXTERNAL_LINK
+  SETTING
+}
+
+model User {
+  id                 String               @id @default(cuid())
+  role               UserRole
+  name               String
+  email              String               @unique
+  passwordHash       String
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  createdRequirements ApplicationRequirement[] @relation("RequirementCreatedBy")
+  resolvedRequirements ApplicationRequirement[] @relation("RequirementResolvedBy")
+  createdOffers      Offer[]
+  sentMessages       Message[]
+  updatedSettings    AppSetting[]
+  auditEvents        AuditEvent[]
+}
+
+model ProductConfig {
+  id                       String      @id @default(cuid())
+  productCode              ProductCode @unique
+  slug                     String      @unique
+  displayName              String
+  shortLabel               String?
+  isPublic                 Boolean     @default(true)
+  isActivelySold           Boolean     @default(false)
+  chargeModelDefault       ChargeModel
+  messageMode              MessageMode
+  clarificationWindowHours Int?
+  patientMessageLimit      Int?
+  defaultDurationMinutes   Int?
+  defaultPriceCents        Int?
+  defaultCurrency          String      @default("EUR")
+  sortOrder                Int         @default(0)
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+}
+
+model Patient {
+  id               String            @id @default(cuid())
+  fullName         String
+  email            String
+  phone            String
+  preferredContact PreferredContact
+  country          String
+  city             String
+  timezone         String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  applications     Application[]
+
+  @@index([email])
+  @@index([phone])
+}
+
+model Application {
+  id                   String                    @id @default(cuid())
+  patientId            String
+  requestedProductCode ProductCode?
+  assignedProductCode  ProductCode?
+  status               ApplicationStatus         @default(NEW)
+  imagingSourceType    ImagingSourceType?
+  chiefComplaint       String                    @db.Text
+  bodyArea             String?
+  symptomTimeline      String?                   @db.Text
+  traumaHistory        String?                   @db.Text
+  surgeryHistory       String?                   @db.Text
+  priorDiagnoses       String?                   @db.Text
+  priorSpecialists     String?                   @db.Text
+  currentTreatment     String?                   @db.Text
+  goalOfConsultation   String?                   @db.Text
+  reviewNoteForDoctor  String?                   @db.Text
+  submittedAt          DateTime                  @default(now())
+  reviewStartedAt      DateTime?
+  reviewedAt           DateTime?
+  paidAt               DateTime?
+  activeAt             DateTime?
+  completedAt          DateTime?
+  archivedAt           DateTime?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  patient              Patient                   @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  redFlags             ApplicationRedFlag?
+  legalAcceptance      LegalAcceptance?
+  uploads              ApplicationUpload[]
+  externalLinks        ApplicationExternalLink[]
+  requirements         ApplicationRequirement[]
+  offers               Offer[]
+  appointments         Appointment[]
+  payments             Payment[]
+  messageThread        MessageThread?
+  accessTokens         AccessToken[]
+  auditEvents          AuditEvent[]
+
+  @@index([status, submittedAt])
+  @@index([patientId, submittedAt])
+  @@index([requestedProductCode, status])
+  @@index([assignedProductCode, status])
+}
+
+model ApplicationRedFlag {
+  id                        String      @id @default(cuid())
+  applicationId             String      @unique
+  hasFever                  Boolean     @default(false)
+  hasAcuteSwelling          Boolean     @default(false)
+  unableToBearWeight        Boolean     @default(false)
+  hasNumbness               Boolean     @default(false)
+  hasWeakness               Boolean     @default(false)
+  hasBladderOrBowelSymptoms Boolean     @default(false)
+  hasChestPain              Boolean     @default(false)
+  hasShortnessOfBreath      Boolean     @default(false)
+  hasConfusion              Boolean     @default(false)
+  isBlocked                 Boolean     @default(false)
+  blockReason               String?     @db.Text
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime    @updatedAt
+  application               Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model LegalAcceptance {
+  id              String      @id @default(cuid())
+  applicationId   String      @unique
+  offerVersion    String
+  privacyVersion  String
+  consentVersion  String
+  acceptedAt      DateTime    @default(now())
+  ipHash          String?
+  userAgentHash   String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model ApplicationUpload {
+  id                          String         @id @default(cuid())
+  applicationId               String
+  category                    UploadCategory
+  status                      UploadStatus   @default(PENDING)
+  originalName                String
+  mimeType                    String
+  extension                   String
+  sizeBytes                   BigInt
+  durationSeconds             Int?
+  storageKey                  String         @unique
+  accessPasswordCiphertext    String?        @db.Text
+  accessInstructionsCiphertext String?       @db.Text
+  uploadedAt                  DateTime?
+  createdAt                   DateTime       @default(now())
+  updatedAt                   DateTime       @updatedAt
+  application                 Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, category])
+  @@index([applicationId, status])
+}
+
+model ApplicationExternalLink {
+  id                           String           @id @default(cuid())
+  applicationId                String
+  kind                         ExternalLinkKind @default(IMAGING)
+  url                          String           @db.Text
+  label                        String?
+  note                         String?          @db.Text
+  accessPasswordCiphertext     String?          @db.Text
+  accessInstructionsCiphertext String?          @db.Text
+  createdAt                    DateTime         @default(now())
+  updatedAt                    DateTime         @updatedAt
+  application                  Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, kind])
+}
+
+model ApplicationRequirement {
+  id               String            @id @default(cuid())
+  applicationId    String
+  type             RequirementType
+  status           RequirementStatus @default(OPEN)
+  note             String            @db.Text
+  createdByUserId  String
+  resolvedByUserId String?
+  createdAt        DateTime          @default(now())
+  resolvedAt       DateTime?
+  application      Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  createdBy        User              @relation("RequirementCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  resolvedBy       User?             @relation("RequirementResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+  accessTokens     AccessToken[]
+
+  @@index([applicationId, status])
+  @@index([type, status])
+}
+
+model Offer {
+  id             String       @id @default(cuid())
+  applicationId  String
+  productCode    ProductCode
+  chargeModel    ChargeModel
+  amountCents    Int
+  currency       String       @default("EUR")
+  durationMinutes Int
+  status         OfferStatus  @default(OPEN)
+  expiresAt      DateTime
+  lastSentAt     DateTime?
+  createdByUserId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  application    Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  createdBy      User         @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  appointment    Appointment?
+  payments       Payment[]
+  accessTokens   AccessToken[]
+  heldSlots      CalendarSlot[] @relation("HeldSlotOffer")
+
+  @@index([applicationId, status])
+  @@index([expiresAt, status])
+}
+
+model CalendarSlot {
+  id                  String      @id @default(cuid())
+  startsAt            DateTime
+  endsAt              DateTime
+  timezone            String
+  status              SlotStatus  @default(AVAILABLE)
+  holdExpiresAt       DateTime?
+  heldOfferId         String?
+  bookedAppointmentId String?     @unique
+  blockedReason       String?     @db.Text
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  heldOffer           Offer?      @relation("HeldSlotOffer", fields: [heldOfferId], references: [id], onDelete: SetNull)
+  bookedAppointment   Appointment? @relation("BookedSlotAppointment", fields: [bookedAppointmentId], references: [id], onDelete: SetNull)
+
+  @@index([status, startsAt])
+  @@index([holdExpiresAt])
+  @@index([heldOfferId])
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  applicationId String
+  offerId     String            @unique
+  startsAt    DateTime
+  endsAt      DateTime
+  timezone    String
+  status      AppointmentStatus @default(SCHEDULED)
+  meetingUrl  String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  offer       Offer             @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  slot        CalendarSlot?     @relation("BookedSlotAppointment")
+  payments    Payment[]
+
+  @@index([applicationId, startsAt])
+  @@index([status, startsAt])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  applicationId     String
+  offerId           String
+  appointmentId     String?
+  chargeModel       ChargeModel
+  amountCents       Int
+  currency          String        @default("EUR")
+  provider          String        @default("stripe")
+  externalPaymentId String?       @unique
+  status            PaymentStatus @default(PENDING)
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  application       Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  offer             Offer         @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  appointment       Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, status])
+  @@index([status, paidAt])
+  @@index([offerId, status])
+}
+
+model MessageThread {
+  id                  String          @id @default(cuid())
+  applicationId       String          @unique
+  productCode         ProductCode
+  mode                MessageMode
+  startsAt            DateTime?
+  endsAt              DateTime?
+  patientMessageLimit Int?
+  patientMessageCount Int             @default(0)
+  status              ThreadStatus    @default(INACTIVE)
+  readOnlyReason      ReadOnlyReason?
+  closeReason         CloseReason?
+  readOnlyAt          DateTime?
+  closedAt            DateTime?
+  rulesSnapshotJson   Json?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  application         Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  messages            Message[]
+
+  @@index([status, endsAt])
+}
+
+model Message {
+  id              String            @id @default(cuid())
+  threadId        String
+  authorRole      MessageAuthorRole
+  senderUserId    String?
+  body            String            @db.Text
+  createdAt       DateTime          @default(now())
+  readByPatientAt DateTime?
+  readByStaffAt   DateTime?
+  thread          MessageThread     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderUser      User?             @relation(fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  @@index([threadId, createdAt])
+  @@index([senderUserId])
+}
+
+model AccessToken {
+  id            String       @id @default(cuid())
+  applicationId String
+  offerId       String?
+  requirementId String?
+  purpose       TokenPurpose
+  tokenHash     String       @unique
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  revokedAt     DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  offer         Offer?       @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  requirement   ApplicationRequirement? @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@index([purpose, expiresAt])
+  @@index([applicationId, purpose])
+}
+
+model AuditEvent {
+  id          String         @id @default(cuid())
+  actorType   AuditActorType
+  actorUserId String?
+  applicationId String?
+  entityType  AuditEntityType
+  entityId    String
+  action      String
+  metadataJson Json?
+  createdAt   DateTime       @default(now())
+  actorUser   User?          @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  application Application?   @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([applicationId, createdAt])
+  @@index([action, createdAt])
+}
+
+model AppSetting {
+  key             String    @id
+  valueJson       Json
+  updatedByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  updatedByUser   User?     @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
+}
+
+/// Constraints enforced in application code plus SQL migrations:
+/// 1. Video uploads: max 3 files, max 120s each, max 250 MB each, max 600 MB total per application.
+/// 2. Booking slot hold TTL: default 20 minutes, configurable via app settings.
+/// 3. Offer expiration TTL: default 72 hours, configurable via app settings.
+/// 4. Portal access token TTL: default 24 hours.
+/// 5. Materials token TTL: default 7 days or until requirement is resolved.
+/// 6. Sensitive access fields must never be included in emails, exports, or generic logs.

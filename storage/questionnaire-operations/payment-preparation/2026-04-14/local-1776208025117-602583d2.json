@@ -1,0 +1,11 @@
+{
+  "submissionId": "local-1776208025117-602583d2",
+  "submittedAt": "2026-04-14T23:07:05.098Z",
+  "paymentPreparation": {
+    "requestedProductCode": null,
+    "requestTemplateKey": "paymentRequest",
+    "confirmationTemplateKey": "paymentConfirmed",
+    "pendingStatus": "payment_pending",
+    "paidStatus": "paid"
+  }
+}
