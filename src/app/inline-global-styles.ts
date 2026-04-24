@@ -301,8 +301,32 @@ button {
 
 .site-footer__legal-meta {
   display: grid;
-  gap: 0.18rem;
+  gap: 0.28rem;
   max-width: 58rem;
+}
+
+.site-footer__business {
+  display: grid;
+  gap: 0.12rem;
+  padding-top: 0.45rem;
+}
+
+.site-footer__business p {
+  margin: 0;
+  color: rgba(36, 33, 29, 0.48);
+  font-size: 0.77rem;
+  line-height: 1.55;
+}
+
+.site-footer__business a {
+  color: rgba(36, 33, 29, 0.64);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(36, 33, 29, 0.16);
+}
+
+.site-footer__business a:hover {
+  color: rgba(36, 33, 29, 0.86);
+  border-bottom-color: rgba(36, 33, 29, 0.28);
 }
 
 .site-footer__backtop {
@@ -1030,15 +1054,15 @@ button {
 }
 
 .home-hero .page-hero__grid {
-  gap: 0;
-  grid-template-columns: minmax(0, 1.04fr) minmax(460px, 0.96fr);
-  align-items: start;
+  gap: 1.75rem;
+  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 0.92fr);
+  align-items: center;
 }
 
 .home-hero .page-hero__content {
-  align-content: start;
-  max-width: none;
-  gap: 0.96rem;
+  align-content: center;
+  max-width: 33.5rem;
+  gap: 0.94rem;
 }
 
 .home-hero .page-hero__eyebrow {
@@ -1048,33 +1072,33 @@ button {
 
 .home-hero h1 {
   display: grid;
-  gap: 1rem;
-  font-size: clamp(1.78rem, 2.1vw, 2.22rem);
+  gap: 0.64rem;
+  font-size: clamp(1.56rem, 1.82vw, 1.94rem);
   font-weight: 500;
-  line-height: 1.14;
+  line-height: 1.08;
   letter-spacing: 0.004em;
   max-width: 100%;
 }
 
 .home-hero__title-intro {
   display: block;
-  max-width: none;
+  max-width: 28rem;
   width: fit-content;
   color: rgba(36, 33, 29, 0.94);
-  font-size: 1em;
+  font-size: 0.96em;
   font-weight: 500;
-  line-height: 1.16;
+  line-height: 1.08;
   letter-spacing: 0.002em;
 }
 
 .home-hero__title-main {
   display: block;
-  max-width: none;
+  max-width: 31.75rem;
   width: fit-content;
   color: rgba(36, 33, 29, 0.94);
-  font-size: 1em;
+  font-size: 0.99em;
   font-weight: 500;
-  line-height: 1.18;
+  line-height: 1.1;
 }
 
 .home-hero__title-line {
@@ -1087,17 +1111,17 @@ button {
 }
 
 .home-hero__description-copy {
-  max-width: 39rem;
+  max-width: 34rem;
   color: rgba(36, 33, 29, 0.72);
-  font-size: clamp(0.98rem, 0.22vw + 0.95rem, 1.06rem);
-  line-height: 1.78;
+  font-size: clamp(0.94rem, 0.16vw + 0.93rem, 1rem);
+  line-height: 1.64;
 }
 
 .home-hero__points {
   display: grid;
-  gap: 0.62rem;
-  max-width: 38rem;
-  padding-top: 0.06rem;
+  gap: 0.48rem;
+  max-width: 31rem;
+  padding-top: 0.08rem;
 }
 
 .home-hero__points-title {
@@ -1115,25 +1139,27 @@ button {
 
 .home-hero__points-list p {
   color: rgba(36, 33, 29, 0.84);
-  font-size: 0.96rem;
-  line-height: 1.62;
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 .home-hero .page-hero__after-actions {
-  margin-top: -0.04rem;
+  margin-top: 0.02rem;
 }
 
 .home-hero__micro-note {
-  font-size: 0.74rem;
+  max-width: 32rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  letter-spacing: 0.1em;
+  line-height: 1.42;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: rgba(36, 33, 29, 0.52);
 }
 
 .home-hero .hero-actions {
   gap: 0.5rem;
-  margin-top: 0.1rem;
+  margin-top: 0.04rem;
 }
 
 .home-hero .button {
@@ -1180,14 +1206,15 @@ button {
 }
 
 .home-hero__portrait-wrap {
+  width: 100%;
   height: 100%;
   justify-content: flex-start;
   align-items: flex-end;
-  padding-bottom: 0;
+  padding-bottom: 1.35rem;
 }
 
 .home-hero__portrait-square {
-  width: 100%;
+  width: calc(100% - 1.2rem);
   max-width: none;
   margin-left: 0;
   margin-right: 0;
@@ -1198,13 +1225,14 @@ button {
 }
 
 .home-hero__portrait-image {
+  display: block;
   width: 100%;
   height: auto;
   object-fit: contain;
   object-position: center 9%;
   border-radius: 0 0 22px 22px;
-  transform: none;
-  transform-origin: center bottom;
+  transform: translateY(-0.44rem) scale(1.02);
+  transform-origin: left bottom;
 }
 
 .home-hero-followup {
@@ -4749,11 +4777,11 @@ button {
 
 .documents-hero .page-hero__description,
 .documents-hero .lead {
-  max-width: none;
+  max-width: 56rem;
 }
 
 .documents-hero .lead {
-  white-space: nowrap;
+  white-space: normal;
   font-size: 0.98rem;
   line-height: 1.55;
 }
@@ -4782,7 +4810,8 @@ button {
   font-size: 1.1rem;
   line-height: 1.18;
   letter-spacing: -0.03em;
-  white-space: nowrap;
+  white-space: normal;
+  text-wrap: balance;
 }
 
 .documents-card__copy p {
@@ -4836,7 +4865,9 @@ button {
 }
 
 .documents-prepayment__link {
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
 }
 
 .documents-legal-info .container {
@@ -4871,6 +4902,12 @@ button {
 .documents-detail-page__back {
   color: var(--accent);
   text-decoration: none;
+}
+
+.documents-detail-hero h1 {
+  max-width: 34rem;
+  white-space: normal;
+  text-wrap: balance;
 }
 
 .documents-detail-page__content .container,
@@ -4916,7 +4953,6 @@ button {
   }
 
   .documents-hero h1,
-  .documents-hero .lead,
   .documents-card__copy h2,
   .documents-card__copy h3 {
     white-space: normal;

@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Эту ситуацию лучше не продолжать через онлайн-анкету.",
+          error: "Эту ситуацию лучше не продолжать в дистанционном формате.",
           redirectTo: "/not-suitable"
         },
         { status: 409 }

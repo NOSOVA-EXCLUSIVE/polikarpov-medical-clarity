@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Section } from "../../../components/public/shell";
+import type { Route } from "next";
 
 const primaryFormats = [
   {
@@ -9,7 +10,7 @@ const primaryFormats = [
     detailHref: "/services/second-opinion",
     situation: "Когда уже были у врачей, но нет ясности.",
     action:
-      "Врач анализирует заключения, обследования и уже полученные мнения, сравнивает их между собой и выстраивает клиническую логику.",
+      "Врач анализирует заключения, обследования и уже полученные мнения, сравнивает их между собой и помогает выстроить понятную логику дальнейших шагов.",
     accent: "👉 Когда есть несколько мнений, но нет уверенного решения",
     priceLead: "Оптимальный формат для решения задачи",
     standardPrice: "5 900 ₽",
@@ -23,7 +24,7 @@ const primaryFormats = [
     detailHref: "/services/clinical-review",
     situation: "Когда важно понять, какой следующий шаг действительно уместен.",
     action:
-      "Врач анализирует жалобы, симптомы и обследования, сопоставляет данные МРТ / КТ / рентгена с клинической картиной и помогает выстроить понятную логику дальнейших шагов.",
+      "Врач анализирует жалобы, симптомы и обследования, сопоставляет данные МРТ / КТ / рентгена с жалобами и текущей ситуацией и помогает выстроить понятную логику дальнейших шагов.",
     accent: "👉 Когда нужен не просто ответ, а профессионально выстроенный следующий шаг",
     priceLead: "Оптимальный формат для решения задачи",
     standardPrice: "9 000 ₽",
@@ -39,15 +40,15 @@ const premiumFormats = [
     title: "Контроль восстановления",
     href: "/questionnaire?product=recovery-4-weeks",
     detailHref: "/services/recovery-control",
-    situation: "Когда лечение уже идёт и нужен контроль процесса.",
+    situation: "Когда восстановление уже идёт и важно понимать динамику и дальнейшие шаги.",
     action:
-      "Врач помогает отслеживать динамику восстановления, сопоставляет жалобы, этап лечения и текущие изменения, помогает удерживать правильный курс.",
-    accent: "👉 Когда важно не упустить детали в процессе лечения и реабилитации",
+      "Врач помогает интерпретировать динамику восстановления, сопоставляет жалобы, этап восстановления и текущие изменения и даёт рекомендации по дальнейшим шагам.",
+    accent: "👉 Когда важно не упустить детали в процессе восстановления и реабилитации",
     priceLead: "Оптимальный формат для решения задачи",
     standardPrice: "45 000 ₽",
     currentPrice: "от 29 000 ₽",
     euroPrice: "≈ 300 €",
-    result: "Вы проходите восстановление без ошибок.",
+    result: "Восстановление становится более понятным и последовательным.",
     premiumDepth:
       "Формат предполагает более глубокую работу и регулярное взаимодействие с врачом",
     extraPriceNote:
@@ -62,9 +63,9 @@ const premiumFormats = [
     detailHref: "/services/personal-support",
     situation: "Когда случай требует более глубокого и длительного внимания.",
     action:
-      "Врач последовательно отслеживает состояние, анализирует изменения, корректирует тактику и помогает удерживать клиническую логику в динамике.",
+      "Врач помогает разбирать изменения в состоянии, анализирует динамику и даёт рекомендации по дальнейшим шагам в рамках согласованного формата.",
     accent:
-      "👉 Когда нужна не разовая консультация, а более внимательное ведение ситуации",
+      "👉 Когда нужна не разовая консультация, а более внимательное сопровождение в рамках согласованного формата",
     priceLead: "Оптимальный формат для решения задачи",
     standardPrice: "75 000 ₽",
     currentPrice: "от 50 000 ₽",
@@ -90,7 +91,7 @@ const orientationScenarios = [
     answer: "→ второе мнение"
   },
   {
-    title: "Если нужен контроль процесса восстановления",
+    title: "Если важно обсудить динамику восстановления",
     answer: "→ сопровождение"
   },
   {
@@ -146,7 +147,7 @@ export default function ServicesPage() {
                     <Link
                       aria-label={`Подробнее о формате: ${format.title}`}
                       className="services-format-card__overlay"
-                      href={format.detailHref}
+                      href={format.detailHref as Route}
                     >
                       Подробнее о формате: {format.title}
                     </Link>
@@ -194,7 +195,7 @@ export default function ServicesPage() {
                         </Link>
                         <Link
                           className="button button--secondary services-format-card__secondary-cta"
-                          href={format.detailHref}
+                          href={format.detailHref as Route}
                         >
                           Подробнее о формате
                         </Link>
@@ -221,7 +222,7 @@ export default function ServicesPage() {
                     <Link
                       aria-label={`Подробнее о формате: ${format.title}`}
                       className="services-format-card__overlay"
-                      href={format.detailHref}
+                      href={format.detailHref as Route}
                     >
                       Подробнее о формате: {format.title}
                     </Link>
@@ -277,7 +278,7 @@ export default function ServicesPage() {
                         </Link>
                         <Link
                           className="button button--secondary services-format-card__secondary-cta"
-                          href={format.detailHref}
+                          href={format.detailHref as Route}
                         >
                           Подробнее о формате
                         </Link>
@@ -296,7 +297,7 @@ export default function ServicesPage() {
           </div>
 
           <p className="services-formats-shell__note">
-            Формат работы определяется после первичного разбора ситуации. Онлайн-разбор не
+            Формат работы определяется после первичного разбора ситуации. Дистанционный формат взаимодействия не
             заменяет очный приём врача при необходимости.
           </p>
         </div>

@@ -6,10 +6,13 @@ const clinicalBenefits = [
   "не проходить лишние обследования",
   "избавиться от противоречивых диагнозов",
   "разобраться, что происходит на самом деле",
-  "выбрать лечение, которое действительно необходимо"
+  "выбрать обоснованный следующий шаг"
 ];
 
-const experienceItems = [
+const experienceItems: Array<{
+  title: string;
+  note?: string;
+}> = [
   {
     title: "— Группа компаний «Мать и дитя» — федеральная сеть многопрофильных медицинских центров"
   },
@@ -82,7 +85,7 @@ export default function DoctorPage() {
                   а разобраться в ситуации и выстроить
                 </span>
                 <span className="doctor-home-reference__lead-line">
-                  точный и обоснованный план лечения
+                  понятный профессиональный ориентир
                 </span>
               </p>
             </div>
@@ -130,7 +133,7 @@ export default function DoctorPage() {
 
             <div className="doctor-followup__list">
               <p className="doctor-followup__list-item">
-                — сопоставление данных МРТ, рентгенографии и клинической картины
+                — сопоставление данных МРТ, рентгенографии и общей картины ситуации
               </p>
               <p className="doctor-followup__list-item">
                 — выявление несоответствий и диагностических ошибок
@@ -163,7 +166,7 @@ export default function DoctorPage() {
               <p>
                 Поэтому обследования никогда не рассматриваются отдельно — они
                 всегда сопоставляются с жалобами, симптомами и реальной
-                клинической картиной.
+                картиной ситуации.
               </p>
             </div>
 
@@ -244,8 +247,8 @@ export default function DoctorPage() {
               </h2>
               <div className="doctor-final-cta__copy stack-sm">
                 <p className="doctor-final-cta__line doctor-final-cta__line--nowrap">
-                  Начать стоит с первичного клинического разбора —именно на этом
-                  этапе формируется ясность и определяется дальнейшая тактика.
+                  Начать стоит с первичного профессионального разбора — именно на
+                  этом этапе формируется ясность и определяется дальнейший маршрут.
                 </p>
               </div>
             </div>
@@ -257,7 +260,7 @@ export default function DoctorPage() {
                 </Link>
               </div>
               <p className="home-hero__micro-note doctor-final-cta__micro-note">
-                Онлайн-консультация. Конфиденциально. По делу.
+                Дистанционный формат взаимодействия. Конфиденциально. По делу.
               </p>
             </div>
           </div>

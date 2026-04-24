@@ -454,7 +454,7 @@ export default async function ApplicationDetailPage({
       <section className="two-column">
         <article className="card stack">
           <h2>Отклонить кейс</h2>
-          <p className="muted">Используйте это действие, если онлайн-формат не подходит, есть red flags или пациенту нужен очный маршрут.</p>
+          <p className="muted">Используйте это действие, если дистанционный формат взаимодействия не подходит, есть red flags или пациенту нужен очный маршрут.</p>
           <form action={`/api/admin/applications/${application.id}/reject`} className="stack" method="post">
             <label className="field">
               <span>Причина для внутренней фиксации</span>

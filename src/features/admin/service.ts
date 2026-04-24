@@ -91,7 +91,7 @@ async function createAuditLog(input: {
       entityType: input.entityType,
       entityId: input.entityId,
       action: input.action,
-      metadataJson: input.metadataJson
+      metadataJson: input.metadataJson as Prisma.InputJsonValue | undefined
     }
   });
 }

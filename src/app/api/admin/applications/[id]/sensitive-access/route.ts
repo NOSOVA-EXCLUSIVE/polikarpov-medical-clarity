@@ -42,10 +42,13 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
+    const { action, targetId, targetType } = parsed.data;
     const result = await revealSensitiveAccess({
       actor: session,
       applicationId: params.id,
-      ...parsed.data
+      action,
+      targetId,
+      targetType
     });
 
     return NextResponse.json({

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Route } from "next";
 
 import { PageHero, Section } from "@/components/public/shell";
 import {
@@ -42,7 +43,7 @@ export function DocumentDetailPage({ slug }: DocumentDetailPageProps) {
       <PageHero
         className="documents-hero documents-detail-hero"
         eyebrow={
-          <Link className="documents-detail-page__back" href="/documents">
+          <Link className="documents-detail-page__back" href={"/documents" as Route}>
             ← Вернуться к документам
           </Link>
         }
@@ -66,7 +67,10 @@ export function DocumentDetailPage({ slug }: DocumentDetailPageProps) {
                 <h3>{item.title}</h3>
                 <p>{item.cardDescription}</p>
               </div>
-              <Link className="button button--secondary documents-card__button" href={`/documents/${item.slug}`}>
+              <Link
+                className="button button--secondary documents-card__button"
+                href={`/documents/${item.slug}` as Route}
+              >
                 Открыть
               </Link>
             </article>

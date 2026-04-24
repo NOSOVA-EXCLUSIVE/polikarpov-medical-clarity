@@ -1,37 +1,45 @@
 import type {
   ApplicationStatus,
   ExternalLinkKind,
-  ImagingSourceType,
-  UploadCategory
+  ImagingSourceType
 } from "@prisma/client";
 
 type UploadLike = {
-  category: UploadCategory;
-  extension: string;
+  extension?: string | null;
   accessPassword?: string | null;
   accessInstructions?: string | null;
 };
 
 type ExternalLinkLike = {
-  kind: ExternalLinkKind;
+  kind?: ExternalLinkKind | null;
   accessPassword?: string | null;
   accessInstructions?: string | null;
 };
 
 type RedFlagLike = {
-  hasFever: boolean;
-  hasAcuteSwelling: boolean;
-  unableToBearWeight: boolean;
-  hasNumbness: boolean;
-  hasWeakness: boolean;
-  hasBladderOrBowelSymptoms: boolean;
-  hasChestPain: boolean;
-  hasShortnessOfBreath: boolean;
-  hasConfusion: boolean;
+  hasFever?: boolean | null;
+  hasAcuteSwelling?: boolean | null;
+  unableToBearWeight?: boolean | null;
+  hasNumbness?: boolean | null;
+  hasWeakness?: boolean | null;
+  hasBladderOrBowelSymptoms?: boolean | null;
+  hasChestPain?: boolean | null;
+  hasShortnessOfBreath?: boolean | null;
+  hasConfusion?: boolean | null;
 };
 
 export function hasBlockingRedFlags(redFlags: RedFlagLike) {
-  return Object.values(redFlags).some(Boolean);
+  return Boolean(
+    redFlags.hasFever ||
+      redFlags.hasAcuteSwelling ||
+      redFlags.unableToBearWeight ||
+      redFlags.hasNumbness ||
+      redFlags.hasWeakness ||
+      redFlags.hasBladderOrBowelSymptoms ||
+      redFlags.hasChestPain ||
+      redFlags.hasShortnessOfBreath ||
+      redFlags.hasConfusion
+  );
 }
 
 export function classifyImagingSourceType(input: {
@@ -68,7 +76,7 @@ export function requiresImagingAccess(input: {
   externalLinks: ExternalLinkLike[];
 }) {
   const hasProtectedArchiveWithoutAccess = input.uploads.some((upload) => {
-    if (upload.extension.toLowerCase() !== "zip") {
+    if ((upload.extension ?? "").toLowerCase() !== "zip") {
       return false;
     }
 

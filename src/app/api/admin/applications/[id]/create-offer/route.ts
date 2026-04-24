@@ -33,10 +33,15 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
+    const { productCode, chargeModel, amountCents, currency, durationMinutes } = parsed.data;
     const result = await createOfferForApplication({
       actor: session,
       applicationId: params.id,
-      ...parsed.data
+      productCode,
+      chargeModel,
+      amountCents,
+      currency,
+      durationMinutes
     });
 
     const redirectUrl = new URL(`/admin/booking-links`, request.url);

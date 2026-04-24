@@ -67,9 +67,9 @@ export function PublicFooter() {
           <nav className="footer-links footer-links--legal" aria-label="Юридическая информация">
             <Link href="/legal/offer">Оферта</Link>
             <span className="site-footer__divider">·</span>
-            <Link href="/legal/privacy">Политика конфиденциальности</Link>
+            <Link href="/legal/privacy">Политика обработки данных</Link>
             <span className="site-footer__divider">·</span>
-            <Link href="/legal/consent">Согласие на обработку персональных данных</Link>
+            <Link href="/legal/consent">Информированное согласие</Link>
           </nav>
         </div>
 
@@ -77,12 +77,21 @@ export function PublicFooter() {
           <div className="site-footer__legal-meta">
             <p className="site-footer__copyright">© Polikarpov Medical Clarity. Все права защищены</p>
             <p className="site-footer__legal-note">
-              Онлайн-консультация носит информационно-консультационный характер и не заменяет
-              очный приём врача.{" "}
+              Дистанционный формат взаимодействия носит информационно-консультационный характер,
+              не является экстренной медицинской помощью и не заменяет очный приём врача, когда
+              он необходим.{" "}
               <Link href="/documents#legal-info" className="site-footer__legal-link">
-                Юридическая информация
+                Юридическая информация и формат работы
               </Link>
             </p>
+            <div className="site-footer__business">
+              <p>Исполнитель: Поликарпов Евгений Сергеевич</p>
+              <p>Форма деятельности: самозанятый (налог на профессиональный доход)</p>
+              <p>ИНН: 771873883546</p>
+              <p>
+                Email: <a href="mailto:medicalclarity@proton.me">medicalclarity@proton.me</a>
+              </p>
+            </div>
           </div>
           <Link className="site-footer__backtop" href="#top">
             Наверх

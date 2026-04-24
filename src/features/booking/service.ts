@@ -93,7 +93,7 @@ async function createSystemAudit(input: {
       entityType: input.entityType,
       entityId: input.entityId,
       action: input.action,
-      metadataJson: input.metadataJson
+      metadataJson: input.metadataJson as Prisma.InputJsonValue | undefined
     }
   });
 }
@@ -114,7 +114,7 @@ async function createStaffAudit(input: {
       entityType: input.entityType,
       entityId: input.entityId,
       action: input.action,
-      metadataJson: input.metadataJson
+      metadataJson: input.metadataJson as Prisma.InputJsonValue | undefined
     }
   });
 }
@@ -343,7 +343,7 @@ export async function getBookingPageContext(rawToken: string) {
     patient: access.offer.application.patient,
     slots: slots.map(mapSlotSummary),
     heldSlot: currentHeldSlot ? mapSlotSummary(currentHeldSlot) : null,
-    appointment
+    appointment: appointment
       ? {
           id: appointment.id,
           startsAt: appointment.startsAt,

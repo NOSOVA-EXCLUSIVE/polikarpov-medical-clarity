@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { PageHero } from "../../../components/public/shell";
 import { QuestionnaireForm } from "../../../components/questionnaire/form";
 
@@ -30,7 +32,7 @@ export default function QuestionnairePage() {
               </div>
               <div className="card questionnaire-page-intro-card stack-sm">
                 <span className="questionnaire-page-intro-card__icon">03</span>
-                <p>Уточняет, возможен ли онлайн-формат</p>
+                <p>Уточняет, возможен ли дистанционный формат взаимодействия</p>
               </div>
               <div className="card questionnaire-page-intro-card stack-sm">
                 <span className="questionnaire-page-intro-card__icon">04</span>
@@ -41,7 +43,9 @@ export default function QuestionnairePage() {
         }
       />
 
-      <QuestionnaireForm />
+      <Suspense fallback={null}>
+        <QuestionnaireForm />
+      </Suspense>
     </main>
   );
 }

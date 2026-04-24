@@ -19,7 +19,7 @@ export function productLabel(productCode: ProductCode | null | undefined) {
     case "SECOND_OPINION":
       return "Продукт 1 · Второе мнение";
     case "MEDICAL_ROUTE":
-      return "Продукт 2 · Маршрут лечения";
+      return "Продукт 2 · Маршрут дальнейших шагов";
     case "RECOVERY_4_WEEKS":
       return "Продукт 3 · Сопровождение 4 недели";
     case "PERSONAL_SUPPORT":

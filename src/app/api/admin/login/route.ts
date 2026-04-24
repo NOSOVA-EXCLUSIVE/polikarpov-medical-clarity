@@ -21,6 +21,11 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/admin/login?error=auth", request.url), 303);
   }
 
-  await setStaffSessionCookie(user);
+  await setStaffSessionCookie({
+    sub: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role
+  });
   return NextResponse.redirect(new URL("/admin/dashboard", request.url), 303);
 }

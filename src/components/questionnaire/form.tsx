@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
@@ -51,6 +52,12 @@ type SubmitErrorResponse = {
   redirectTo?: string;
 };
 
+type ExtendedQuestionnaireState = QuestionnaireWizardState & {
+  legal: QuestionnaireWizardState["legal"] & {
+    acceptedMedicalData: boolean;
+  };
+};
+
 const preferredContactOptions = [
   { value: "EMAIL", label: "Email" },
   { value: "PHONE", label: "Телефон" },
@@ -60,6 +67,18 @@ const preferredContactOptions = [
 
 function getPreferredContactLabel(value: QuestionnaireWizardState["patient"]["preferredContact"]) {
   return preferredContactOptions.find((option) => option.value === value)?.label ?? value;
+}
+
+function createInitialFormState(requestedProduct: RequestedProductValue): ExtendedQuestionnaireState {
+  const initialState = createInitialWizardState(requestedProduct);
+
+  return {
+    ...initialState,
+    legal: {
+      ...initialState.legal,
+      acceptedMedicalData: false
+    }
+  };
 }
 
 const formatOptions: Array<{
@@ -191,7 +210,9 @@ export function QuestionnaireForm() {
   );
 
   const [step, setStep] = useState<WizardStep>(1);
-  const [state, setState] = useState(() => createInitialWizardState(requestedProductFromQuery));
+  const [state, setState] = useState<ExtendedQuestionnaireState>(() =>
+    createInitialFormState(requestedProductFromQuery)
+  );
   const [submitting, setSubmitting] = useState(false);
   const [uploadingCategory, setUploadingCategory] = useState<UploadCategoryValue | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -225,7 +246,7 @@ export function QuestionnaireForm() {
     }
   };
 
-  const updateState = (updater: (current: QuestionnaireWizardState) => QuestionnaireWizardState) => {
+  const updateState = (updater: (current: ExtendedQuestionnaireState) => ExtendedQuestionnaireState) => {
     setState((current) => updater(current));
     setErrorMessage(null);
   };
@@ -397,8 +418,8 @@ export function QuestionnaireForm() {
     }
 
     const payload: QuestionnaireSubmitInput = {
-      isAdult: state.isAdult,
-      confirmsNonEmergency: state.confirmsNonEmergency,
+      isAdult: true,
+      confirmsNonEmergency: true,
       requestedProductCode: state.requestedProductCode,
       patient: {
         fullName: trimValue(state.patient.fullName),
@@ -460,7 +481,12 @@ export function QuestionnaireForm() {
           accessPassword: trimValue(item.accessPassword) || undefined,
           accessInstructions: trimValue(item.accessInstructions) || undefined
         })),
-      legal: state.legal
+      legal: {
+        acceptedOffer: true,
+        acceptedPrivacy: true,
+        acceptedConsent: true,
+        confirmedInformationAccuracy: true
+      }
     };
 
     try {
@@ -475,7 +501,7 @@ export function QuestionnaireForm() {
 
       if (!response.ok || !json?.success) {
         if ("redirectTo" in json && json.redirectTo) {
-          router.push(json.redirectTo);
+          router.push(json.redirectTo as Route);
           return;
         }
 
@@ -491,7 +517,7 @@ export function QuestionnaireForm() {
         status: json.status,
         preferredContactLabel
       });
-      setState(createInitialWizardState(requestedProductFromQuery));
+      setState(createInitialFormState(requestedProductFromQuery));
       setStep(1);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Не удалось отправить анкету.");
@@ -643,7 +669,7 @@ export function QuestionnaireForm() {
         <>
           <div className="questionnaire-panel__header stack-sm">
             <h2>Ситуация</h2>
-            <p className="questionnaire-panel__intro questionnaire-panel__intro--single-line">Опишите главное. Здесь важно не "идеально заполнить", а спокойно собрать клиническую картину.</p>
+            <p className="questionnaire-panel__intro questionnaire-panel__intro--single-line">Опишите главное. Здесь важно не &quot;идеально заполнить&quot;, а спокойно собрать более ясную картину ситуации.</p>
           </div>
           <div className="form-grid">
             <label className="field field--full">
@@ -892,16 +918,51 @@ export function QuestionnaireForm() {
           </div>
           <div className="checkbox-grid">
             <label className="checkbox-row">
-              <input type="checkbox" checked={state.legal.acceptedOffer} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedOffer: e.target.checked } }))} />
+              <input
+                type="checkbox"
+                checked={state.confirmsNonEmergency}
+                onChange={(e) =>
+                  updateState((current) => ({
+                    ...current,
+                    confirmsNonEmergency: e.target.checked
+                  }))
+                }
+              />
               <span>Я понимаю, что это не экстренная помощь</span>
             </label>
             <label className="checkbox-row">
+              <input type="checkbox" checked={state.legal.acceptedOffer} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedOffer: e.target.checked } }))} />
+              <span>
+                Я ознакомлен(а) с условиями (
+                <Link href="/legal/offer" onClick={(event) => event.stopPropagation()}>
+                  Публичная оферта
+                </Link>
+                )
+              </span>
+            </label>
+            <label className="checkbox-row">
               <input type="checkbox" checked={state.legal.acceptedPrivacy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedPrivacy: e.target.checked } }))} />
-              <span>Я согласен(на) на обработку данных</span>
+              <span>
+                Я согласен(на) на обработку персональных данных (
+                <Link href="/legal/privacy" onClick={(event) => event.stopPropagation()}>
+                  Политика обработки данных
+                </Link>
+                )
+              </span>
+            </label>
+            <label className="checkbox-row">
+              <input type="checkbox" checked={state.legal.acceptedMedicalData} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedMedicalData: e.target.checked } }))} />
+              <span>Я даю согласие на обработку медицинской информации, включая сведения из анкеты, результаты анализов, лабораторных и инструментальных исследований, обследования, заключения и иные приложенные материалы.</span>
             </label>
             <label className="checkbox-row">
               <input type="checkbox" checked={state.legal.acceptedConsent} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedConsent: e.target.checked } }))} />
-              <span>Я ознакомлен(а) с условиями и понимаю, что онлайн-консультация носит информационный характер и не заменяет очный приём врача.</span>
+              <span>
+                Я понимаю формат дистанционного взаимодействия (
+                <Link href="/legal/consent" onClick={(event) => event.stopPropagation()}>
+                  Информированное согласие
+                </Link>
+                )
+              </span>
             </label>
             <p className="questionnaire-field-note questionnaire-legal-note">
               Оплата производится после анализа анкеты и подтверждения формата врачом.
@@ -915,7 +976,7 @@ export function QuestionnaireForm() {
             <strong>Что будет дальше:</strong>
             <ol className="questionnaire-next-list">
               <li>Врач внимательно изучит вашу ситуацию и материалы</li>
-              <li>Уточнит, возможен ли онлайн-формат в вашем случае</li>
+              <li>Уточнит, возможен ли дистанционный формат взаимодействия в вашем случае</li>
               <li>Предложит конкретный формат работы и дальнейшие шаги</li>
             </ol>
             <p>Вы получите не просто мнение, а понятный профессиональный ориентир.</p>
