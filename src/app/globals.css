@@ -80,6 +80,14 @@ h1 {
   max-width: 10.4ch;
 }
 
+.admin-login .card > h1 {
+  max-width: none;
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
 h2 {
   font-size: clamp(1.8rem, 3vw, 2.7rem);
   max-width: 18ch;
@@ -484,6 +492,13 @@ button {
 
 .section-heading {
   max-width: 60ch;
+}
+
+.section-heading h2 {
+  font-size: clamp(1.5rem, 2.25vw, 2.05rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .card-grid {
@@ -1074,10 +1089,10 @@ button {
 .home-hero h1 {
   display: grid;
   gap: 0.64rem;
-  font-size: clamp(1.56rem, 1.82vw, 1.94rem);
+  font-size: clamp(1.5rem, 1.72vw, 1.88rem);
   font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: 0.004em;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
   max-width: 100%;
 }
 
@@ -1168,6 +1183,7 @@ button {
   padding: 0.62rem 0.98rem;
   font-size: 0.92rem;
   font-weight: 500;
+  line-height: 1.2;
   box-shadow: none;
 }
 
@@ -1761,6 +1777,7 @@ button {
   padding: 0.62rem 0.98rem;
   font-size: 0.92rem;
   font-weight: 500;
+  line-height: 1.2;
   box-shadow: none;
 }
 
@@ -1881,10 +1898,10 @@ button {
 
 .services-page .section-heading h2 {
   max-width: none;
-  font-size: clamp(1.92rem, 2.45vw, 2.75rem);
+  font-size: clamp(1.5rem, 2.25vw, 2.05rem);
   font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: 0.01em;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .services-page .section-heading .lead {
@@ -1918,10 +1935,10 @@ button {
 
 .services-hero h1 {
   max-width: 15ch;
-  font-size: clamp(2.2rem, 3.2vw, 3.55rem);
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
   font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: 0.008em;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .services-hero__headline-line {
@@ -2249,9 +2266,10 @@ button {
 
 .services-final-cta__copy h2 {
   max-width: 33ch;
-  font-size: clamp(1.46rem, 1.8vw, 1.92rem);
-  font-weight: 600;
-  line-height: 1.26;
+  font-size: clamp(1.36rem, 1.65vw, 1.78rem);
+  font-weight: 500;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
 }
 
 .services-final-cta__line {
@@ -2331,9 +2349,10 @@ button {
 
 .service-detail-hero h1 {
   max-width: none;
-  font-size: clamp(2rem, 2.35vw, 3rem);
-  font-weight: 560;
-  line-height: 1.14;
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
@@ -2364,11 +2383,12 @@ button {
 }
 
 .service-detail-hero .button {
-  min-height: 46px;
-  padding: 0.7rem 1.08rem;
-  font-size: 0.95rem;
-  font-weight: 520;
-  box-shadow: 0 8px 18px rgba(36, 55, 70, 0.1);
+  min-height: 42px;
+  padding: 0.62rem 0.98rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.2;
+  box-shadow: none;
 }
 
 .service-detail-hero .button--secondary {
@@ -2608,12 +2628,16 @@ button {
   }
 
   .services-hero h1 {
-    font-size: clamp(2.02rem, 8.4vw, 3rem);
+    font-size: 1.625rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
   }
 
   .service-detail-hero h1 {
     max-width: 100%;
-    font-size: clamp(2rem, 8.2vw, 3rem);
+    font-size: 1.625rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
   }
 
   .services-page__orientation-title {
@@ -2772,10 +2796,12 @@ button {
 
 .home-final-cta__actions .button {
   min-height: 46px;
-  padding: 0.7rem 1.22rem;
-  font-size: 0.98rem;
+  padding: 0.62rem 0.98rem;
+  min-height: 42px;
+  font-size: 0.92rem;
   font-weight: 500;
-  box-shadow: 0 8px 18px rgba(36, 55, 70, 0.08);
+  line-height: 1.2;
+  box-shadow: none;
 }
 
 .hero-product-links__item::after {
@@ -2810,10 +2836,10 @@ button {
 
 .doctor-hero h1 {
   max-width: 13ch;
-  font-size: clamp(2.6rem, 3.9vw, 4.2rem);
-  font-weight: 470;
-  line-height: 1.04;
-  letter-spacing: 0.01em;
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
 }
 
 .doctor-hero .lead {
@@ -3065,10 +3091,10 @@ button {
 
 .doctor-page .section-heading h2 {
   max-width: none;
-  font-size: clamp(2rem, 2.7vw, 3rem);
+  font-size: clamp(1.5rem, 2.25vw, 2.05rem);
   font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: 0.01em;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .doctor-hero {
@@ -3095,10 +3121,10 @@ button {
 
 .doctor-page .doctor-hero h1 {
   max-width: 14ch;
-  font-size: clamp(2.8rem, 4.15vw, 4.35rem);
-  font-weight: 470;
-  line-height: 1.02;
-  letter-spacing: 0.008em;
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
 }
 
 .doctor-page .doctor-hero .hero-actions {
@@ -3303,9 +3329,10 @@ button {
 
 .doctor-final-cta__card--refined h2 {
   max-width: 21ch;
-  font-size: clamp(1.68rem, 2.1vw, 2.2rem);
+  font-size: clamp(1.36rem, 1.65vw, 1.78rem);
   font-weight: 500;
-  line-height: 1.18;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
 }
 
 .doctor-final-cta__copy {
@@ -3333,10 +3360,10 @@ button {
 
 .doctor-page--home-reference .section-heading h2 {
   max-width: none;
-  font-size: clamp(1.98rem, 2.65vw, 2.9rem);
+  font-size: clamp(1.5rem, 2.25vw, 2.05rem);
   font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: 0.01em;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .doctor-page--home-reference .doctor-hero--home-reference {
@@ -3393,10 +3420,10 @@ button {
 
 .doctor-page--home-reference .doctor-hero--home-reference h1 {
   max-width: 18ch;
-  font-size: clamp(2.28rem, 3.25vw, 3.5rem);
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
   font-weight: 500;
-  line-height: 1.06;
-  letter-spacing: 0.006em;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .doctor-page--home-reference .doctor-hero--home-reference .hero-actions {
@@ -3409,6 +3436,7 @@ button {
   padding: 0.62rem 0.98rem;
   font-size: 0.92rem;
   font-weight: 500;
+  line-height: 1.2;
   box-shadow: none;
 }
 
@@ -3636,9 +3664,10 @@ button {
 
 .doctor-page--home-reference .doctor-final-cta__card--refined h2 {
   max-width: none;
-  font-size: clamp(1.42rem, 1.7vw, 1.88rem);
-  font-weight: 600;
-  line-height: 1.26;
+  font-size: clamp(1.36rem, 1.65vw, 1.78rem);
+  font-weight: 500;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
 }
 
 .doctor-page--home-reference .doctor-final-cta__copy {
@@ -3653,11 +3682,22 @@ button {
 }
 
 .doctor-page--home-reference .doctor-final-cta__actions .button {
-  min-height: 40px;
-  padding: 0.6rem 0.96rem;
-  font-size: 0.91rem;
+  min-height: 42px;
+  padding: 0.62rem 0.98rem;
+  font-size: 0.92rem;
   font-weight: 500;
+  line-height: 1.2;
   box-shadow: none;
+}
+
+.documents-page .button,
+.questionnaire-form .button,
+.services-final-cta__actions .button {
+  min-height: 42px;
+  padding: 0.62rem 0.98rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .doctor-final-cta__line,
@@ -4272,7 +4312,9 @@ button {
 
   .doctor-hero h1 {
     max-width: 10ch;
-    font-size: clamp(2.2rem, 10vw, 3.2rem);
+    font-size: 1.625rem;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
   }
 
   .doctor-hero .lead {
@@ -4319,7 +4361,9 @@ button {
 
   .doctor-page .doctor-hero h1 {
     max-width: 100%;
-    font-size: clamp(2.2rem, 8.8vw, 3.15rem);
+    font-size: 1.625rem;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
   }
 
   .doctor-refined-hero__lead,
@@ -4416,8 +4460,9 @@ button {
   .home-hero h1 {
     max-width: 100%;
     gap: 0.72rem;
-    font-size: clamp(1.7rem, 7.2vw, 2.2rem);
-    line-height: 1.1;
+    font-size: 1.625rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
   }
 
   .home-hero__title-intro,
@@ -4801,10 +4846,12 @@ button {
 }
 
 .documents-hero h1 {
-  max-width: none;
+  max-width: 720px;
   white-space: nowrap;
-  font-size: clamp(2rem, 3.05vw, 2.8rem);
-  letter-spacing: -0.04em;
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .documents-hero .page-hero__description,
@@ -4910,6 +4957,13 @@ button {
   max-width: none;
 }
 
+.documents-prepayment .section-heading h2 {
+  font-size: clamp(1.5rem, 2.25vw, 2.05rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
 .documents-prepayment .section-heading .lead {
   white-space: nowrap;
 }
@@ -4963,8 +5017,10 @@ button {
 .documents-legal-info__content h2 {
   max-width: none;
   white-space: nowrap;
-  font-size: clamp(1.16rem, 1.58vw, 1.42rem);
-  line-height: 1.2;
+  font-size: clamp(1.05rem, 1.42vw, 1.28rem);
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -0.015em;
 }
 
 .documents-legal-info__content p {
@@ -4986,9 +5042,12 @@ button {
 }
 
 .documents-detail-hero h1 {
-  max-width: 34rem;
-  white-space: normal;
-  text-wrap: balance;
+  max-width: none;
+  white-space: nowrap;
+  font-size: clamp(1.45rem, 2vw, 1.82rem);
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -0.02em;
 }
 
 .documents-detail-page__content .container,
@@ -5010,8 +5069,11 @@ button {
 
 .documents-detail__section h2 {
   margin: 0;
-  font-size: 1.2rem;
-  line-height: 1.28;
+  font-size: 1.02rem;
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
 }
 
 .documents-detail__section p {
@@ -5046,6 +5108,9 @@ button {
   }
 
   .documents-hero h1,
+  .documents-detail-hero h1,
+  .documents-legal-info__content h2,
+  .documents-detail__section h2,
   .documents-card__copy h2,
   .documents-card__copy h3 {
     white-space: normal;
@@ -5063,6 +5128,13 @@ button {
 
   .documents-grid {
     grid-template-columns: 1fr;
+  }
+
+  .documents-hero h1,
+  .documents-detail-hero h1 {
+    font-size: 1.625rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
   }
 
   .documents-card,

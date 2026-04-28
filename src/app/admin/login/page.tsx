@@ -7,7 +7,7 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
   const hasError = params.error === "auth" || params.error === "invalid";
 
   return (
-    <main className="section">
+    <main className="section admin-login">
       <div className="container" style={{ maxWidth: "520px" }}>
         <div className="card stack">
           <p className="eyebrow">Admin</p>
