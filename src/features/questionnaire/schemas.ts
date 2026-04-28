@@ -34,6 +34,7 @@ export const externalLinkKindValues = ["IMAGING", "VIDEO", "CLOUD"] as const;
 export const legalAcceptanceInputSchema = z.object({
   acceptedOffer: z.literal(true),
   acceptedPrivacy: z.literal(true),
+  acceptedMedicalData: z.literal(true),
   acceptedConsent: z.literal(true),
   confirmedInformationAccuracy: z.literal(true)
 });

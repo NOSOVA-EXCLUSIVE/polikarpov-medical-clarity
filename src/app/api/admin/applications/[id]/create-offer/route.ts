@@ -46,7 +46,10 @@ export async function POST(request: Request, context: RouteContext) {
 
     const redirectUrl = new URL(`/admin/booking-links`, request.url);
     redirectUrl.searchParams.set("bookingUrl", result.bookingUrl);
-    redirectUrl.searchParams.set("notice", "offer_created");
+    redirectUrl.searchParams.set(
+      "notice",
+      result.emailDelivery.status === "sent" ? "offer_email_sent" : "offer_email_failed"
+    );
     return NextResponse.redirect(redirectUrl, 303);
   } catch {
     return NextResponse.redirect(

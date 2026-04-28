@@ -18,6 +18,7 @@ import {
 } from "@/features/questionnaire/status";
 import { validateQuestionnaireUploads } from "@/features/questionnaire/upload-validation";
 import { prisma } from "@/lib/db/prisma";
+import { sendQuestionnaireSubmittedStaffEmail } from "@/features/messages/notifications";
 import { encryptSensitiveField } from "@/lib/security/encryption";
 
 function getTokenHashSecret() {
@@ -85,6 +86,7 @@ export async function submitQuestionnaire(
       externalLinks: input.externalLinks
     })
   };
+  const registeredTemplateKeys = Object.keys(QUESTIONNAIRE_MESSAGE_TEMPLATES);
 
   let result: SubmissionResult;
 
@@ -244,6 +246,24 @@ export async function submitQuestionnaire(
             applicationId: application.id,
             entityType: "APPLICATION",
             entityId: application.id,
+            action: "legal_acceptance_recorded",
+            metadataJson: {
+              acceptedOffer: input.legal.acceptedOffer,
+              acceptedPrivacy: input.legal.acceptedPrivacy,
+              acceptedMedicalData: input.legal.acceptedMedicalData,
+              acceptedConsent: input.legal.acceptedConsent,
+              confirmedInformationAccuracy:
+                input.legal.confirmedInformationAccuracy,
+              offerVersion: LEGAL_DOCUMENT_VERSIONS.offer,
+              privacyVersion: LEGAL_DOCUMENT_VERSIONS.privacy,
+              consentVersion: LEGAL_DOCUMENT_VERSIONS.consent
+            }
+          },
+          {
+            actorType: "SYSTEM",
+            applicationId: application.id,
+            entityType: "APPLICATION",
+            entityId: application.id,
             action: "doctor_notification_prepared",
             metadataJson: workflowHooks.doctorNotification
           },
@@ -286,7 +306,9 @@ export async function submitQuestionnaire(
             entityId: application.id,
             action: "communication_templates_registered",
             metadataJson: {
-              templates: QUESTIONNAIRE_MESSAGE_TEMPLATES
+              templateKeys: registeredTemplateKeys,
+              contentStatus: "operational_draft",
+              deliveryMode: "manual_or_staff_triggered"
             }
           }
         ]
@@ -325,6 +347,42 @@ export async function submitQuestionnaire(
     });
   } catch {
     operationalArtifacts = null;
+  }
+
+  const staffNotification = await sendQuestionnaireSubmittedStaffEmail({
+    applicationId: result.applicationId,
+    patientName: input.patient.fullName,
+    patientEmail: input.patient.email,
+    patientPhone: input.patient.phone,
+    preferredContact: input.patient.preferredContact,
+    city: input.patient.city,
+    country: input.patient.country,
+    timezone: input.patient.timezone,
+    requestedProductCode,
+    useQueueLink: Boolean(result.storagePath)
+  });
+
+  if (!result.storagePath) {
+    await prisma.auditEvent.create({
+      data: {
+        actorType: "SYSTEM",
+        applicationId: result.applicationId,
+        entityType: "APPLICATION",
+        entityId: result.applicationId,
+        action:
+          staffNotification.status === "sent"
+            ? "questionnaire_staff_email_sent"
+            : "questionnaire_staff_email_failed",
+        metadataJson: {
+          provider: staffNotification.provider,
+          manualFallbackRequired: staffNotification.manualFallbackRequired,
+          errorMessage:
+            staffNotification.status === "failed"
+              ? staffNotification.errorMessage ?? null
+              : null
+        }
+      }
+    });
   }
 
   return {

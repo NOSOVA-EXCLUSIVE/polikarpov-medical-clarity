@@ -1,8 +1,5 @@
-import { ServiceDetailPage } from "@/components/public/service-detail-page";
-import { serviceDetailContentMap } from "@/features/products/service-detail-content";
-
-const service = serviceDetailContentMap["clinical-review"];
+import { permanentRedirect } from "next/navigation";
 
 export default function MedicalRoutePage() {
-  return <ServiceDetailPage service={service} />;
+  permanentRedirect("/services/clinical-review");
 }

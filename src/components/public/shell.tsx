@@ -27,7 +27,9 @@ type BulletListProps = {
 
 export function PublicHeader() {
   return (
-    <header id="top" className="site-header">
+    <>
+      <div id="top" aria-hidden="true" />
+      <header className="site-header">
       <div className="container site-header__inner">
         <div className="site-brand">
           <Link href="/" className="site-brand__eyebrow">
@@ -47,7 +49,8 @@ export function PublicHeader() {
           <Link href="/documents">Документы</Link>
         </nav>
       </div>
-    </header>
+      </header>
+    </>
   );
 }
 
@@ -93,9 +96,9 @@ export function PublicFooter() {
               </p>
             </div>
           </div>
-          <Link className="site-footer__backtop" href="#top">
+          <a className="site-footer__backtop" href="#top">
             Наверх
-          </Link>
+          </a>
         </div>
       </div>
     </footer>

@@ -76,15 +76,11 @@ export const QUESTIONNAIRE_MESSAGE_TEMPLATES = {
 
 Спасибо, что подробно описали ситуацию — это помогает увидеть картину целиком.
 
-По вашей ситуации:
-[врач добавляет 1–2 коротких персональных наблюдения]
+По вашей анкете можно переходить к следующему этапу разбора.
 
-Сейчас важно:
-[краткий вывод]
+Сейчас важно спокойно сопоставить материалы и определить дальнейшие шаги.
 
-Я вижу, что в вашем случае возможен дистанционный формат взаимодействия и могу предложить вам следующий вариант:
-
-👉 [название формата]
+Я вижу, что в вашем случае возможен дистанционный формат взаимодействия и могу предложить подходящий вариант работы.
 
 Что вы получите:
 — разбор ситуации
@@ -92,9 +88,7 @@ export const QUESTIONNAIRE_MESSAGE_TEMPLATES = {
 — ориентиры по дальнейшим шагам
 — ответы на вопросы
 
-Стоимость: [цена]
-
-Если вам подходит — напишите, и я предложу удобное время.`,
+Если вам подходит — напишите, и я предложу удобное время и объясню следующие шаги.`,
   firstReminder: `Здравствуйте!
 
 Я подготовил для вас разбор по анкете.
@@ -108,13 +102,11 @@ export const QUESTIONNAIRE_MESSAGE_TEMPLATES = {
 Я предложу удобное время после оплаты.`,
   paymentRequest: `Отлично, тогда зафиксируем формат.
 
-Стоимость: [цена]
-
 После оплаты я:
 — забронирую для вас время
 — подготовлюсь к разбору
 
-[ссылка на оплату]
+Стоимость и ссылку на оплату я направлю отдельно после подтверждения формата.
 
 После оплаты напишите, пожалуйста, и я сразу подтвержу запись.`,
   paymentConfirmed: `Спасибо, оплату получил(а).
@@ -271,24 +263,29 @@ export function buildQuestionnaireWorkflowHooks(input: {
     },
     integrations: {
       emailNotification: {
-        status: "ready_for_integration",
+        status: "not_connected",
+        deliveryMode: "manual_follow_up",
         event: "questionnaire.submitted"
       },
       telegramNotification: {
-        status: "ready_for_integration",
+        status: "not_connected",
+        deliveryMode: "manual_follow_up",
         event: "questionnaire.submitted"
       },
       whatsappNotification: {
-        status: "ready_for_integration",
+        status: "not_connected",
+        deliveryMode: "manual_follow_up",
         event: "questionnaire.submitted"
       },
       crmPush: {
-        status: "ready_for_integration",
+        status: "not_connected",
+        deliveryMode: "manual_export",
         event: "lead.created"
       },
       adminDashboard: {
-        status: "ready",
-        queue: "doctor-review"
+        status: "active",
+        queue: "doctor-review",
+        deliveryMode: "automatic_internal_queue"
       }
     }
   };

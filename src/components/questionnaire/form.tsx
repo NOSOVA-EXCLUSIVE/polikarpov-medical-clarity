@@ -58,6 +58,15 @@ type ExtendedQuestionnaireState = QuestionnaireWizardState & {
   };
 };
 
+const confirmationCheckboxStyle = {
+  width: 18,
+  height: 18,
+  minWidth: 18,
+  minHeight: 18,
+  flexShrink: 0,
+  marginTop: "0.2rem"
+} as const;
+
 const preferredContactOptions = [
   { value: "EMAIL", label: "Email" },
   { value: "PHONE", label: "Телефон" },
@@ -236,6 +245,13 @@ export function QuestionnaireForm() {
   });
 
   const goToStep = (next: WizardStep) => {
+    if (next === 6 && step !== 6) {
+      setState((current) => ({
+        ...current,
+        confirmsNonEmergency: false
+      }));
+    }
+
     setStep(next);
     setErrorMessage(null);
 
@@ -484,6 +500,7 @@ export function QuestionnaireForm() {
       legal: {
         acceptedOffer: true,
         acceptedPrivacy: true,
+        acceptedMedicalData: true,
         acceptedConsent: true,
         confirmedInformationAccuracy: true
       }
@@ -900,9 +917,9 @@ export function QuestionnaireForm() {
           <div className="questionnaire-guide stack-sm">
             <strong>Как подготовить материалы</strong>
             <div className="questionnaire-guide-grid">
-              <div className="questionnaire-guide-card">[Видео: как сфотографировать МРТ]</div>
-              <div className="questionnaire-guide-card">[Видео: как открыть диск МРТ]</div>
-              <div className="questionnaire-guide-card">[Видео: как загрузить файлы]</div>
+              <div className="questionnaire-guide-card">Сделайте несколько чётких фото ключевых кадров исследования, если загружаете снимки вручную.</div>
+              <div className="questionnaire-guide-card">Если у вас диск, архив или облачная папка, добавьте короткую инструкцию по доступу.</div>
+              <div className="questionnaire-guide-card">Если файлы не загружаются напрямую, можно оставить внешнюю ссылку и указать пароль при необходимости.</div>
             </div>
           </div>
         </>
@@ -920,6 +937,7 @@ export function QuestionnaireForm() {
             <label className="checkbox-row">
               <input
                 type="checkbox"
+                style={confirmationCheckboxStyle}
                 checked={state.confirmsNonEmergency}
                 onChange={(e) =>
                   updateState((current) => ({
@@ -931,7 +949,7 @@ export function QuestionnaireForm() {
               <span>Я понимаю, что это не экстренная помощь</span>
             </label>
             <label className="checkbox-row">
-              <input type="checkbox" checked={state.legal.acceptedOffer} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedOffer: e.target.checked } }))} />
+              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedOffer} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedOffer: e.target.checked } }))} />
               <span>
                 Я ознакомлен(а) с условиями (
                 <Link href="/legal/offer" onClick={(event) => event.stopPropagation()}>
@@ -941,7 +959,7 @@ export function QuestionnaireForm() {
               </span>
             </label>
             <label className="checkbox-row">
-              <input type="checkbox" checked={state.legal.acceptedPrivacy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedPrivacy: e.target.checked } }))} />
+              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedPrivacy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedPrivacy: e.target.checked } }))} />
               <span>
                 Я согласен(на) на обработку персональных данных (
                 <Link href="/legal/privacy" onClick={(event) => event.stopPropagation()}>
@@ -951,11 +969,11 @@ export function QuestionnaireForm() {
               </span>
             </label>
             <label className="checkbox-row">
-              <input type="checkbox" checked={state.legal.acceptedMedicalData} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedMedicalData: e.target.checked } }))} />
+              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedMedicalData} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedMedicalData: e.target.checked } }))} />
               <span>Я даю согласие на обработку медицинской информации, включая сведения из анкеты, результаты анализов, лабораторных и инструментальных исследований, обследования, заключения и иные приложенные материалы.</span>
             </label>
             <label className="checkbox-row">
-              <input type="checkbox" checked={state.legal.acceptedConsent} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedConsent: e.target.checked } }))} />
+              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedConsent} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedConsent: e.target.checked } }))} />
               <span>
                 Я понимаю формат дистанционного взаимодействия (
                 <Link href="/legal/consent" onClick={(event) => event.stopPropagation()}>
@@ -968,7 +986,7 @@ export function QuestionnaireForm() {
               Оплата производится после анализа анкеты и подтверждения формата врачом.
             </p>
             <label className="checkbox-row">
-              <input type="checkbox" checked={state.legal.confirmedInformationAccuracy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, confirmedInformationAccuracy: e.target.checked } }))} />
+              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.confirmedInformationAccuracy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, confirmedInformationAccuracy: e.target.checked } }))} />
               <span>Я подтверждаю, что указал(а) информацию корректно</span>
             </label>
           </div>

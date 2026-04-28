@@ -1,10 +1,64 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { ChargeModel, MessageMode, PrismaClient, ProductCode } from "@prisma/client";
-import { env } from "@/lib/env/server";
 import { hashStaffPassword } from "@/lib/auth/password";
 
 const prisma = new PrismaClient();
 
+function loadEnvLocal() {
+  const envPath = resolve(process.cwd(), ".env.local");
+
+  if (!existsSync(envPath)) {
+    return;
+  }
+
+  const source = readFileSync(envPath, "utf8");
+
+  for (const rawLine of source.split(/\r?\n/)) {
+    const line = rawLine.trim();
+
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+
+    const separatorIndex = line.indexOf("=");
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const name = line.slice(0, separatorIndex).trim();
+    let value = line.slice(separatorIndex + 1).trim();
+
+    if (!name || process.env[name]) {
+      continue;
+    }
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[name] = value;
+  }
+}
+
+function getSeedEnv() {
+  loadEnvLocal();
+
+  return {
+    adminSeedEmail: process.env.ADMIN_SEED_EMAIL?.trim(),
+    adminSeedPassword: process.env.ADMIN_SEED_PASSWORD?.trim(),
+    adminSeedName: process.env.ADMIN_SEED_NAME?.trim() || "Practice Admin"
+  };
+}
+
 async function main() {
+  const seedEnv = getSeedEnv();
+
   await prisma.productConfig.upsert({
     where: { productCode: ProductCode.SECOND_OPINION },
     update: {},
@@ -84,20 +138,20 @@ async function main() {
     }
   });
 
-  if (env.ADMIN_SEED_EMAIL && env.ADMIN_SEED_PASSWORD) {
+  if (seedEnv.adminSeedEmail && seedEnv.adminSeedPassword) {
     await prisma.user.upsert({
-      where: { email: env.ADMIN_SEED_EMAIL },
+      where: { email: seedEnv.adminSeedEmail },
       update: {
-        name: env.ADMIN_SEED_NAME,
+        name: seedEnv.adminSeedName,
         role: "ADMIN",
-        passwordHash: hashStaffPassword(env.ADMIN_SEED_PASSWORD),
+        passwordHash: hashStaffPassword(seedEnv.adminSeedPassword),
         isActive: true
       },
       create: {
-        email: env.ADMIN_SEED_EMAIL,
-        name: env.ADMIN_SEED_NAME,
+        email: seedEnv.adminSeedEmail,
+        name: seedEnv.adminSeedName,
         role: "ADMIN",
-        passwordHash: hashStaffPassword(env.ADMIN_SEED_PASSWORD),
+        passwordHash: hashStaffPassword(seedEnv.adminSeedPassword),
         isActive: true
       }
     });

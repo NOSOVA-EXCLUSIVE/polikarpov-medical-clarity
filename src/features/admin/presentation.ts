@@ -14,19 +14,14 @@ import type {
   ThreadStatus
 } from "@prisma/client";
 
+import { canonicalProductLabelByCode } from "@/features/products/catalog";
+
 export function productLabel(productCode: ProductCode | null | undefined) {
-  switch (productCode) {
-    case "SECOND_OPINION":
-      return "Продукт 1 · Второе мнение";
-    case "MEDICAL_ROUTE":
-      return "Продукт 2 · Маршрут дальнейших шагов";
-    case "RECOVERY_4_WEEKS":
-      return "Продукт 3 · Сопровождение 4 недели";
-    case "PERSONAL_SUPPORT":
-      return "Продукт 4 · Индивидуальное сопровождение";
-    default:
-      return "Не назначен";
+  if (!productCode) {
+    return "Не назначен";
   }
+
+  return canonicalProductLabelByCode[productCode] ?? "Не назначен";
 }
 
 export function applicationStatusLabel(status: ApplicationStatus) {

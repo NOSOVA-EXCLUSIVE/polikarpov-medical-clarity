@@ -72,10 +72,14 @@ export default async function ApplicationDetailPage({
   }
 
   const noticeMessage =
-    flash.notice === "upload_request_created"
-      ? "Пациенту отправлен запрос на файлы и документы."
-      : flash.notice === "imaging_request_created"
-        ? "Пациенту отправлен запрос на ссылку или доступ к исследованию."
+    flash.notice === "upload_request_email_sent"
+      ? "Пациенту отправлено письмо с запросом на файлы и документы."
+      : flash.notice === "upload_request_email_failed"
+        ? "Ссылка для дозагрузки создана, но письмо не отправилось. Ссылку нужно переслать пациенту вручную."
+        : flash.notice === "imaging_request_email_sent"
+          ? "Пациенту отправлено письмо с запросом на ссылку или доступ к исследованию."
+          : flash.notice === "imaging_request_email_failed"
+            ? "Ссылка для запроса доступа создана, но письмо не отправилось. Ссылку нужно переслать пациенту вручную."
         : flash.notice === "rejected"
           ? "Кейс переведён в отклонённые."
           : flash.notice === "activated"
@@ -109,7 +113,12 @@ export default async function ApplicationDetailPage({
       {flash.materialsUrl ? (
         <div className="card stack">
           <h2>Ссылка для дозагрузки материалов</h2>
-          <p className="muted">Эту защищённую ссылку можно переслать пациенту вручную, если нужно продублировать доступ.</p>
+          <p className="muted">
+            {flash.notice === "upload_request_email_sent" ||
+            flash.notice === "imaging_request_email_sent"
+              ? "Письмо пациенту уже отправлено. Эту защищённую ссылку можно использовать для ручного повтора, если доступ нужно продублировать."
+              : "Эту защищённую ссылку нужно переслать пациенту вручную, если письмо не дошло или требуется ручной повтор."}
+          </p>
           <a className="text-link" href={flash.materialsUrl}>
             {flash.materialsUrl}
           </a>

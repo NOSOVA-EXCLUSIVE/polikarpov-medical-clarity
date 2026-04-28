@@ -30,11 +30,14 @@ export default async function BookingLinksPage({ searchParams }: PageProps) {
       title="Ссылки на запись"
       description="Здесь собраны персональные офферы и ссылки, которые переводят пациента к следующему шагу после просмотра кейса."
     >
-      {params.notice === "offer_created" && params.bookingUrl ? (
+      {(params.notice === "offer_email_sent" || params.notice === "offer_email_failed") &&
+      params.bookingUrl ? (
         <div className="card stack">
           <h2>Новая ссылка для пациента</h2>
           <p className="muted">
-            Это единственный момент, когда ссылка видна целиком. Скопируйте её сейчас, если нужно отправить пациенту вручную.
+            {params.notice === "offer_email_sent"
+              ? "Письмо пациенту уже отправлено. Скопируйте ссылку только если понадобится ручной повтор."
+              : "Ссылка создана, но письмо пациенту не отправилось. Скопируйте её сейчас и отправьте вручную."}
           </p>
           <a className="text-link" href={params.bookingUrl}>
             {params.bookingUrl}

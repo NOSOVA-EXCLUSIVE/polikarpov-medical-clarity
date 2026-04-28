@@ -23,6 +23,20 @@ export type PublicProduct = {
   routeNote: string;
 };
 
+export const canonicalProductLabelByCode: Record<ProductCode, string> = {
+  SECOND_OPINION: "Экспертное второе мнение",
+  MEDICAL_ROUTE: "Клинический разбор ситуации",
+  RECOVERY_4_WEEKS: "Контроль восстановления",
+  PERSONAL_SUPPORT: "Индивидуальное сопровождение"
+};
+
+export const canonicalServiceDetailPathByCode: Record<ProductCode, string> = {
+  SECOND_OPINION: "/services/second-opinion",
+  MEDICAL_ROUTE: "/services/clinical-review",
+  RECOVERY_4_WEEKS: "/services/recovery-control",
+  PERSONAL_SUPPORT: "/services/personal-support"
+};
+
 export const publicProducts: PublicProduct[] = [
   {
     code: "SECOND_OPINION",

@@ -46,6 +46,7 @@ export async function saveQuestionnaireSubmissionFallback(
     preferredContact: input.patient.preferredContact,
     requestedProductCode: input.requestedProductCode
   });
+  const registeredTemplateKeys = Object.keys(QUESTIONNAIRE_MESSAGE_TEMPLATES);
   const folderPath = path.join(
     FALLBACK_STORAGE_ROOT,
     submittedAt.toISOString().slice(0, 10)
@@ -95,7 +96,11 @@ export async function saveQuestionnaireSubmissionFallback(
           }))
         },
         workflowHooks,
-        communicationTemplates: QUESTIONNAIRE_MESSAGE_TEMPLATES
+        communicationTemplates: {
+          templateKeys: registeredTemplateKeys,
+          contentStatus: "operational_draft",
+          deliveryMode: "manual_or_staff_triggered"
+        }
       },
       null,
       2

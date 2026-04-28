@@ -38,7 +38,12 @@ export async function POST(request: Request, context: RouteContext) {
 
     const redirectUrl = new URL(`/admin/applications/${params.id}`, request.url);
     redirectUrl.searchParams.set("materialsUrl", result.materialsUrl);
-    redirectUrl.searchParams.set("notice", "imaging_request_created");
+    redirectUrl.searchParams.set(
+      "notice",
+      result.emailDelivery.status === "sent"
+        ? "imaging_request_email_sent"
+        : "imaging_request_email_failed"
+    );
     return NextResponse.redirect(redirectUrl, 303);
   } catch {
     return NextResponse.redirect(

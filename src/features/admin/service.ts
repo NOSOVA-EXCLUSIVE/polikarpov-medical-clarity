@@ -11,6 +11,10 @@ import type {
 
 import { prisma } from "@/lib/db/prisma";
 import { env } from "@/lib/env/server";
+import {
+  sendMaterialsRequestEmail,
+  sendOfferCreatedEmail
+} from "@/features/messages/notifications";
 import { syncThreadLifecycle } from "@/features/messages/service";
 import { decryptSensitiveField } from "@/lib/security/encryption";
 import { createOpaqueToken, hashOpaqueToken } from "@/lib/security/tokens";
@@ -431,14 +435,44 @@ export async function requestApplicationMaterials(input: {
 
     return {
       requirementId: requirement.id,
-      patientName: application.patient.fullName
+      patientName: application.patient.fullName,
+      patientEmail: application.patient.email
     };
+  });
+
+  const materialsUrl = `${env.APP_URL}/portal/materials/${rawToken}`;
+  const emailDelivery = await sendMaterialsRequestEmail({
+    patientName: result.patientName,
+    patientEmail: result.patientEmail,
+    requirementType: input.type,
+    note: input.note,
+    materialsUrl,
+    expiresAt
+  });
+
+  await createAuditLog({
+    actor: input.actor,
+    applicationId: input.applicationId,
+    entityType: "REQUIREMENT",
+    entityId: result.requirementId,
+    action:
+      emailDelivery.status === "sent"
+        ? "materials_request_email_sent"
+        : "materials_request_email_failed",
+    metadataJson: {
+      requirementType: input.type,
+      provider: emailDelivery.provider,
+      manualFallbackRequired: emailDelivery.manualFallbackRequired,
+      errorMessage:
+        emailDelivery.status === "failed" ? emailDelivery.errorMessage ?? null : null
+    }
   });
 
   return {
     ...result,
-    materialsUrl: `${env.APP_URL}/portal/materials/${rawToken}`,
-    expiresAt
+    materialsUrl,
+    expiresAt,
+    emailDelivery
   };
 }
 
@@ -498,7 +532,13 @@ export async function createOfferForApplication(input: {
       where: { id: input.applicationId },
       select: {
         id: true,
-        status: true
+        status: true,
+        patient: {
+          select: {
+            fullName: true,
+            email: true
+          }
+        }
       }
     });
 
@@ -519,7 +559,6 @@ export async function createOfferForApplication(input: {
         currency: input.currency,
         durationMinutes: input.durationMinutes,
         expiresAt,
-        lastSentAt: new Date(),
         createdByUserId: input.actor.id
       }
     });
@@ -574,13 +613,59 @@ export async function createOfferForApplication(input: {
       ]
     });
 
-    return { offerId: offer.id };
+    return {
+      offerId: offer.id,
+      offerStatus: offer.status,
+      patientName: application.patient.fullName,
+      patientEmail: application.patient.email
+    };
+  });
+
+  const bookingUrl = `${env.APP_URL}/booking/${rawToken}`;
+  const emailDelivery = await sendOfferCreatedEmail({
+    patientName: result.patientName,
+    patientEmail: result.patientEmail,
+    productCode: input.productCode,
+    chargeModel: input.chargeModel,
+    amountCents: input.amountCents,
+    currency: input.currency,
+    bookingUrl,
+    expiresAt
+  });
+
+  if (emailDelivery.status === "sent") {
+    await prisma.offer.update({
+      where: { id: result.offerId },
+      data: {
+        lastSentAt: new Date()
+      }
+    });
+  }
+
+  await createAuditLog({
+    actor: input.actor,
+    applicationId: input.applicationId,
+    entityType: "OFFER",
+    entityId: result.offerId,
+    action: emailDelivery.status === "sent" ? "offer_email_sent" : "offer_email_failed",
+    metadataJson: {
+      productCode: input.productCode,
+      chargeModel: input.chargeModel,
+      amountCents: input.amountCents,
+      currency: input.currency,
+      offerStatus: result.offerStatus,
+      provider: emailDelivery.provider,
+      manualFallbackRequired: emailDelivery.manualFallbackRequired,
+      errorMessage:
+        emailDelivery.status === "failed" ? emailDelivery.errorMessage ?? null : null
+    }
   });
 
   return {
     ...result,
-    bookingUrl: `${env.APP_URL}/booking/${rawToken}`,
-    expiresAt
+    bookingUrl,
+    expiresAt,
+    emailDelivery
   };
 }
 

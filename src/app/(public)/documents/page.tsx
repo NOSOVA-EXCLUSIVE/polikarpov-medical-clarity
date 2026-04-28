@@ -4,6 +4,20 @@ import { BulletList, PageHero, Section } from "@/components/public/shell";
 import { beforePaymentDocuments, practiceDocuments, practiceDocumentsMap } from "@/features/documents/content";
 import type { Route } from "next";
 
+function renderDocumentCardTitle(slug: string, title: string) {
+  if (slug === "data-policy") {
+    return (
+      <>
+        Политика обработки персональных данных и
+        <br />
+        медицинской информации
+      </>
+    );
+  }
+
+  return title;
+}
+
 export default function DocumentsPage() {
   return (
     <main className="documents-page">
@@ -22,9 +36,9 @@ export default function DocumentsPage() {
       <Section className="documents-overview">
         <div className="documents-grid">
           {practiceDocuments.map((document) => (
-            <article key={document.slug} className="documents-card">
+            <article key={document.slug} className={`documents-card documents-card--${document.slug}`}>
               <div className="documents-card__copy stack-sm">
-                <h2>{document.title}</h2>
+                <h2>{renderDocumentCardTitle(document.slug, document.title)}</h2>
                 <p>{document.cardDescription}</p>
               </div>
               <Link
@@ -108,6 +122,13 @@ export default function DocumentsPage() {
           <p>
             Формат и возможность дистанционного взаимодействия определяются врачом после анализа
             анкеты и материалов пациента.
+          </p>
+          <p>
+            Информация, которую пациент предоставляет через анкету и материалы, используется
+            только для профессионального разбора ситуации, подготовки индивидуальных
+            рекомендаций и связи по его запросу. Эти данные не используются в маркетинговых
+            целях, а пациент вправе запросить уточнение или удаление данных в пределах и
+            порядке, предусмотренных политикой обработки данных и действующим законодательством.
           </p>
           <p>
             Отправка анкеты и предварительный анализ материалов не являются началом оказания
