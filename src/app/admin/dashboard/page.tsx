@@ -11,7 +11,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <AdminShell
-      title="Обзор заявок"
+      title={<span className="admin-page-title">Обзор заявок</span>}
       description={`Вы вошли как ${session.name}. Здесь видно, какие кейсы требуют первичного просмотра, дозапроса материалов или следующего решения.`}
     >
       <div className="card-grid">
@@ -40,7 +40,7 @@ export default async function AdminDashboardPage() {
 
       <section className="card stack">
         <div className="card-meta">
-          <h2>Последние поступившие заявки</h2>
+          <h2 className="admin-section-title">Последние поступившие заявки</h2>
           <Link className="text-link" href="/admin/applications">
             Открыть все заявки
           </Link>

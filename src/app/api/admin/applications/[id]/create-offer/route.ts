@@ -8,6 +8,10 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+function majorUnitsToMinorUnits(amountMajor: number) {
+  return Math.round(amountMajor * 100);
+}
+
 export async function POST(request: Request, context: RouteContext) {
   const session = await getStaffSession();
 
@@ -20,7 +24,7 @@ export async function POST(request: Request, context: RouteContext) {
   const parsed = createOfferSchema.safeParse({
     productCode: formData.get("productCode"),
     chargeModel: formData.get("chargeModel"),
-    amountCents: formData.get("amountCents"),
+    amountMajor: formData.get("amountMajor"),
     currency: formData.get("currency"),
     durationMinutes: formData.get("durationMinutes")
   });
@@ -33,13 +37,13 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    const { productCode, chargeModel, amountCents, currency, durationMinutes } = parsed.data;
+    const { productCode, chargeModel, amountMajor, currency, durationMinutes } = parsed.data;
     const result = await createOfferForApplication({
       actor: session,
       applicationId: params.id,
       productCode,
       chargeModel,
-      amountCents,
+      amountCents: majorUnitsToMinorUnits(amountMajor),
       currency,
       durationMinutes
     });

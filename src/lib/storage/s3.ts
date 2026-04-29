@@ -1,9 +1,13 @@
 import "server-only";
 
+import { access, mkdir, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { env } from "@/lib/env/server";
+import { hashOpaqueToken } from "@/lib/security/tokens";
 
 export const s3Client = new S3Client({
   region: env.S3_REGION,
@@ -15,11 +19,65 @@ export const s3Client = new S3Client({
   forcePathStyle: env.S3_FORCE_PATH_STYLE
 });
 
+const LOCAL_UPLOAD_ROOT = path.join(process.cwd(), "storage", "private-uploads");
+
+function getS3EndpointHostname() {
+  try {
+    return new URL(env.S3_ENDPOINT).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+export function shouldUseLocalUploadFallback() {
+  return getS3EndpointHostname().endsWith("example.com");
+}
+
+function createLocalUploadSignature(key: string) {
+  return hashOpaqueToken(key);
+}
+
+function buildLocalUploadUrl(key: string) {
+  const uploadUrl = new URL("/api/uploads/direct", env.APP_URL);
+  uploadUrl.searchParams.set("key", key);
+  uploadUrl.searchParams.set("signature", createLocalUploadSignature(key));
+  return uploadUrl.toString();
+}
+
+function buildLocalStoragePath(key: string) {
+  return path.join(LOCAL_UPLOAD_ROOT, ...key.split("/"));
+}
+
+export function isValidLocalUploadSignature(key: string, signature: string | null) {
+  return Boolean(signature) && signature === createLocalUploadSignature(key);
+}
+
+export async function writePrivateObjectLocally(key: string, bytes: Uint8Array) {
+  const targetPath = buildLocalStoragePath(key);
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, bytes);
+}
+
+export async function localPrivateObjectExists(key: string) {
+  const targetPath = buildLocalStoragePath(key);
+
+  try {
+    await access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function createPrivateUploadUrl(input: {
   key: string;
   contentType: string;
   expiresInSeconds?: number;
 }) {
+  if (shouldUseLocalUploadFallback()) {
+    return buildLocalUploadUrl(input.key);
+  }
+
   const command = new PutObjectCommand({
     Bucket: env.S3_BUCKET,
     Key: input.key,
@@ -32,6 +90,14 @@ export async function createPrivateUploadUrl(input: {
 }
 
 export async function deletePrivateObject(key: string) {
+  if (shouldUseLocalUploadFallback()) {
+    const targetPath = buildLocalStoragePath(key);
+    await rm(targetPath, {
+      force: true
+    });
+    return;
+  }
+
   await s3Client.send(
     new DeleteObjectCommand({
       Bucket: env.S3_BUCKET,

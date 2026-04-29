@@ -33,11 +33,11 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
 
   return (
     <AdminShell
-      title="Заявки"
+      title={<span className="admin-page-title">Заявки</span>}
       description="Рабочий список для первичного просмотра, запроса материалов и подготовки следующего шага по кейсу."
     >
       <section className="card stack">
-        <h2>Фильтры</h2>
+        <h2 className="admin-section-title">Фильтры</h2>
         <form className="form-grid" method="get">
           <label className="field">
             <span>Статус</span>

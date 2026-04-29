@@ -21,8 +21,8 @@ export const createOfferSchema = z.object({
     "PERSONAL_SUPPORT"
   ]),
   chargeModel: z.enum(["ONE_TIME", "PACKAGE", "RECURRING_READY"]),
-  amountCents: z.coerce.number().int().positive().max(10_000_000),
-  currency: z.string().trim().min(3).max(8).default("EUR"),
+  amountMajor: z.coerce.number().positive().max(10_000_000),
+  currency: z.string().trim().min(3).max(8).default("RUB"),
   durationMinutes: z.coerce.number().int().positive().max(24 * 60)
 });
 

@@ -51,6 +51,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const bookingUrl = new URL(`/booking/${token}`, request.url);
     bookingUrl.searchParams.set("error", "checkout");
+    bookingUrl.searchParams.set("message", message);
     return NextResponse.redirect(bookingUrl, 303);
   }
 }

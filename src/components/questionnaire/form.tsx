@@ -351,13 +351,17 @@ export function QuestionnaireForm() {
           throw new Error(presignJson?.error?.message ?? "Не удалось подготовить загрузку файла.");
         }
 
-        await fetch(presignJson.data.uploadUrl, {
+        const uploadResponse = await fetch(presignJson.data.uploadUrl, {
           method: "PUT",
           headers: {
             "Content-Type": presignJson.data.contentType
           },
           body: file
         });
+
+        if (!uploadResponse.ok) {
+          throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С„Р°Р№Р» РІ С…СЂР°РЅРёР»РёС‰Рµ. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·.");
+        }
 
         const completeResponse = await fetch("/api/uploads/complete", {
           method: "POST",
@@ -784,6 +788,7 @@ export function QuestionnaireForm() {
                 </p>
                 <input
                   type="file"
+                  className="questionnaire-file-input"
                   multiple
                   onChange={(e) => handleUpload(category, e.target.files)}
                   disabled={uploadingCategory !== null}
@@ -1013,7 +1018,7 @@ export function QuestionnaireForm() {
           <div className="card questionnaire-success-card stack">
             <h2>Анкета отправлена</h2>
             <p className="questionnaire-success-card__lead">
-              Спасибо. Врач лично изучит вашу ситуацию и материалы.
+              Благодарим Вас! Врач лично изучит вашу ситуацию и материалы.
             </p>
             <p>
               Мы внимательно разберём вашу ситуацию, чтобы понять, что действительно
@@ -1042,15 +1047,8 @@ export function QuestionnaireForm() {
             </div>
 
             <div className="questionnaire-success-card__section stack-sm">
-              <strong>Мы свяжемся с вами по выбранному способу связи:</strong>
-              <ul className="questionnaire-success-list">
-                <li>👉 Email</li>
-                <li>👉 WhatsApp</li>
-                <li>👉 Telegram</li>
-                <li>👉 Телефон</li>
-              </ul>
-              <p>Основной способ связи: {successState.preferredContactLabel}</p>
-              <p>Пожалуйста, будьте на связи.</p>
+              <p>Мы свяжемся с Вами по выбранному способу связи: {successState.preferredContactLabel}</p>
+              <p>Пожалуйста, проверяйте выбранный канал связи.</p>
             </div>
 
             <p className="questionnaire-field-note">

@@ -29,7 +29,7 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
 
   return (
     <AdminShell
-      title="Календарь слотов"
+      title={<span className="admin-page-title">Календарь слотов</span>}
       description="Здесь врач управляет доступными слотами для персональных ссылок на запись."
     >
       {noticeMessage ? (
@@ -45,7 +45,7 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
       ) : null}
 
       <section className="card stack">
-        <h2>Добавить новый слот</h2>
+        <h2 className="admin-section-title">Добавить новый слот</h2>
         <p className="muted">
           Создавайте только те интервалы, которые реально готовы к записи через персональную ссылку.
         </p>

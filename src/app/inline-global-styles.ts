@@ -90,6 +90,18 @@ h1 {
   letter-spacing: -0.015em;
 }
 
+.admin-page-title {
+  font-size: clamp(2rem, 3.35vw, 2.7rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.admin-section-title {
+  font-size: clamp(1.28rem, 1.45vw, 1.44rem);
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+}
+
 h2 {
   font-size: clamp(1.8rem, 3vw, 2.7rem);
   max-width: 18ch;
@@ -475,6 +487,44 @@ button {
   padding: 0.68rem 1.05rem;
   font-weight: 500;
   box-shadow: 0 6px 12px rgba(36, 55, 70, 0.08);
+}
+
+.booking-page__title {
+  font-size: clamp(2rem, 4vw, 2.55rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+
+.booking-page__lead {
+  line-height: 1.62;
+}
+
+.booking-page__section-title {
+  max-width: none;
+  white-space: nowrap;
+  font-size: clamp(1.16rem, 1.4vw, 1.34rem);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.015em;
+}
+
+.booking-page__offer-name {
+  font-size: 1.02rem;
+  font-weight: 500;
+  line-height: 1.22;
+  letter-spacing: -0.015em;
+}
+
+.booking-page__offer-product,
+.booking-page__offer-price,
+.booking-page__offer-expiry {
+  line-height: 1.42;
+  letter-spacing: -0.005em;
+}
+
+.booking-page__offer-price {
+  font-weight: 450;
 }
 
 .hero-actions {
@@ -4015,6 +4065,43 @@ button {
 
 .questionnaire-upload-card input[type="file"] {
   cursor: pointer;
+  font: inherit;
+  color: rgba(36, 33, 29, 0.68);
+}
+
+.questionnaire-file-input::file-selector-button {
+  min-height: 46px;
+  margin-right: 0.85rem;
+  padding: 0.68rem 1.05rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.015em;
+  cursor: pointer;
+  box-shadow: 0 6px 12px rgba(36, 55, 70, 0.08);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.questionnaire-file-input:hover::file-selector-button {
+  background: #1d2f3c;
+  border-color: #1d2f3c;
+  box-shadow: 0 14px 26px rgba(36, 55, 70, 0.16);
+  transform: translateY(-1px);
+}
+
+.questionnaire-file-input:disabled::file-selector-button {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .questionnaire-upload-item,
@@ -4499,6 +4586,16 @@ button {
 
   .home-hero .button {
     min-height: 46px;
+  }
+
+  .booking-page__title {
+    font-size: 1.625rem;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+  }
+
+  .booking-page__section-title {
+    white-space: normal;
   }
 
   .home-hero .page-hero__after-actions {

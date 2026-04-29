@@ -233,9 +233,23 @@ export function formatDateTime(value: Date | string) {
   }).format(date);
 }
 
+export function normalizeCurrencyCode(currency: string) {
+  const normalized = currency.trim().toUpperCase();
+
+  switch (normalized) {
+    case "РУБ":
+    case "RUR":
+      return "RUB";
+    case "ЕВРО":
+      return "EUR";
+    default:
+      return normalized;
+  }
+}
+
 export function formatMoney(amountCents: number, currency: string) {
   return new Intl.NumberFormat("ru-RU", {
     style: "currency",
-    currency
+    currency: normalizeCurrencyCode(currency)
   }).format(amountCents / 100);
 }

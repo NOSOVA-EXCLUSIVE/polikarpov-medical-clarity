@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { OfferCreateForm } from "@/components/admin/offer-create-form";
 import { AdminShell, DefinitionList } from "@/components/admin/shell";
 import { SensitiveAccessPanel } from "@/components/admin/sensitive-access";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/features/admin/presentation";
 import { getApplicationDetail } from "@/features/admin/service";
 import { canStaffReplyToThread } from "@/features/messages/service";
+import { defaultOfferByProductCode } from "@/features/products/catalog";
 import { requireStaffSession } from "@/lib/auth/session";
 
 const redFlagLabels: Record<string, string> = {
@@ -95,7 +97,7 @@ export default async function ApplicationDetailPage({
 
   return (
     <AdminShell
-      title={`Карточка заявки ${application.id}`}
+      title={<span className="admin-page-title">Карточка заявки {application.id}</span>}
       description="Здесь можно проверить материалы, принять решение по кейсу, открыть или завершить сопровождение и работать с перепиской внутри системы."
     >
       {noticeMessage ? (
@@ -140,7 +142,7 @@ export default async function ApplicationDetailPage({
 
       <section className="two-column">
         <article className="card stack">
-          <h2>Пациент и кейс</h2>
+          <h2 className="admin-section-title">Пациент и кейс</h2>
           <DefinitionList
             items={[
               { label: "Статус", value: applicationStatusLabel(application.status) },
@@ -170,7 +172,7 @@ export default async function ApplicationDetailPage({
         </article>
 
         <article className="card stack">
-          <h2>Клиническая сводка</h2>
+          <h2 className="admin-section-title">Клиническая сводка</h2>
           <div className="stack-sm">
             <p>
               <strong>Основная жалоба:</strong> {application.chiefComplaint}
@@ -201,7 +203,7 @@ export default async function ApplicationDetailPage({
 
       <section className="two-column">
         <article className="card stack">
-          <h2>Тревожные признаки</h2>
+          <h2 className="admin-section-title">Тревожные признаки</h2>
           {application.redFlags ? (
             <div className="stack-sm">
               {Object.entries(redFlagLabels).map(([key, label]) => {
@@ -220,7 +222,7 @@ export default async function ApplicationDetailPage({
         </article>
 
         <article className="card stack">
-          <h2>История случая</h2>
+          <h2 className="admin-section-title">История случая</h2>
           <div className="stack-sm">
             {application.traumaHistory ? <p><strong>Травма:</strong> {application.traumaHistory}</p> : null}
             {application.surgeryHistory ? <p><strong>Операции:</strong> {application.surgeryHistory}</p> : null}
@@ -232,7 +234,7 @@ export default async function ApplicationDetailPage({
       </section>
 
       <section className="card stack">
-        <h2>Загруженные файлы и архивы</h2>
+        <h2 className="admin-section-title">Загруженные файлы и архивы</h2>
         {application.uploads.length === 0 ? <p className="muted">Материалы внутри системы пока не загружены.</p> : null}
         {application.uploads.map((upload) => (
           <article key={upload.id} className="card stack-sm">
@@ -259,7 +261,7 @@ export default async function ApplicationDetailPage({
       </section>
 
       <section className="card stack">
-        <h2>Внешние ссылки на исследования и архивы</h2>
+        <h2 className="admin-section-title">Внешние ссылки на исследования и архивы</h2>
         {application.externalLinks.length === 0 ? (
           <p className="muted">Внешние ссылки пациент пока не добавил.</p>
         ) : null}
@@ -287,7 +289,7 @@ export default async function ApplicationDetailPage({
 
       <section className="two-column">
         <article className="card stack">
-          <h2>Следующий этап кейса</h2>
+          <h2 className="admin-section-title">Следующий этап кейса</h2>
           <p className="muted">
             После оплаты врач вручную переводит кейс в активные и открывает центр сообщений. Для Product 1 и 2 это окно
             уточнений после результата. Для Product 3 и 4 — рабочая переписка в рамках сопровождения.
@@ -328,7 +330,7 @@ export default async function ApplicationDetailPage({
         </article>
 
         <article className="card stack">
-          <h2>Статус переписки</h2>
+          <h2 className="admin-section-title">Статус переписки</h2>
           {thread ? (
             <>
               <DefinitionList
@@ -364,7 +366,7 @@ export default async function ApplicationDetailPage({
       {thread ? (
         <section className="two-column">
           <article className="card stack">
-            <h2>Переписка по кейсу</h2>
+            <h2 className="admin-section-title">Переписка по кейсу</h2>
             {thread.messages.length === 0 ? (
               <p className="muted">Сообщений пока нет.</p>
             ) : (
@@ -383,7 +385,7 @@ export default async function ApplicationDetailPage({
           </article>
 
           <article className="card stack">
-            <h2>Ответить пациенту</h2>
+            <h2 className="admin-section-title">Ответить пациенту</h2>
             {canReply ? (
               <>
                 <p className="muted">
@@ -418,7 +420,7 @@ export default async function ApplicationDetailPage({
 
       <section className="two-column">
         <article className="card stack">
-          <h2>Запросить файлы и документы</h2>
+          <h2 className="admin-section-title">Запросить файлы и документы</h2>
           <p className="muted">Используйте этот запрос, если для просмотра не хватает выписок, фото, видео или архивов внутри системы.</p>
           <form action={`/api/admin/applications/${application.id}/request-upload`} className="stack" method="post">
             <label className="field">
@@ -426,6 +428,7 @@ export default async function ApplicationDetailPage({
               <textarea
                 name="note"
                 rows={4}
+                minLength={10}
                 placeholder="Например: добавьте выписку после операции, свежие фото и короткое видео походки."
                 required
               />
@@ -439,7 +442,7 @@ export default async function ApplicationDetailPage({
         </article>
 
         <article className="card stack">
-          <h2>Запросить ссылку или доступ</h2>
+          <h2 className="admin-section-title">Запросить ссылку или доступ</h2>
           <p className="muted">Используйте этот запрос, если ссылка не открывается или не хватает пароля, кода доступа или инструкции.</p>
           <form action={`/api/admin/applications/${application.id}/request-imaging-access`} className="stack" method="post">
             <label className="field">
@@ -447,6 +450,7 @@ export default async function ApplicationDetailPage({
               <textarea
                 name="note"
                 rows={4}
+                minLength={10}
                 placeholder="Например: пришлите рабочую ссылку на МРТ, пароль к архиву или короткую инструкцию, как открыть исследование."
                 required
               />
@@ -462,7 +466,7 @@ export default async function ApplicationDetailPage({
 
       <section className="two-column">
         <article className="card stack">
-          <h2>Отклонить кейс</h2>
+          <h2 className="admin-section-title">Отклонить кейс</h2>
           <p className="muted">Используйте это действие, если дистанционный формат взаимодействия не подходит, есть red flags или пациенту нужен очный маршрут.</p>
           <form action={`/api/admin/applications/${application.id}/reject`} className="stack" method="post">
             <label className="field">
@@ -483,53 +487,22 @@ export default async function ApplicationDetailPage({
         </article>
 
         <article className="card stack">
-          <h2>Подготовить персональную ссылку</h2>
+          <h2 className="admin-section-title">Подготовить персональную ссылку</h2>
           <p className="muted">Используйте это действие, когда материалов достаточно и пациента можно перевести к записи и оплате.</p>
-          <form action={`/api/admin/applications/${application.id}/create-offer`} className="form-grid" method="post">
-            <label className="field">
-              <span>Продукт</span>
-              <select
-                defaultValue={application.assignedProductCode ?? application.requestedProductCode ?? "SECOND_OPINION"}
-                name="productCode"
-              >
-                <option value="SECOND_OPINION">Продукт 1</option>
-                <option value="MEDICAL_ROUTE">Продукт 2</option>
-                <option value="RECOVERY_4_WEEKS">Продукт 3</option>
-                <option value="PERSONAL_SUPPORT">Продукт 4</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>Модель оплаты</span>
-              <select defaultValue="ONE_TIME" name="chargeModel">
-                <option value="ONE_TIME">Разовая</option>
-                <option value="PACKAGE">Пакет</option>
-                <option value="RECURRING_READY">Готово к продлению</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>Сумма в центах</span>
-              <input defaultValue="30000" min="1" name="amountCents" type="number" />
-            </label>
-            <label className="field">
-              <span>Валюта</span>
-              <input defaultValue="EUR" name="currency" />
-            </label>
-            <label className="field field--full">
-              <span>Длительность / объём в минутах</span>
-              <input defaultValue="45" min="1" name="durationMinutes" type="number" />
-            </label>
-            <div className="field--full">
-              <button className="button" type="submit">
-                Создать персональную ссылку
-              </button>
-            </div>
-          </form>
+          <OfferCreateForm
+            action={`/api/admin/applications/${application.id}/create-offer`}
+            defaultDurationMinutes={45}
+            defaultOfferByProductCode={defaultOfferByProductCode}
+            defaultProductCode={
+              application.assignedProductCode ?? application.requestedProductCode ?? "SECOND_OPINION"
+            }
+          />
         </article>
       </section>
 
       <section className="two-column">
         <article className="card stack">
-          <h2>История запросов</h2>
+          <h2 className="admin-section-title">История запросов</h2>
           {application.requirements.length === 0 ? (
             <p className="muted">Дополнительные запросы пациенту пока не отправлялись.</p>
           ) : (
@@ -550,7 +523,7 @@ export default async function ApplicationDetailPage({
         </article>
 
         <article className="card stack">
-          <h2>Подготовленные офферы</h2>
+          <h2 className="admin-section-title">Подготовленные офферы</h2>
           {application.offers.length === 0 ? (
             <p className="muted">Офферы пока не создавались.</p>
           ) : (

@@ -1,0 +1,73 @@
+{
+  "uploads": [
+    {
+      "category": "DOCUMENT",
+      "originalName": "runtime-test.pdf",
+      "mimeType": "application/pdf",
+      "extension": "pdf",
+      "sizeBytes": 622,
+      "durationSeconds": null,
+      "storageKey": "intake/incoming/document/1777489027747-62116c58-a991-4934-bebe-6401224b9776.pdf",
+      "accessPassword": null,
+      "accessInstructions": null
+    },
+    {
+      "category": "IMAGE",
+      "originalName": "runtime-test.png",
+      "mimeType": "image/png",
+      "extension": "png",
+      "sizeBytes": 68,
+      "durationSeconds": null,
+      "storageKey": "intake/incoming/image/1777489027842-3438df14-de60-4fa5-bef6-25637a3709a3.png",
+      "accessPassword": null,
+      "accessInstructions": null
+    },
+    {
+      "category": "VIDEO",
+      "originalName": "20230515_123137_777.mov",
+      "mimeType": "video/quicktime",
+      "extension": "mov",
+      "sizeBytes": 8481217,
+      "durationSeconds": 10,
+      "storageKey": "intake/incoming/video/1777489027924-17c950d3-9bb3-4ee1-bdc3-4019dd1d935c.mov",
+      "accessPassword": null,
+      "accessInstructions": null
+    }
+  ],
+  "submitStatus": 200,
+  "submitBody": {
+    "success": true,
+    "submissionId": "cmokf3fip0002unus6cum3x5c",
+    "status": "new"
+  },
+  "timestamp": "2026-04-29T18-57-07-625Z",
+  "patientEmail": "nosova-anastasiy@mail.ru",
+  "patientName": "Runtime Test 2026-04-29T18-57-07-625Z",
+  "cleanedUploads": [
+    {
+      "category": "DOCUMENT",
+      "originalName": "runtime-test.pdf",
+      "mimeType": "application/pdf",
+      "extension": "pdf",
+      "sizeBytes": 622,
+      "storageKey": "intake/incoming/document/1777489027747-62116c58-a991-4934-bebe-6401224b9776.pdf"
+    },
+    {
+      "category": "IMAGE",
+      "originalName": "runtime-test.png",
+      "mimeType": "image/png",
+      "extension": "png",
+      "sizeBytes": 68,
+      "storageKey": "intake/incoming/image/1777489027842-3438df14-de60-4fa5-bef6-25637a3709a3.png"
+    },
+    {
+      "category": "VIDEO",
+      "originalName": "20230515_123137_777.mov",
+      "mimeType": "video/quicktime",
+      "extension": "mov",
+      "sizeBytes": 8481217,
+      "durationSeconds": 10,
+      "storageKey": "intake/incoming/video/1777489027924-17c950d3-9bb3-4ee1-bdc3-4019dd1d935c.mov"
+    }
+  ]
+}

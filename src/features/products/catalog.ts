@@ -23,6 +23,11 @@ export type PublicProduct = {
   routeNote: string;
 };
 
+export type ProductDefaultOffer = {
+  amountMajor: number;
+  currency: "RUB" | "EUR";
+};
+
 export const canonicalProductLabelByCode: Record<ProductCode, string> = {
   SECOND_OPINION: "Экспертное второе мнение",
   MEDICAL_ROUTE: "Клинический разбор ситуации",
@@ -35,6 +40,25 @@ export const canonicalServiceDetailPathByCode: Record<ProductCode, string> = {
   MEDICAL_ROUTE: "/services/clinical-review",
   RECOVERY_4_WEEKS: "/services/recovery-control",
   PERSONAL_SUPPORT: "/services/personal-support"
+};
+
+export const defaultOfferByProductCode: Record<ProductCode, ProductDefaultOffer> = {
+  SECOND_OPINION: {
+    amountMajor: 3900,
+    currency: "RUB"
+  },
+  MEDICAL_ROUTE: {
+    amountMajor: 5900,
+    currency: "RUB"
+  },
+  RECOVERY_4_WEEKS: {
+    amountMajor: 29000,
+    currency: "RUB"
+  },
+  PERSONAL_SUPPORT: {
+    amountMajor: 50000,
+    currency: "RUB"
+  }
 };
 
 export const publicProducts: PublicProduct[] = [

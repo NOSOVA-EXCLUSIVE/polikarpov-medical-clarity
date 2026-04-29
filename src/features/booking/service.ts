@@ -13,7 +13,7 @@ import type {
 } from "@prisma/client";
 import Stripe from "stripe";
 
-import { productLabel } from "@/features/admin/presentation";
+import { normalizeCurrencyCode, productLabel } from "@/features/admin/presentation";
 import { prisma } from "@/lib/db/prisma";
 import { env } from "@/lib/env/server";
 import { getStripe } from "@/lib/payments/stripe";
@@ -477,7 +477,7 @@ export async function createStripeCheckout(rawToken: string, slotId: string) {
       {
         quantity: 1,
         price_data: {
-          currency: access.offer.currency.toLowerCase(),
+          currency: normalizeCurrencyCode(access.offer.currency).toLowerCase(),
           unit_amount: access.offer.amountCents,
           product_data: {
             name: productLabel(access.offer.productCode),

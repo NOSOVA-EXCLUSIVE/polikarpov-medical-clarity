@@ -1,0 +1,125 @@
+{
+  "loginResult": {
+    "cookie": "staff_session=eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwibmFtZSI6IlByYWN0aWNlIEFkbWluIiwicm9sZSI6IkFETUlOIiwic3ViIjoiY21vZDR1Ymx3MDAwNHVubWswdGp4azMxZiIsImlhdCI6MTc3NzQ4OTIxOSwiZXhwIjoxNzc3NTMyNDE5fQ.rgYMxCPpabUF9swolh-rEobivI5F0iej_coB8-BeHJo",
+    "status": 303,
+    "location": "http://localhost:3011/admin/dashboard"
+  },
+  "createOffer": {
+    "status": 303,
+    "location": "http://localhost:3011/admin/booking-links?bookingUrl=http%3A%2F%2Flocalhost%3A3011%2Fbooking%2FETlWXQ1FYhRcLvHhAwGlQEmENVZH710OK5lqMYRV_lU&notice=offer_email_sent"
+  },
+  "bookingUrl": "http://localhost:3011/booking/ETlWXQ1FYhRcLvHhAwGlQEmENVZH710OK5lqMYRV_lU",
+  "bookingToken": "ETlWXQ1FYhRcLvHhAwGlQEmENVZH710OK5lqMYRV_lU",
+  "offer": {
+    "id": "cmokf6sy1001aunuse5yy2md7",
+    "productCode": "SECOND_OPINION",
+    "amountCents": 390000,
+    "currency": "RUB",
+    "status": "OPEN",
+    "lastSentAt": "2026-04-29T19:00:22.124Z"
+  },
+  "slot": {
+    "id": "cmokbivnh0000unqk3glopi6m",
+    "startsAt": "2026-04-30T11:00:00.000Z",
+    "status": "AVAILABLE"
+  },
+  "hold": {
+    "status": 200,
+    "data": {
+      "ok": true,
+      "data": {
+        "slot": {
+          "id": "cmokbivnh0000unqk3glopi6m",
+          "startsAt": "2026-04-30T11:00:00.000Z",
+          "endsAt": "2026-04-30T11:45:00.000Z",
+          "timezone": "Europe/Moscow"
+        },
+        "heldUntil": "2026-04-29T19:20:23.376Z"
+      }
+    }
+  },
+  "checkout": {
+    "status": 400,
+    "data": {
+      "ok": false,
+      "error": {
+        "code": "CHECKOUT_CREATE_FAILED",
+        "message": "Invalid API Key provided: sk_test_*************lder"
+      }
+    }
+  },
+  "latestSlot": {
+    "id": "cmokbivnh0000unqk3glopi6m",
+    "status": "HELD",
+    "heldOfferId": "cmokf6sy1001aunuse5yy2md7",
+    "holdExpiresAt": "2026-04-29T19:20:24.526Z"
+  },
+  "auditTail": [
+    {
+      "action": "status_changed",
+      "metadataJson": {
+        "to": "NEEDS_IMAGING_ACCESS",
+        "from": "NEEDS_UPLOAD"
+      }
+    },
+    {
+      "action": "requirement_requested",
+      "metadataJson": {
+        "type": "IMAGING_ACCESS",
+        "tokenId": "cmokf5dww000zunusg8eg6bf9"
+      }
+    },
+    {
+      "action": "materials_request_email_sent",
+      "metadataJson": {
+        "provider": "postmark",
+        "errorMessage": null,
+        "requirementType": "IMAGING_ACCESS",
+        "manualFallbackRequired": false
+      }
+    },
+    {
+      "action": "offer_created",
+      "metadataJson": {
+        "currency": "RUB",
+        "amountCents": 390000,
+        "chargeModel": "ONE_TIME",
+        "productCode": "SECOND_OPINION"
+      }
+    },
+    {
+      "action": "status_changed",
+      "metadataJson": {
+        "to": "BOOKING_SENT",
+        "from": "NEEDS_IMAGING_ACCESS"
+      }
+    },
+    {
+      "action": "offer_email_sent",
+      "metadataJson": {
+        "currency": "RUB",
+        "provider": "postmark",
+        "amountCents": 390000,
+        "chargeModel": "ONE_TIME",
+        "offerStatus": "OPEN",
+        "productCode": "SECOND_OPINION",
+        "errorMessage": null,
+        "manualFallbackRequired": false
+      }
+    },
+    {
+      "action": "slot_held",
+      "metadataJson": {
+        "offerId": "cmokf6sy1001aunuse5yy2md7",
+        "heldUntil": "2026-04-29T19:20:23.376Z"
+      }
+    },
+    {
+      "action": "slot_held",
+      "metadataJson": {
+        "offerId": "cmokf6sy1001aunuse5yy2md7",
+        "heldUntil": "2026-04-29T19:20:24.526Z"
+      }
+    }
+  ]
+}

@@ -54,16 +54,11 @@ async function getActiveStaffEmails() {
   return [...new Set(staff.map((item) => item.email).filter(Boolean))];
 }
 
+const DEFAULT_STAFF_NOTIFICATION_EMAIL = "medicalclarity@proton.me";
+
 async function getQuestionnaireStaffRecipients() {
-  if (env.ADMIN_SEED_EMAIL?.trim()) {
-    return [env.ADMIN_SEED_EMAIL.trim()];
-  }
-
-  if (env.POSTMARK_REPLY_TO_EMAIL.trim()) {
-    return [env.POSTMARK_REPLY_TO_EMAIL.trim()];
-  }
-
-  return getActiveStaffEmails();
+  const configuredRecipient = process.env.STAFF_NOTIFICATION_EMAIL?.trim();
+  return [configuredRecipient || DEFAULT_STAFF_NOTIFICATION_EMAIL];
 }
 
 export async function sendQuestionnaireSubmittedStaffEmail(input: {

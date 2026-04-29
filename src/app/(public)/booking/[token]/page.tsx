@@ -8,6 +8,7 @@ type PageProps = {
   searchParams?: Promise<{
     cancelled?: string;
     error?: string;
+    message?: string;
   }>;
 };
 
@@ -19,25 +20,27 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
     const context = await getBookingPageContext(token);
 
     return (
-      <main className="section">
+      <main className="section booking-page">
         <div className="container stack">
           <section className="page-hero">
             <div className="page-hero__grid">
               <div className="stack">
                 <p className="eyebrow">Персональная запись</p>
-                <h1>Выберите удобное время и перейдите к оплате</h1>
-                <p className="lead">
-                  Ваш случай предварительно изучен, и для вас подготовлен персональный вариант взаимодействия. Здесь можно спокойно выбрать удобный слот, после чего откроется защищённая страница оплаты.
+                <h1 className="booking-page__title">Выберите удобное время и перейдите к оплате</h1>
+                <p className="lead booking-page__lead">
+                  Выберите доступное время. После подтверждения слота откроется защищённая страница оплаты.
                 </p>
               </div>
-              <aside className="card stack-sm">
+              <aside className="card stack-sm booking-page__offer-card">
                 <p className="eyebrow">Ваше предложение</p>
-                <strong>{context.patient.fullName}</strong>
-                <p className="muted">{productLabel(context.offer.productCode)}</p>
-                <p className="muted">
+                <strong className="booking-page__offer-name">{context.patient.fullName}</strong>
+                <p className="muted booking-page__offer-product">{productLabel(context.offer.productCode)}</p>
+                <p className="muted booking-page__offer-price">
                   {chargeModelLabel(context.offer.chargeModel)} · {formatMoney(context.offer.amountCents, context.offer.currency)}
                 </p>
-                <p className="muted">Ссылка действует до {formatDateTime(context.offer.expiresAt)}</p>
+                <p className="muted booking-page__offer-expiry">
+                  Ссылка действует до {formatDateTime(context.offer.expiresAt)}
+                </p>
               </aside>
             </div>
           </section>
@@ -50,7 +53,11 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
 
           {query.error ? (
             <div className="notice notice--danger">
-              <p>Не удалось открыть оплату. Попробуйте ещё раз. Если ситуация повторится, не оплачивайте повторно по другим ссылкам без подтверждения.</p>
+              <p>
+                {query.message
+                  ? `Не удалось открыть оплату: ${query.message}`
+                  : "Не удалось открыть оплату. Попробуйте ещё раз. Если ситуация повторится, не оплачивайте повторно по другим ссылкам без подтверждения."}
+              </p>
             </div>
           ) : null}
 
@@ -65,7 +72,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
 
           <section className="two-column">
             <article className="card stack">
-              <h2>Как проходит этот шаг</h2>
+              <h2 className="booking-page__section-title">Как проходит этот шаг</h2>
               <ul className="list">
                 <li>Вы выбираете один удобный слот из доступных вариантов.</li>
                 <li>Система временно удерживает этот слот, пока вы переходите к оплате.</li>
@@ -73,7 +80,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
               </ul>
             </article>
             <article className="card stack">
-              <h2>Важно</h2>
+              <h2 className="booking-page__section-title">Важно</h2>
               <ul className="list">
                 <li>Слот удерживается на ограниченное время во время перехода к оплате.</li>
                 <li>Если оплата не завершена вовремя, слот может снова стать доступным.</li>
@@ -85,7 +92,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
 
           <section className="card stack">
             <div className="stack-sm">
-              <h2>Выберите время</h2>
+              <h2 className="booking-page__section-title booking-page__slot-title">Выберите время</h2>
               <p className="muted">
                 Для этой ссылки доступны только те слоты, которые врач открыл под персональную запись.
               </p>
@@ -133,11 +140,11 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
     );
   } catch (error) {
     return (
-      <main className="section">
+      <main className="section booking-page">
         <div className="container stack">
           <div className="card stack">
             <p className="eyebrow">Персональная запись</p>
-            <h1>Ссылка недоступна</h1>
+            <h1 className="booking-page__title">Ссылка недоступна</h1>
             <div className="notice notice--danger">
               <p>
                 {error instanceof Error
