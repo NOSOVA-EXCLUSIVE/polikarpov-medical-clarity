@@ -14,14 +14,19 @@ import type {
   ThreadStatus
 } from "@prisma/client";
 
-import { canonicalProductLabelByCode } from "@/features/products/catalog";
+const PRODUCT_LABELS: Record<ProductCode, string> = {
+  SECOND_OPINION: "Экспертное второе мнение",
+  MEDICAL_ROUTE: "Клинический разбор ситуации",
+  RECOVERY_4_WEEKS: "Контроль восстановления",
+  PERSONAL_SUPPORT: "Индивидуальное сопровождение"
+};
 
 export function productLabel(productCode: ProductCode | null | undefined) {
   if (!productCode) {
     return "Не назначен";
   }
 
-  return canonicalProductLabelByCode[productCode] ?? "Не назначен";
+  return PRODUCT_LABELS[productCode] ?? "Не назначен";
 }
 
 export function applicationStatusLabel(status: ApplicationStatus) {
@@ -52,7 +57,9 @@ export function applicationStatusLabel(status: ApplicationStatus) {
 }
 
 export function requirementTypeLabel(type: RequirementType) {
-  return type === "UPLOAD" ? "Запрос материалов" : "Запрос доступов к исследованиям";
+  return type === "UPLOAD"
+    ? "Запрос материалов"
+    : "Запрос доступа к исследованиям";
 }
 
 export function requirementStatusLabel(status: RequirementStatus) {
@@ -82,41 +89,41 @@ export function chargeModelLabel(model: ChargeModel) {
 export function externalLinkKindLabel(kind: ExternalLinkKind) {
   switch (kind) {
     case "IMAGING":
-      return "Ссылка на исследование";
+      return "Просмотр исследования";
     case "VIDEO":
-      return "Ссылка на видео";
+      return "Видео по ссылке";
     case "CLOUD":
-      return "Облако / архив";
+      return "Архив материалов";
     default:
       return kind;
   }
 }
 
-export function imagingSourceTypeLabel(type: ImagingSourceType | null | undefined) {
+export function imagingSourceTypeLabel(type: ImagingSourceType) {
   switch (type) {
     case "UPLOADED":
-      return "Только загруженные файлы";
+      return "Файлы внутри системы";
     case "EXTERNAL_LINK_ONLY":
-      return "Только внешние ссылки";
+      return "Ссылки на архивы и исследования";
     case "MIXED":
-      return "Файлы и внешние ссылки";
+      return "Файлы и ссылки";
     default:
-      return "Материалы пока не добавлены";
+      return type;
   }
 }
 
 export function offerStatusLabel(status: OfferStatus) {
   switch (status) {
     case "OPEN":
-      return "Ссылка активна";
+      return "Открыт";
     case "HELD":
       return "Слот удержан";
     case "PAID":
-      return "Оплачено";
+      return "Оплачен";
     case "EXPIRED":
-      return "Срок истёк";
+      return "Истёк";
     case "CANCELLED":
-      return "Отменено";
+      return "Отменён";
     default:
       return status;
   }
@@ -124,23 +131,23 @@ export function offerStatusLabel(status: OfferStatus) {
 
 export function preferredContactLabel(contact: PreferredContact) {
   switch (contact) {
-    case "EMAIL":
-      return "Email";
     case "PHONE":
       return "Телефон";
     case "WHATSAPP":
       return "WhatsApp";
     case "TELEGRAM":
       return "Telegram";
+    case "EMAIL":
+      return "Email";
     default:
       return contact;
   }
 }
 
-export function uploadCategoryLabel(category: "DOCUMENT" | "IMAGE" | "VIDEO") {
+export function uploadCategoryLabel(category: string) {
   switch (category) {
     case "DOCUMENT":
-      return "Документ или архив";
+      return "Документ";
     case "IMAGE":
       return "Изображение";
     case "VIDEO":
@@ -150,14 +157,14 @@ export function uploadCategoryLabel(category: "DOCUMENT" | "IMAGE" | "VIDEO") {
   }
 }
 
-export function uploadStatusLabel(status: "PENDING" | "ATTACHED" | "DELETED") {
+export function uploadStatusLabel(status: string) {
   switch (status) {
     case "PENDING":
-      return "Ожидает подтверждения";
-    case "ATTACHED":
-      return "Прикреплён";
-    case "DELETED":
-      return "Удалён";
+      return "Ожидает";
+    case "READY":
+      return "Готов";
+    case "FAILED":
+      return "Ошибка";
     default:
       return status;
   }
@@ -166,7 +173,7 @@ export function uploadStatusLabel(status: "PENDING" | "ATTACHED" | "DELETED") {
 export function threadStatusLabel(status: ThreadStatus) {
   switch (status) {
     case "INACTIVE":
-      return "Ещё не открыт";
+      return "Ожидает активации";
     case "ACTIVE":
       return "Активен";
     case "READ_ONLY":
@@ -178,78 +185,75 @@ export function threadStatusLabel(status: ThreadStatus) {
   }
 }
 
-export function readOnlyReasonLabel(reason: ReadOnlyReason | null | undefined) {
+export function readOnlyReasonLabel(reason: ReadOnlyReason | null) {
   switch (reason) {
     case "WINDOW_EXPIRED":
-      return "Окно уточнений завершилось";
+      return "Завершилось окно сообщений";
     case "MESSAGE_LIMIT_REACHED":
-      return "Лимит сообщений пациента исчерпан";
+      return "Исчерпан лимит сообщений";
     case "PACKAGE_ENDED":
-      return "Период сопровождения завершён";
+      return "Пакет завершён";
     case "MANUAL_LOCK":
-      return "Переписка переведена в режим чтения вручную";
+      return "Переведено вручную";
     case "CASE_STATUS_CHANGE":
-      return "Статус кейса изменился";
+      return "Статус кейса изменён";
+    case null:
+      return "Не применимо";
     default:
-      return "—";
+      return reason;
   }
 }
 
-export function closeReasonLabel(reason: CloseReason | null | undefined) {
+export function closeReasonLabel(reason: CloseReason | null) {
   switch (reason) {
     case "CASE_COMPLETED":
       return "Кейс завершён";
     case "CASE_ARCHIVED":
-      return "Кейс в архиве";
+      return "Кейс архивирован";
     case "MANUAL_CLOSE":
       return "Закрыто вручную";
     case "REJECTED":
-      return "Кейс отклонён";
+      return "Отклонено";
+    case null:
+      return "Не применимо";
     default:
-      return "—";
+      return reason;
   }
 }
 
 export function messageAuthorLabel(role: MessageAuthorRole) {
   switch (role) {
-    case "PATIENT":
-      return "Пациент";
     case "DOCTOR":
-      return "Врач";
     case "ADMIN":
-      return "Администратор";
+      return "Врач / администратор";
     case "SYSTEM":
       return "Система";
+    case "PATIENT":
     default:
-      return role;
+      return "Пациент";
   }
 }
 
-export function formatDateTime(value: Date | string) {
-  const date = typeof value === "string" ? new Date(value) : value;
+export function formatDateTime(value: Date) {
   return new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",
     timeStyle: "short"
-  }).format(date);
+  }).format(value);
 }
 
 export function normalizeCurrencyCode(currency: string) {
-  const normalized = currency.trim().toUpperCase();
-
-  switch (normalized) {
-    case "РУБ":
-    case "RUR":
-      return "RUB";
-    case "ЕВРО":
-      return "EUR";
-    default:
-      return normalized;
+  if (currency === "RUB" || currency === "EUR") {
+    return currency;
   }
+
+  return "RUB";
 }
 
 export function formatMoney(amountCents: number, currency: string) {
+  const normalizedCurrency = normalizeCurrencyCode(currency);
+
   return new Intl.NumberFormat("ru-RU", {
     style: "currency",
-    currency: normalizeCurrencyCode(currency)
+    currency: normalizedCurrency
   }).format(amountCents / 100);
 }

@@ -3,7 +3,12 @@ import "server-only";
 import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { env } from "@/lib/env/server";
@@ -44,8 +49,22 @@ function buildLocalUploadUrl(key: string) {
   return uploadUrl.toString();
 }
 
-function buildLocalStoragePath(key: string) {
-  return path.join(LOCAL_UPLOAD_ROOT, ...key.split("/"));
+function buildLocalFileUrl(key: string) {
+  const fileUrl = new URLSearchParams();
+  fileUrl.set("key", key);
+  fileUrl.set("signature", createLocalUploadSignature(key));
+  return `/api/uploads/file?${fileUrl.toString()}`;
+}
+
+export function buildPrivateStoragePath(key: string) {
+  const rootPath = path.resolve(LOCAL_UPLOAD_ROOT);
+  const targetPath = path.resolve(rootPath, ...key.split("/"));
+
+  if (!targetPath.startsWith(`${rootPath}${path.sep}`) && targetPath !== rootPath) {
+    throw new Error("Invalid storage key.");
+  }
+
+  return targetPath;
 }
 
 export function isValidLocalUploadSignature(key: string, signature: string | null) {
@@ -53,13 +72,13 @@ export function isValidLocalUploadSignature(key: string, signature: string | nul
 }
 
 export async function writePrivateObjectLocally(key: string, bytes: Uint8Array) {
-  const targetPath = buildLocalStoragePath(key);
+  const targetPath = buildPrivateStoragePath(key);
   await mkdir(path.dirname(targetPath), { recursive: true });
   await writeFile(targetPath, bytes);
 }
 
 export async function localPrivateObjectExists(key: string) {
-  const targetPath = buildLocalStoragePath(key);
+  const targetPath = buildPrivateStoragePath(key);
 
   try {
     await access(targetPath);
@@ -89,9 +108,27 @@ export async function createPrivateUploadUrl(input: {
   });
 }
 
+export async function createPrivateDownloadUrl(input: {
+  key: string;
+  expiresInSeconds?: number;
+}) {
+  if (shouldUseLocalUploadFallback()) {
+    return buildLocalFileUrl(input.key);
+  }
+
+  const command = new GetObjectCommand({
+    Bucket: env.S3_BUCKET,
+    Key: input.key
+  });
+
+  return getSignedUrl(s3Client, command, {
+    expiresIn: input.expiresInSeconds ?? 900
+  });
+}
+
 export async function deletePrivateObject(key: string) {
   if (shouldUseLocalUploadFallback()) {
-    const targetPath = buildLocalStoragePath(key);
+    const targetPath = buildPrivateStoragePath(key);
     await rm(targetPath, {
       force: true
     });

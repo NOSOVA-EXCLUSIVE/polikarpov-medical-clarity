@@ -9,7 +9,10 @@ export const createCheckoutSchema = z.object({
 });
 
 export const createCalendarSlotSchema = z.object({
-  startsAtIso: z.string().datetime(),
+  startsAtLocal: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Укажите корректные дату и время."),
   durationMinutes: z.coerce.number().int().positive().max(24 * 60),
   timezone: z.string().trim().min(2).max(120)
 });

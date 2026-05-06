@@ -4,7 +4,8 @@ type LoginPageProps = {
 
 export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
   const params = (await searchParams) ?? {};
-  const hasError = params.error === "auth" || params.error === "invalid";
+  const authError = params.error === "auth" || params.error === "invalid";
+  const systemError = params.error === "system";
 
   return (
     <main className="section admin-login">
@@ -13,12 +14,19 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
           <p className="eyebrow">Admin</p>
           <h1>Вход для врача и администратора</h1>
           <p className="muted">
-            Этот контур предназначен только для разбора заявок, запросов материалов и подготовки персональных офферов.
+            Этот контур предназначен только для разбора заявок, запросов материалов и подготовки
+            персональных офферов.
           </p>
 
-          {hasError ? (
+          {authError ? (
             <div className="notice notice--danger">
               <p>Не удалось выполнить вход. Проверьте email и пароль.</p>
+            </div>
+          ) : null}
+
+          {systemError ? (
+            <div className="notice notice--danger">
+              <p>Вход временно недоступен. Проверьте подключение к базе данных и повторите попытку.</p>
             </div>
           ) : null}
 

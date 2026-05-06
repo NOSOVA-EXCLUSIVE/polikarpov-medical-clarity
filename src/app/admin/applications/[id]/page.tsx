@@ -27,6 +27,7 @@ import { getApplicationDetail } from "@/features/admin/service";
 import { canStaffReplyToThread } from "@/features/messages/service";
 import { defaultOfferByProductCode } from "@/features/products/catalog";
 import { requireStaffSession } from "@/lib/auth/session";
+import { createPrivateDownloadUrl } from "@/lib/storage/s3";
 
 const redFlagLabels: Record<string, string> = {
   hasFever: "Температура или признаки воспаления",
@@ -82,18 +83,24 @@ export default async function ApplicationDetailPage({
           ? "Пациенту отправлено письмо с запросом на ссылку или доступ к исследованию."
           : flash.notice === "imaging_request_email_failed"
             ? "Ссылка для запроса доступа создана, но письмо не отправилось. Ссылку нужно переслать пациенту вручную."
-        : flash.notice === "rejected"
-          ? "Кейс переведён в отклонённые."
-          : flash.notice === "activated"
-            ? "Кейс активирован. Центр сообщений открыт и ссылка отправлена на email пациента."
-            : flash.notice === "completed"
-              ? "Кейс завершён. Переписка закрыта."
-              : flash.notice === "message_sent"
-                ? "Ответ в центр сообщений отправлен. Пациент получил уведомление на email."
-                : null;
+            : flash.notice === "rejected"
+              ? "Кейс переведён в отклонённые."
+              : flash.notice === "activated"
+                ? "Кейс активирован. Центр сообщений открыт, и ссылка отправлена на email пациента."
+                : flash.notice === "completed"
+                  ? "Кейс завершён. Переписка закрыта."
+                  : flash.notice === "message_sent"
+                    ? "Ответ в центр сообщений отправлен. Пациент получил уведомление на email."
+                    : null;
 
   const thread = application.messageThread;
   const canReply = canStaffReplyToThread(thread);
+  const uploadsWithDownloadUrls = await Promise.all(
+    application.uploads.map(async (upload) => ({
+      ...upload,
+      downloadUrl: await createPrivateDownloadUrl({ key: upload.storageKey })
+    }))
+  );
 
   return (
     <AdminShell
@@ -131,8 +138,7 @@ export default async function ApplicationDetailPage({
         <div className="card stack">
           <h2>Ссылка в центр сообщений</h2>
           <p className="muted">
-            Это текущая ссылка входа пациента в закрытый центр сообщений. Она уже отправлена на email, но при необходимости
-            её можно переслать повторно вручную.
+            Это текущая ссылка входа пациента в закрытый центр сообщений. Она уже отправлена на email, но при необходимости её можно переслать повторно вручную.
           </p>
           <a className="text-link" href={flash.portalUrl}>
             {flash.portalUrl}
@@ -224,23 +230,61 @@ export default async function ApplicationDetailPage({
         <article className="card stack">
           <h2 className="admin-section-title">История случая</h2>
           <div className="stack-sm">
-            {application.traumaHistory ? <p><strong>Травма:</strong> {application.traumaHistory}</p> : null}
-            {application.surgeryHistory ? <p><strong>Операции:</strong> {application.surgeryHistory}</p> : null}
-            {application.priorDiagnoses ? <p><strong>Диагнозы / мнения:</strong> {application.priorDiagnoses}</p> : null}
-            {application.priorSpecialists ? <p><strong>Кто уже смотрел:</strong> {application.priorSpecialists}</p> : null}
-            {application.currentTreatment ? <p><strong>Текущее лечение:</strong> {application.currentTreatment}</p> : null}
+            {application.traumaHistory ? (
+              <p>
+                <strong>Травма:</strong> {application.traumaHistory}
+              </p>
+            ) : null}
+            {application.surgeryHistory ? (
+              <p>
+                <strong>Операции:</strong> {application.surgeryHistory}
+              </p>
+            ) : null}
+            {application.priorDiagnoses ? (
+              <p>
+                <strong>Диагнозы / мнения:</strong> {application.priorDiagnoses}
+              </p>
+            ) : null}
+            {application.priorSpecialists ? (
+              <p>
+                <strong>Кто уже смотрел:</strong> {application.priorSpecialists}
+              </p>
+            ) : null}
+            {application.currentTreatment ? (
+              <p>
+                <strong>Текущее лечение:</strong> {application.currentTreatment}
+              </p>
+            ) : null}
           </div>
         </article>
       </section>
 
       <section className="card stack">
         <h2 className="admin-section-title">Загруженные файлы и архивы</h2>
-        {application.uploads.length === 0 ? <p className="muted">Материалы внутри системы пока не загружены.</p> : null}
-        {application.uploads.map((upload) => (
+        {application.uploads.length === 0 ? (
+          <p className="muted">Материалы внутри системы пока не загружены.</p>
+        ) : null}
+        {uploadsWithDownloadUrls.map((upload) => (
           <article key={upload.id} className="card stack-sm">
             <div className="card-meta">
               <div className="stack-sm">
-                <strong>{upload.originalName}</strong>
+                {upload.downloadUrl ? (
+                  <strong>
+                    <a
+                      className="text-link"
+                      href={upload.downloadUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {upload.originalName} ↗
+                    </a>
+                  </strong>
+                ) : (
+                  <>
+                    <strong>{upload.originalName}</strong>
+                    <p className="muted">Ссылка для скачивания недоступна. Проверьте сохранение файла в хранилище.</p>
+                  </>
+                )}
                 <p className="muted">
                   {uploadCategoryLabel(upload.category)} · {sizeLabel(upload.sizeBytes)}
                   {upload.durationSeconds ? ` · ${upload.durationSeconds} сек` : ""}
@@ -251,10 +295,10 @@ export default async function ApplicationDetailPage({
             <p className="muted">Ключ в хранилище: {upload.storageKey}</p>
             <SensitiveAccessPanel
               applicationId={application.id}
+              hasInstructions={Boolean(upload.accessInstructionsCiphertext)}
+              hasPassword={Boolean(upload.accessPasswordCiphertext)}
               targetId={upload.id}
               targetType="upload"
-              hasPassword={Boolean(upload.accessPasswordCiphertext)}
-              hasInstructions={Boolean(upload.accessInstructionsCiphertext)}
             />
           </article>
         ))}
@@ -278,10 +322,10 @@ export default async function ApplicationDetailPage({
             {link.note ? <p>{link.note}</p> : null}
             <SensitiveAccessPanel
               applicationId={application.id}
+              hasInstructions={Boolean(link.accessInstructionsCiphertext)}
+              hasPassword={Boolean(link.accessPasswordCiphertext)}
               targetId={link.id}
               targetType="externalLink"
-              hasPassword={Boolean(link.accessPasswordCiphertext)}
-              hasInstructions={Boolean(link.accessInstructionsCiphertext)}
             />
           </article>
         ))}
@@ -291,8 +335,7 @@ export default async function ApplicationDetailPage({
         <article className="card stack">
           <h2 className="admin-section-title">Следующий этап кейса</h2>
           <p className="muted">
-            После оплаты врач вручную переводит кейс в активные и открывает центр сообщений. Для Product 1 и 2 это окно
-            уточнений после результата. Для Product 3 и 4 — рабочая переписка в рамках сопровождения.
+            После оплаты врач вручную переводит кейс в активные и открывает центр сообщений. Для Продукта 1 и 2 это окно уточнений после результата. Для Продукта 3 и 4 — рабочая переписка в рамках сопровождения.
           </p>
           <DefinitionList
             items={[
@@ -337,7 +380,10 @@ export default async function ApplicationDetailPage({
                 items={[
                   { label: "Статус", value: threadStatusLabel(thread.status) },
                   { label: "Открыт", value: thread.startsAt ? formatDateTime(thread.startsAt) : "—" },
-                  { label: "Доступен до", value: thread.endsAt ? formatDateTime(thread.endsAt) : "Пока кейс активен" },
+                  {
+                    label: "Доступен до",
+                    value: thread.endsAt ? formatDateTime(thread.endsAt) : "Пока кейс активен"
+                  },
                   {
                     label: "Сообщения пациента",
                     value:
@@ -345,8 +391,14 @@ export default async function ApplicationDetailPage({
                         ? `${thread.patientMessageCount} из ${thread.patientMessageLimit}`
                         : `${thread.patientMessageCount} без жёсткого лимита`
                   },
-                  { label: "Почему только чтение", value: readOnlyReasonLabel(thread.readOnlyReason) },
-                  { label: "Причина закрытия", value: closeReasonLabel(thread.closeReason) }
+                  {
+                    label: "Почему только чтение",
+                    value: readOnlyReasonLabel(thread.readOnlyReason)
+                  },
+                  {
+                    label: "Причина закрытия",
+                    value: closeReasonLabel(thread.closeReason)
+                  }
                 ]}
               />
               <p className="muted">
@@ -389,17 +441,16 @@ export default async function ApplicationDetailPage({
             {canReply ? (
               <>
                 <p className="muted">
-                  Этот ответ появится в закрытом центре сообщений, а пациент получит уведомление на email с новой ссылкой
-                  входа.
+                  Этот ответ появится в закрытом центре сообщений, а пациент получит уведомление на email с новой ссылкой входа.
                 </p>
                 <form action={`/api/admin/applications/${application.id}/messages/reply`} className="stack" method="post">
                   <label className="field">
                     <span>Сообщение</span>
                     <textarea
                       name="body"
-                      rows={6}
                       placeholder="Напишите коротко и спокойно, что важно пациенту сейчас."
                       required
+                      rows={6}
                     />
                   </label>
                   <div>
@@ -421,16 +472,18 @@ export default async function ApplicationDetailPage({
       <section className="two-column">
         <article className="card stack">
           <h2 className="admin-section-title">Запросить файлы и документы</h2>
-          <p className="muted">Используйте этот запрос, если для просмотра не хватает выписок, фото, видео или архивов внутри системы.</p>
+          <p className="muted">
+            Используйте этот запрос, если для просмотра не хватает выписок, фото, видео или архивов внутри системы.
+          </p>
           <form action={`/api/admin/applications/${application.id}/request-upload`} className="stack" method="post">
             <label className="field">
               <span>Что нужно прислать</span>
               <textarea
-                name="note"
-                rows={4}
                 minLength={10}
+                name="note"
                 placeholder="Например: добавьте выписку после операции, свежие фото и короткое видео походки."
                 required
+                rows={4}
               />
             </label>
             <div>
@@ -443,16 +496,18 @@ export default async function ApplicationDetailPage({
 
         <article className="card stack">
           <h2 className="admin-section-title">Запросить ссылку или доступ</h2>
-          <p className="muted">Используйте этот запрос, если ссылка не открывается или не хватает пароля, кода доступа или инструкции.</p>
+          <p className="muted">
+            Используйте этот запрос, если ссылка не открывается или не хватает пароля, кода доступа или инструкции.
+          </p>
           <form action={`/api/admin/applications/${application.id}/request-imaging-access`} className="stack" method="post">
             <label className="field">
               <span>Что нужно уточнить по доступу</span>
               <textarea
-                name="note"
-                rows={4}
                 minLength={10}
+                name="note"
                 placeholder="Например: пришлите рабочую ссылку на МРТ, пароль к архиву или короткую инструкцию, как открыть исследование."
                 required
+                rows={4}
               />
             </label>
             <div>
@@ -467,15 +522,17 @@ export default async function ApplicationDetailPage({
       <section className="two-column">
         <article className="card stack">
           <h2 className="admin-section-title">Отклонить кейс</h2>
-          <p className="muted">Используйте это действие, если дистанционный формат взаимодействия не подходит, есть red flags или пациенту нужен очный маршрут.</p>
+          <p className="muted">
+            Используйте это действие, если дистанционный формат взаимодействия не подходит, есть red flags или пациенту нужен очный маршрут.
+          </p>
           <form action={`/api/admin/applications/${application.id}/reject`} className="stack" method="post">
             <label className="field">
               <span>Причина для внутренней фиксации</span>
               <textarea
                 name="note"
-                rows={4}
                 placeholder="Например: тревожные признаки, неподходящий формат, требуется очное наблюдение."
                 required
+                rows={4}
               />
             </label>
             <div>
@@ -488,7 +545,9 @@ export default async function ApplicationDetailPage({
 
         <article className="card stack">
           <h2 className="admin-section-title">Подготовить персональную ссылку</h2>
-          <p className="muted">Используйте это действие, когда материалов достаточно и пациента можно перевести к записи и оплате.</p>
+          <p className="muted">
+            Используйте это действие, когда материалов достаточно и пациента можно перевести к записи и оплате.
+          </p>
           <OfferCreateForm
             action={`/api/admin/applications/${application.id}/create-offer`}
             defaultDurationMinutes={45}
@@ -513,9 +572,13 @@ export default async function ApplicationDetailPage({
                   <span className="status">{requirementStatusLabel(requirement.status)}</span>
                 </div>
                 <p>{requirement.note}</p>
-                <p className="muted">Создан: {formatDateTime(requirement.createdAt)} · {requirement.createdBy.name}</p>
+                <p className="muted">
+                  Создан: {formatDateTime(requirement.createdAt)} · {requirement.createdBy.name}
+                </p>
                 {requirement.accessTokens[0] ? (
-                  <p className="muted">Ссылка действует до: {formatDateTime(requirement.accessTokens[0].expiresAt)}</p>
+                  <p className="muted">
+                    Ссылка действует до: {formatDateTime(requirement.accessTokens[0].expiresAt)}
+                  </p>
                 ) : null}
               </article>
             ))
@@ -533,8 +596,12 @@ export default async function ApplicationDetailPage({
                   <strong>{productLabel(offer.productCode)}</strong>
                   <span className="status">{offerStatusLabel(offer.status)}</span>
                 </div>
-                <p className="muted">{chargeModelLabel(offer.chargeModel)} · {formatMoney(offer.amountCents, offer.currency)}</p>
-                <p className="muted">Создан: {formatDateTime(offer.createdAt)} · {offer.createdBy.name}</p>
+                <p className="muted">
+                  {chargeModelLabel(offer.chargeModel)} · {formatMoney(offer.amountCents, offer.currency)}
+                </p>
+                <p className="muted">
+                  Создан: {formatDateTime(offer.createdAt)} · {offer.createdBy.name}
+                </p>
                 <p className="muted">Истекает: {formatDateTime(offer.expiresAt)}</p>
               </article>
             ))

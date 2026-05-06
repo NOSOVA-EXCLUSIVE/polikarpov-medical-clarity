@@ -9,6 +9,7 @@ import { requireStaffSession } from "@/lib/auth/session";
 type SearchParams = {
   notice?: string;
   error?: string;
+  message?: string;
 };
 
 type PageProps = {
@@ -40,7 +41,7 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
 
       {params.error ? (
         <div className="notice notice--danger">
-          <p>Не удалось обновить календарь. Проверьте данные и повторите попытку.</p>
+          <p>{params.message ?? "Не удалось обновить календарь. Проверьте данные и повторите попытку."}</p>
         </div>
       ) : null}
 

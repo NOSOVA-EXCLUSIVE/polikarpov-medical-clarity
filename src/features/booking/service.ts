@@ -296,6 +296,11 @@ function holdExpiresAt() {
   return new Date(Date.now() + env.DEFAULT_HELD_SLOT_TTL_MINUTES * 60 * 1000);
 }
 
+function stripeCheckoutExpiresAt(heldUntil: Date) {
+  const minimumCheckoutExpiresAt = new Date(Date.now() + 31 * 60 * 1000);
+  return heldUntil > minimumCheckoutExpiresAt ? heldUntil : minimumCheckoutExpiresAt;
+}
+
 function mapSlotSummary(slot: Pick<CalendarSlot, "id" | "startsAt" | "endsAt" | "timezone" | "status" | "holdExpiresAt">) {
   return {
     id: slot.id,
@@ -460,6 +465,7 @@ export async function holdBookingSlot(rawToken: string, slotId: string) {
 export async function createStripeCheckout(rawToken: string, slotId: string) {
   const hold = await holdBookingSlot(rawToken, slotId);
   const access = await resolveBookingAccess(rawToken);
+  const checkoutExpiresAt = stripeCheckoutExpiresAt(hold.heldUntil);
 
   const stripe = getStripe();
   const checkoutSession = await stripe.checkout.sessions.create({
@@ -467,7 +473,7 @@ export async function createStripeCheckout(rawToken: string, slotId: string) {
     customer_email: access.offer.application.patient.email,
     success_url: `${env.APP_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${env.APP_URL}/booking/${rawToken}?cancelled=1`,
-    expires_at: Math.floor(hold.heldUntil.getTime() / 1000),
+    expires_at: Math.floor(checkoutExpiresAt.getTime() / 1000),
     metadata: {
       offerId: access.offer.id,
       applicationId: access.offer.application.id,
@@ -494,17 +500,36 @@ export async function createStripeCheckout(rawToken: string, slotId: string) {
   }
 
   try {
-    const payment = await prisma.payment.create({
-      data: {
-        applicationId: access.offer.application.id,
-        offerId: access.offer.id,
-        chargeModel: access.offer.chargeModel,
-        amountCents: access.offer.amountCents,
-        currency: access.offer.currency,
-        provider: "stripe",
-        externalPaymentId: checkoutSession.id,
-        status: "PENDING"
+    const payment = await prisma.$transaction(async (tx) => {
+      if (checkoutExpiresAt > hold.heldUntil) {
+        const extendedHold = await tx.calendarSlot.updateMany({
+          where: {
+            id: hold.slot.id,
+            heldOfferId: access.offer.id,
+            status: "HELD"
+          },
+          data: {
+            holdExpiresAt: checkoutExpiresAt
+          }
+        });
+
+        if (extendedHold.count === 0) {
+          throw paymentError("Не удалось продлить удержание слота перед открытием оплаты.", 409);
+        }
       }
+
+      return tx.payment.create({
+        data: {
+          applicationId: access.offer.application.id,
+          offerId: access.offer.id,
+          chargeModel: access.offer.chargeModel,
+          amountCents: access.offer.amountCents,
+          currency: access.offer.currency,
+          provider: "stripe",
+          externalPaymentId: checkoutSession.id,
+          status: "PENDING"
+        }
+      });
     });
 
     await createSystemAudit({
@@ -522,7 +547,7 @@ export async function createStripeCheckout(rawToken: string, slotId: string) {
     return {
       paymentId: payment.id,
       checkoutUrl: checkoutSession.url,
-      heldUntil: hold.heldUntil,
+      heldUntil: checkoutExpiresAt,
       slot: hold.slot
     };
   } catch (error) {

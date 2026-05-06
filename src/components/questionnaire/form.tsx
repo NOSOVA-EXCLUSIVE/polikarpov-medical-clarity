@@ -281,6 +281,29 @@ export function QuestionnaireForm() {
     }));
   };
 
+  const updateStepOneCheckbox = (
+    field: "isAdult" | "confirmsNonEmergency",
+    checked: boolean
+  ) => {
+    updateState((current) => ({
+      ...current,
+      [field]: checked
+    }));
+  };
+
+  const updateRedFlag = (
+    key: keyof QuestionnaireWizardState["redFlags"],
+    checked: boolean
+  ) => {
+    updateState((current) => ({
+      ...current,
+      redFlags: {
+        ...current.redFlags,
+        [key]: checked
+      }
+    }));
+  };
+
   const handleNext = () => {
     if (!stepCanContinue) {
       return;
@@ -561,7 +584,9 @@ export function QuestionnaireForm() {
               <input
                 type="checkbox"
                 checked={state.isAdult}
-                onChange={(e) => updateState((current) => ({ ...current, isAdult: e.target.checked }))}
+                onChange={(e) => updateStepOneCheckbox("isAdult", e.currentTarget.checked)}
+                onInput={(e) => updateStepOneCheckbox("isAdult", e.currentTarget.checked)}
+                onClick={(e) => updateStepOneCheckbox("isAdult", (e.currentTarget as HTMLInputElement).checked)}
               />
               <span>Мне есть 18 лет</span>
             </label>
@@ -569,8 +594,10 @@ export function QuestionnaireForm() {
               <input
                 type="checkbox"
                 checked={state.confirmsNonEmergency}
-                onChange={(e) =>
-                  updateState((current) => ({ ...current, confirmsNonEmergency: e.target.checked }))
+                onChange={(e) => updateStepOneCheckbox("confirmsNonEmergency", e.currentTarget.checked)}
+                onInput={(e) => updateStepOneCheckbox("confirmsNonEmergency", e.currentTarget.checked)}
+                onClick={(e) =>
+                  updateStepOneCheckbox("confirmsNonEmergency", (e.currentTarget as HTMLInputElement).checked)
                 }
               />
               <span>Ситуация не относится к экстренным</span>
@@ -584,15 +611,9 @@ export function QuestionnaireForm() {
                   <input
                     type="checkbox"
                     checked={state.redFlags[item.key]}
-                    onChange={(e) =>
-                      updateState((current) => ({
-                        ...current,
-                        redFlags: {
-                          ...current.redFlags,
-                          [item.key]: e.target.checked
-                        }
-                      }))
-                    }
+                    onChange={(e) => updateRedFlag(item.key, e.currentTarget.checked)}
+                    onInput={(e) => updateRedFlag(item.key, e.currentTarget.checked)}
+                    onClick={(e) => updateRedFlag(item.key, (e.currentTarget as HTMLInputElement).checked)}
                   />
                   <span>{item.label}</span>
                 </label>

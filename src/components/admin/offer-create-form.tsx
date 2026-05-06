@@ -29,10 +29,10 @@ export function OfferCreateForm({
   return (
     <form action={action} className="form-grid" method="post">
       <label className="field">
-        <span>РџСЂРѕРґСѓРєС‚</span>
+        <span>Продукт</span>
         <select
-          value={productCode}
           name="productCode"
+          value={productCode}
           onChange={(event) => {
             const nextProductCode = event.target.value as ProductCode;
             const nextOffer =
@@ -42,22 +42,22 @@ export function OfferCreateForm({
             setCurrency(nextOffer.currency);
           }}
         >
-          <option value="SECOND_OPINION">РџСЂРѕРґСѓРєС‚ 1</option>
-          <option value="MEDICAL_ROUTE">РџСЂРѕРґСѓРєС‚ 2</option>
-          <option value="RECOVERY_4_WEEKS">РџСЂРѕРґСѓРєС‚ 3</option>
-          <option value="PERSONAL_SUPPORT">РџСЂРѕРґСѓРєС‚ 4</option>
+          <option value="SECOND_OPINION">Продукт 1</option>
+          <option value="MEDICAL_ROUTE">Продукт 2</option>
+          <option value="RECOVERY_4_WEEKS">Продукт 3</option>
+          <option value="PERSONAL_SUPPORT">Продукт 4</option>
         </select>
       </label>
       <label className="field">
-        <span>РњРѕРґРµР»СЊ РѕРїР»Р°С‚С‹</span>
+        <span>Модель оплаты</span>
         <select defaultValue="ONE_TIME" name="chargeModel">
-          <option value="ONE_TIME">Р Р°Р·РѕРІР°СЏ</option>
-          <option value="PACKAGE">РџР°РєРµС‚</option>
-          <option value="RECURRING_READY">Р“РѕС‚РѕРІРѕ Рє РїСЂРѕРґР»РµРЅРёСЋ</option>
+          <option value="ONE_TIME">Разовая</option>
+          <option value="PACKAGE">Пакет</option>
+          <option value="RECURRING_READY">Готово к продлению</option>
         </select>
       </label>
       <label className="field">
-        <span>РЎСѓРјРјР°</span>
+        <span>Сумма</span>
         <input
           min="1"
           name="amountMajor"
@@ -68,19 +68,23 @@ export function OfferCreateForm({
         />
       </label>
       <label className="field">
-        <span>Р’Р°Р»СЋС‚Р°</span>
-        <select name="currency" value={currency} onChange={(event) => setCurrency(event.target.value as "RUB" | "EUR")}>
+        <span>Валюта</span>
+        <select
+          name="currency"
+          value={currency}
+          onChange={(event) => setCurrency(event.target.value as "RUB" | "EUR")}
+        >
           <option value="RUB">RUB</option>
           <option value="EUR">EUR</option>
         </select>
       </label>
       <label className="field field--full">
-        <span>Р”Р»РёС‚РµР»СЊРЅРѕСЃС‚СЊ / РѕР±СЉС‘Рј РІ РјРёРЅСѓС‚Р°С…</span>
+        <span>Длительность / объём в минутах</span>
         <input defaultValue={defaultDurationMinutes} min="1" name="durationMinutes" type="number" />
       </label>
       <div className="field--full">
         <button className="button" type="submit">
-          РЎРѕР·РґР°С‚СЊ РїРµСЂСЃРѕРЅР°Р»СЊРЅСѓСЋ СЃСЃС‹Р»РєСѓ
+          Создать персональную ссылку
         </button>
       </div>
     </form>

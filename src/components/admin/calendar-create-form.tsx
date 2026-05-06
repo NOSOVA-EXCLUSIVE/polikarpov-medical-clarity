@@ -16,28 +16,19 @@ function initialLocalDateTime() {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-function toIsoOrEmpty(value: string) {
-  if (!value) {
-    return "";
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
-}
-
 export function AdminCalendarCreateForm() {
   const timezone = useMemo(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Moscow",
     []
   );
   const [localDateTime, setLocalDateTime] = useState(initialLocalDateTime);
-  const startsAtIso = toIsoOrEmpty(localDateTime);
 
   return (
     <form action="/api/admin/calendar/slots" className="form-grid" method="post">
       <label className="field">
         <span>Дата и время</span>
         <input
+          name="startsAtLocal"
           required
           type="datetime-local"
           value={localDateTime}
@@ -48,7 +39,6 @@ export function AdminCalendarCreateForm() {
         <span>Длительность в минутах</span>
         <input defaultValue="45" min="15" name="durationMinutes" required type="number" />
       </label>
-      <input name="startsAtIso" type="hidden" value={startsAtIso} />
       <input name="timezone" type="hidden" value={timezone} />
       <div className="field field--full">
         <p className="muted">
