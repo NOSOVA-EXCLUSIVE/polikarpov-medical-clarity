@@ -3,6 +3,16 @@ import Link from "next/link";
 import { Section } from "../../../components/public/shell";
 import type { Route } from "next";
 
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Форматы помощи",
+  description:
+    "Форматы помощи Polikarpov Medical Clarity: экспертное второе мнение, клинический разбор ситуации, контроль восстановления и индивидуальное сопровождение.",
+  path: "/services"
+});
+
 const primaryFormats = [
   {
     title: "Экспертное второе мнение",

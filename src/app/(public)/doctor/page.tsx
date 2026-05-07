@@ -2,6 +2,16 @@ import Link from "next/link";
 
 import { PageHero, Section } from "../../../components/public/shell";
 
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Евгений Поликарпов — травматолог-ортопед",
+  description:
+    "Профиль врача Polikarpov Medical Clarity: Евгений Сергеевич Поликарпов, травматолог-ортопед и специалист по интерпретации МРТ в сложных клинических ситуациях.",
+  path: "/doctor"
+});
+
 const clinicalBenefits = [
   "не проходить лишние обследования",
   "избавиться от противоречивых диагнозов",

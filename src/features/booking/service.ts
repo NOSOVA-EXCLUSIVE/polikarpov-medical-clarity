@@ -556,6 +556,27 @@ export async function createStripeCheckout(rawToken: string, slotId: string) {
   }
 }
 
+export async function confirmManualBooking(rawToken: string, slotId: string) {
+  const hold = await holdBookingSlot(rawToken, slotId);
+  const access = await resolveBookingAccess(rawToken);
+
+  await createSystemAudit({
+    applicationId: access.offer.application.id,
+    entityType: "OFFER",
+    entityId: access.offer.id,
+    action: "manual_booking_confirmed",
+    metadataJson: {
+      slotId: hold.slot.id,
+      heldUntil: hold.heldUntil.toISOString()
+    }
+  });
+
+  return {
+    heldUntil: hold.heldUntil,
+    slot: hold.slot
+  };
+}
+
 async function getPaymentByStripeSession(sessionId: string): Promise<PaymentWithRelations | null> {
   return prisma.payment.findUnique({
     where: { externalPaymentId: sessionId },

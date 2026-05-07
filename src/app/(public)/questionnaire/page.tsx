@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { PageHero } from "../../../components/public/shell";
 import { QuestionnaireForm } from "../../../components/questionnaire/form";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Анкета пациента",
+  description:
+    "Анкета пациента Polikarpov Medical Clarity для предварительного дистанционного разбора ситуации, материалов и выбора подходящего формата профессиональной помощи.",
+  path: "/questionnaire"
+});
 
 export default function QuestionnairePage() {
   return (

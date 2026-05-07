@@ -3,6 +3,16 @@
 import { PageHero, Section } from "../../components/public/shell";
 import type { Route } from "next";
 
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Экспертное второе мнение и клинический разбор",
+  description:
+    "Polikarpov Medical Clarity — экспертное второе мнение, дистанционный клинический разбор и профессиональная интерпретация МРТ, КТ и медицинских материалов у травматолога-ортопеда.",
+  path: "/"
+});
+
 const assistanceFormats = [
   {
     title: "Экспертное второе мнение",

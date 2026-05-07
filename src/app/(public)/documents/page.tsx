@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BulletList, PageHero, Section } from "@/components/public/shell";
 import { beforePaymentDocuments, practiceDocuments, practiceDocumentsMap } from "@/features/documents/content";
+import { buildPageMetadata } from "@/lib/seo";
 import type { Route } from "next";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Документы и условия работы",
+  description:
+    "Документы Polikarpov Medical Clarity: публичная оферта, информированное согласие, политика обработки данных, правила дистанционного формата и регламент сопровождения.",
+  path: "/documents"
+});
 
 function renderDocumentCardTitle(slug: string, title: string) {
   if (slug === "data-policy") {

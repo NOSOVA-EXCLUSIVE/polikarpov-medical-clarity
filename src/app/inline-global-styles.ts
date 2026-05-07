@@ -496,6 +496,13 @@ button {
   letter-spacing: -0.02em;
 }
 
+.booking-page__title--manual {
+  font-size: clamp(1.85rem, 3.2vw, 2.2rem);
+  line-height: 1.14;
+  max-width: 14ch;
+  text-wrap: balance;
+}
+
 .booking-page__lead {
   line-height: 1.62;
 }

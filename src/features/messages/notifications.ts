@@ -9,6 +9,7 @@ import {
   productLabel,
   requirementTypeLabel
 } from "@/features/admin/presentation";
+import { getBookingMode } from "@/features/booking/mode";
 import { getCloseReasonText, getReadOnlyReasonText, getThreadRulesText } from "@/features/messages/content";
 import { prisma } from "@/lib/db/prisma";
 import { sendTransactionalEmail } from "@/lib/email/postmark";
@@ -174,30 +175,39 @@ export async function sendOfferCreatedEmail(input: {
     input.amountCents,
     input.currency
   )}`;
+  const isManualMode = getBookingMode() === "manual";
 
   return sendEmailSafely({
     to: input.patientEmail,
-    subject: `Персональная ссылка для записи · ${product}`,
+    subject: isManualMode
+      ? `Персональное предложение · ${product}`
+      : `Персональная ссылка для записи · ${product}`,
     textBody: [
       `Здравствуйте, ${input.patientName}.`,
       "",
-      "Для вас подготовлен персональный следующий шаг по кейсу.",
+      "Для вас подготовлено персональное предложение.",
       `Формат: ${product}`,
       `Стоимость: ${priceLine}`,
       "",
-      "Сначала выберите удобный слот. После выбора откроется защищённая страница оплаты.",
-      `Перейти к записи: ${input.bookingUrl}`,
+      isManualMode
+        ? "Откройте персональную страницу, чтобы подтвердить заявку. После подтверждения мы свяжемся с Вами вручную и отдельно передадим инструкции по оплате."
+        : "Сначала выберите удобный слот. После выбора откроется защищённая страница оплаты.",
+      `${isManualMode ? "Перейти к подтверждению" : "Перейти к записи"}: ${input.bookingUrl}`,
       `Ссылка действует до: ${input.expiresAt.toLocaleString("ru-RU")}`,
       "",
       "Если ссылка перестанет открываться, напишите в ответ на это письмо — мы отправим новую."
     ].join("\n"),
     htmlBody: [
       `<p>Здравствуйте, ${input.patientName}.</p>`,
-      "<p>Для вас подготовлен персональный следующий шаг по кейсу.</p>",
+      "<p>Для вас подготовлено персональное предложение.</p>",
       `<p><strong>Формат:</strong> ${product}<br />`,
       `<strong>Стоимость:</strong> ${priceLine}</p>`,
-      "<p>Сначала выберите удобный слот. После выбора откроется защищённая страница оплаты.</p>",
-      `<p><a href="${input.bookingUrl}">Перейти к записи</a></p>`,
+      `<p>${
+        isManualMode
+          ? "Откройте персональную страницу, чтобы подтвердить заявку. После подтверждения мы свяжемся с Вами вручную и отдельно передадим инструкции по оплате."
+          : "Сначала выберите удобный слот. После выбора откроется защищённая страница оплаты."
+      }</p>`,
+      `<p><a href="${input.bookingUrl}">${isManualMode ? "Перейти к подтверждению" : "Перейти к записи"}</a></p>`,
       `<p>Ссылка действует до: ${input.expiresAt.toLocaleString("ru-RU")}</p>`,
       "<p>Если ссылка перестанет открываться, напишите в ответ на это письмо — мы отправим новую.</p>"
     ].join("")
