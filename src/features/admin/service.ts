@@ -9,11 +9,17 @@ import type {
   UserRole
 } from "@prisma/client";
 
+import {
+  attachApplicationDisplayNumbers,
+  getApplicationDisplayNumber
+} from "@/features/applications/display-number";
 import { prisma } from "@/lib/db/prisma";
 import { env } from "@/lib/env/server";
 import {
   sendMaterialsRequestEmail,
-  sendOfferCreatedEmail
+  sendOfferCreatedEmail,
+  sendApplicationRejectedPatientEmail,
+  sendApplicationRejectedStaffEmail
 } from "@/features/messages/notifications";
 import { syncThreadLifecycle } from "@/features/messages/service";
 import { decryptSensitiveField } from "@/lib/security/encryption";
@@ -38,6 +44,94 @@ const PRE_REVIEW_STATUSES: ApplicationStatus[] = [
   "NEEDS_UPLOAD",
   "NEEDS_IMAGING_ACCESS"
 ];
+
+type ManualBookingAudit = {
+  action: string;
+  createdAt: Date;
+  metadataJson?: Prisma.JsonValue | null;
+};
+
+type ManualBookingHeldSlot = {
+  id: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  holdExpiresAt: Date | null;
+  status: string;
+};
+
+type LatestMaterialsSubmission = {
+  createdAt: Date;
+  filesCount: number;
+  linksCount: number;
+};
+
+function getLatestAuditByAction(auditEvents: ManualBookingAudit[], action: string) {
+  return auditEvents.find((event) => event.action === action) ?? null;
+}
+
+function getAuditMetaNumber(metadataJson: Prisma.JsonValue | null | undefined, key: string) {
+  if (!metadataJson || Array.isArray(metadataJson) || typeof metadataJson !== "object") {
+    return null;
+  }
+
+  const value = (metadataJson as Record<string, unknown>)[key];
+  return typeof value === "number" ? value : null;
+}
+
+function getLatestMaterialsSubmission(
+  auditEvents: ManualBookingAudit[]
+): LatestMaterialsSubmission | null {
+  const event = getLatestAuditByAction(auditEvents, "patient_materials_submitted");
+
+  if (!event) {
+    return null;
+  }
+
+  return {
+    createdAt: event.createdAt,
+    filesCount: getAuditMetaNumber(event.metadataJson, "filesCount") ?? 0,
+    linksCount: getAuditMetaNumber(event.metadataJson, "linksCount") ?? 0
+  };
+}
+
+function appendManualBookingFlag<T extends { auditEvents: ManualBookingAudit[] }>(application: T) {
+  const latestMaterialsSubmission = getLatestMaterialsSubmission(application.auditEvents);
+
+  return {
+    ...application,
+    patientConfirmedManualBooking: Boolean(
+      getLatestAuditByAction(application.auditEvents, "manual_booking_confirmed")
+    ),
+    latestMaterialsSubmission
+  };
+}
+
+function appendManualBookingState<
+  T extends {
+    auditEvents: ManualBookingAudit[];
+    offers: Array<{
+      status: string;
+      heldSlots: ManualBookingHeldSlot[];
+    }>;
+  }
+>(application: T) {
+  const heldOffer = application.offers.find(
+    (offer) => offer.status === "HELD" && offer.heldSlots.length > 0
+  );
+  const manualBookingHeldSlot = heldOffer?.heldSlots[0] ?? null;
+  const manualBookingConfirmedAt =
+    getLatestAuditByAction(application.auditEvents, "manual_booking_confirmed")?.createdAt ?? null;
+  const latestMaterialsSubmission = getLatestMaterialsSubmission(application.auditEvents);
+
+  return {
+    ...application,
+    patientConfirmedManualBooking: Boolean(manualBookingConfirmedAt || manualBookingHeldSlot),
+    manualBookingConfirmedAt,
+    manualBookingHeldSlot,
+    latestMaterialsSubmission
+  };
+}
 
 function buildApplicationWhere(filters: ApplicationFilters) {
   const where: Prisma.ApplicationWhereInput = {};
@@ -141,7 +235,7 @@ export async function getDashboardSnapshot() {
 }
 
 export async function listApplications(filters: ApplicationFilters) {
-  return prisma.application.findMany({
+  const applications = await prisma.application.findMany({
     where: buildApplicationWhere(filters),
     orderBy: { submittedAt: "desc" },
     select: {
@@ -167,9 +261,27 @@ export async function listApplications(filters: ApplicationFilters) {
           requirements: true,
           offers: true
         }
+      },
+      auditEvents: {
+        where: {
+          action: {
+            in: ["manual_booking_confirmed", "patient_materials_submitted"]
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          action: true,
+          createdAt: true,
+          metadataJson: true
+        }
       }
     }
   });
+
+  const applicationsWithDisplayNumbers = await attachApplicationDisplayNumbers(applications);
+
+  return applicationsWithDisplayNumbers.map(appendManualBookingFlag);
 }
 
 export async function getApplicationDetail(applicationId: string) {
@@ -214,6 +326,19 @@ export async function getApplicationDetail(applicationId: string) {
           createdBy: {
             select: { name: true, email: true }
           },
+          heldSlots: {
+            where: { status: "HELD" },
+            orderBy: { startsAt: "desc" },
+            take: 1,
+            select: {
+              id: true,
+              startsAt: true,
+              endsAt: true,
+              timezone: true,
+              holdExpiresAt: true,
+              status: true
+            }
+          },
           accessTokens: {
             where: { purpose: "BOOKING", revokedAt: null },
             orderBy: { createdAt: "desc" },
@@ -249,12 +374,39 @@ export async function getApplicationDetail(applicationId: string) {
             }
           }
         }
+      },
+      auditEvents: {
+        where: {
+          action: {
+            in: ["manual_booking_confirmed", "patient_materials_submitted"]
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          action: true,
+          createdAt: true,
+          metadataJson: true
+        }
       }
     }
   });
 
-  if (!application?.messageThread) {
-    return application;
+  if (!application) {
+    return null;
+  }
+
+  const displayNumber =
+    (await getApplicationDisplayNumber({
+      applicationId: application.id,
+      submittedAt: application.submittedAt
+    })) ?? application.id;
+
+  if (!application.messageThread) {
+    return {
+      ...appendManualBookingState(application),
+      displayNumber
+    };
   }
 
   await prisma.message.updateMany({
@@ -268,7 +420,7 @@ export async function getApplicationDetail(applicationId: string) {
     }
   });
 
-  return prisma.application.findUnique({
+  const refreshedApplication = await prisma.application.findUnique({
     where: { id: applicationId },
     include: {
       patient: true,
@@ -307,6 +459,19 @@ export async function getApplicationDetail(applicationId: string) {
           createdBy: {
             select: { name: true, email: true }
           },
+          heldSlots: {
+            where: { status: "HELD" },
+            orderBy: { startsAt: "desc" },
+            take: 1,
+            select: {
+              id: true,
+              startsAt: true,
+              endsAt: true,
+              timezone: true,
+              holdExpiresAt: true,
+              status: true
+            }
+          },
           accessTokens: {
             where: { purpose: "BOOKING", revokedAt: null },
             orderBy: { createdAt: "desc" },
@@ -342,9 +507,32 @@ export async function getApplicationDetail(applicationId: string) {
             }
           }
         }
+      },
+      auditEvents: {
+        where: {
+          action: {
+            in: ["manual_booking_confirmed", "patient_materials_submitted"]
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          action: true,
+          createdAt: true,
+          metadataJson: true
+        }
       }
     }
   });
+
+  if (!refreshedApplication) {
+    return null;
+  }
+
+  return {
+    ...appendManualBookingState(refreshedApplication),
+    displayNumber
+  };
 }
 
 export async function requestApplicationMaterials(input: {
@@ -483,18 +671,47 @@ export async function rejectApplication(input: {
 }) {
   const existing = await prisma.application.findUnique({
     where: { id: input.applicationId },
-    select: { id: true, status: true }
+    select: {
+      id: true,
+      status: true,
+      submittedAt: true,
+      patient: {
+        select: {
+          fullName: true,
+          email: true
+        }
+      }
+    }
   });
 
   if (!existing) {
     throw new Error("Заявка не найдена.");
   }
 
+  const displayNumber =
+    (await getApplicationDisplayNumber({
+      applicationId: existing.id,
+      submittedAt: existing.submittedAt
+    })) ?? existing.id;
+
   const application = await prisma.application.update({
     where: { id: input.applicationId },
     data: {
       status: "REJECTED",
       reviewedAt: new Date()
+    }
+  });
+
+  await createAuditLog({
+    actor: input.actor,
+    applicationId: application.id,
+    entityType: "APPLICATION",
+    entityId: application.id,
+    action: "application_rejected",
+    metadataJson: {
+      from: existing.status,
+      to: "REJECTED",
+      note: input.note
     }
   });
 
@@ -511,7 +728,60 @@ export async function rejectApplication(input: {
     }
   });
 
-  return application;
+  const [patientEmailDelivery, staffEmailDelivery] = await Promise.all([
+    sendApplicationRejectedPatientEmail({
+      patientName: existing.patient.fullName,
+      patientEmail: existing.patient.email
+    }),
+    sendApplicationRejectedStaffEmail({
+      applicationId: application.id,
+      applicationDisplayNumber: displayNumber,
+      patientName: existing.patient.fullName,
+      note: input.note
+    })
+  ]);
+
+  await createAuditLog({
+    actor: input.actor,
+    applicationId: application.id,
+    entityType: "APPLICATION",
+    entityId: application.id,
+    action:
+      patientEmailDelivery.status === "sent"
+        ? "application_rejected_patient_email_sent"
+        : "application_rejected_patient_email_failed",
+    metadataJson: {
+      provider: patientEmailDelivery.provider,
+      manualFallbackRequired: patientEmailDelivery.manualFallbackRequired,
+      errorMessage:
+        patientEmailDelivery.status === "failed"
+          ? patientEmailDelivery.errorMessage ?? null
+          : null
+    }
+  });
+
+  await createAuditLog({
+    actor: input.actor,
+    applicationId: application.id,
+    entityType: "APPLICATION",
+    entityId: application.id,
+    action:
+      staffEmailDelivery.status === "sent"
+        ? "application_rejected_staff_email_sent"
+        : "application_rejected_staff_email_failed",
+    metadataJson: {
+      provider: staffEmailDelivery.provider,
+      manualFallbackRequired: staffEmailDelivery.manualFallbackRequired,
+      errorMessage:
+        staffEmailDelivery.status === "failed" ? staffEmailDelivery.errorMessage ?? null : null
+    }
+  });
+
+  return {
+    application,
+    patientEmailDelivery,
+    staffEmailDelivery
+  };
 }
 
 export async function createOfferForApplication(input: {

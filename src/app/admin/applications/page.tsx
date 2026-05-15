@@ -6,6 +6,8 @@ import {
   applicationStatusLabel,
   formatDateTime,
   imagingSourceTypeLabel,
+  manualBookingBadgeLabel,
+  manualPaymentPendingLabel,
   productLabel
 } from "@/features/admin/presentation";
 import { listApplications } from "@/features/admin/service";
@@ -80,15 +82,34 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
       <section className="stack">
         {applications.length === 0 ? <p className="muted">По этим фильтрам заявок пока нет.</p> : null}
         {applications.map((application) => (
-          <article key={application.id} className="card stack-sm">
+          <article
+            key={application.id}
+            className={`card stack-sm ${
+              application.patientConfirmedManualBooking
+                ? "admin-application-card--confirmed"
+                : ""
+            }`.trim()}
+          >
             <div className="card-meta">
               <div className="stack-sm">
                 <strong>{application.patient.fullName}</strong>
+                <p className="muted">{application.displayNumber}</p>
                 <p className="muted">
                   {application.patient.email} · {application.patient.country} · {application.patient.timezone}
                 </p>
               </div>
-              <span className="status">{applicationStatusLabel(application.status)}</span>
+              <div className="stack-sm">
+                <span className="status">{applicationStatusLabel(application.status)}</span>
+                {application.patientConfirmedManualBooking ? (
+                  <>
+                    <span className="status status--held">{manualBookingBadgeLabel()}</span>
+                    <span className="status status--manual-pending">{manualPaymentPendingLabel()}</span>
+                  </>
+                ) : null}
+                {application.latestMaterialsSubmission ? (
+                  <span className="status status--new-materials">Новые материалы</span>
+                ) : null}
+              </div>
             </div>
             <p>{application.chiefComplaint}</p>
             <p className="muted">

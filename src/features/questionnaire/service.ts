@@ -3,6 +3,10 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 
 import { LEGAL_DOCUMENT_VERSIONS } from "@/features/legal/versions";
+import {
+  getApplicationDisplayNumber,
+  getFallbackApplicationDisplayNumber
+} from "@/features/applications/display-number";
 import { saveQuestionnaireSubmissionFallback } from "@/features/questionnaire/fallback-store";
 import {
   QUESTIONNAIRE_LEAD_STATUS,
@@ -349,8 +353,15 @@ export async function submitQuestionnaire(
     operationalArtifacts = null;
   }
 
+  const displayNumber =
+    (await getApplicationDisplayNumber({
+      applicationId: result.applicationId,
+      submittedAt
+    })) ?? getFallbackApplicationDisplayNumber(submittedAt);
+
   const staffNotification = await sendQuestionnaireSubmittedStaffEmail({
     applicationId: result.applicationId,
+    applicationDisplayNumber: displayNumber,
     patientName: input.patient.fullName,
     patientEmail: input.patient.email,
     patientPhone: input.patient.phone,
@@ -388,6 +399,7 @@ export async function submitQuestionnaire(
   return {
     ...result,
     submissionId: result.applicationId,
+    displayNumber,
     status: QUESTIONNAIRE_LEAD_STATUS.code,
     statusLabel: QUESTIONNAIRE_LEAD_STATUS.label,
     imagingSourceType,

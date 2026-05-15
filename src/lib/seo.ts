@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 export const SITE_NAME = "Polikarpov Medical Clarity";
 export const DEFAULT_SITE_URL = "http://localhost:3000";
+export const DEFAULT_OG_IMAGE_PATH = "/opengraph-image.jpg";
 
 type IndexingMode = {
   index: boolean;
@@ -95,6 +96,7 @@ export function buildPageMetadata({
 }: PageMetadataInput): Metadata {
   const canonical = canonicalPath ?? path;
   const socialTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
+  const ogImageUrl = buildAbsoluteUrl(DEFAULT_OG_IMAGE_PATH);
 
   return {
     title,
@@ -107,6 +109,14 @@ export function buildPageMetadata({
       title: socialTitle,
       description,
       url: buildAbsoluteUrl(canonical),
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: SITE_NAME
+        }
+      ],
       siteName: SITE_NAME,
       locale: "ru_RU",
       type: "website"
@@ -114,7 +124,8 @@ export function buildPageMetadata({
     twitter: {
       card: "summary",
       title: socialTitle,
-      description
+      description,
+      images: [ogImageUrl]
     }
   };
 }

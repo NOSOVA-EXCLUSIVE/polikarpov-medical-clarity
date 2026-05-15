@@ -13,7 +13,7 @@ export default async function PortalMaterialsPage({ params }: PageProps) {
     const context = await getMaterialsPortalContext(token);
 
     return (
-      <main className="section">
+      <main className="section portal-materials-page">
         <div className="container stack">
           <div className="card stack">
             <p className="eyebrow">Дозагрузка материалов</p>
@@ -43,7 +43,7 @@ export default async function PortalMaterialsPage({ params }: PageProps) {
     );
   } catch (error) {
     return (
-      <main className="section">
+      <main className="section portal-materials-page">
         <div className="container stack">
           <div className="card stack">
             <p className="eyebrow">Дозагрузка материалов</p>

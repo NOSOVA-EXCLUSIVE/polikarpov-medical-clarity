@@ -36,6 +36,7 @@ import {
 
 type SuccessState = {
   submissionId: string;
+  displayNumber: string;
   status: string;
   preferredContactLabel: string;
 };
@@ -43,6 +44,7 @@ type SuccessState = {
 type SubmitSuccessResponse = {
   success: true;
   submissionId: string;
+  displayNumber: string;
   status: string;
 };
 
@@ -558,6 +560,7 @@ export function QuestionnaireForm() {
 
       setSuccessState({
         submissionId: json.submissionId,
+        displayNumber: json.displayNumber,
         status: json.status,
         preferredContactLabel
       });
@@ -1068,8 +1071,12 @@ export function QuestionnaireForm() {
             </div>
 
             <div className="questionnaire-success-card__section stack-sm">
-              <p>Мы свяжемся с Вами по выбранному способу связи: {successState.preferredContactLabel}</p>
-              <p>Пожалуйста, проверяйте выбранный канал связи.</p>
+              <p>Мы свяжемся с Вами по выбранному способу связи: {successState.preferredContactLabel}.</p>
+              <p>
+                После рассмотрения анкеты на Вашу электронную почту поступит письмо для подтверждения записи и
+                выбора удобной даты и времени консультации.
+              </p>
+              <p>Пожалуйста, проверяйте выбранный канал связи и электронную почту.</p>
             </div>
 
             <p className="questionnaire-field-note">
@@ -1077,7 +1084,7 @@ export function QuestionnaireForm() {
               очной медицинской помощью.
             </p>
             <p className="questionnaire-success-card__meta">
-              Номер анкеты: {successState.submissionId} · Статус:{" "}
+              Номер анкеты: {successState.displayNumber} · Статус:{" "}
               {successState.status === "new" ? "Новая анкета" : successState.status}
             </p>
 

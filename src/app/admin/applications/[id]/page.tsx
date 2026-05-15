@@ -12,6 +12,8 @@ import {
   formatDateTime,
   formatMoney,
   imagingSourceTypeLabel,
+  manualBookingBadgeLabel,
+  manualPaymentPendingLabel,
   messageAuthorLabel,
   offerStatusLabel,
   preferredContactLabel,
@@ -93,8 +95,19 @@ export default async function ApplicationDetailPage({
                     ? "Ответ в центр сообщений отправлен. Пациент получил уведомление на email."
                     : null;
 
+  const rejectionNoticeMessage =
+    flash.notice === "rejected"
+      ? "Заявка отклонена. Уведомление отправлено."
+      : flash.notice === "rejected_warning"
+        ? "Заявка отклонена, но одно из уведомлений не удалось отправить автоматически. Проверьте журналы и при необходимости свяжитесь вручную."
+        : null;
+
   const thread = application.messageThread;
   const canReply = canStaffReplyToThread(thread);
+  const manualBookingHeldSlot = application.manualBookingHeldSlot;
+  const latestMaterialsSubmission = application.latestMaterialsSubmission;
+  const showManualBookingConfirmation =
+    application.patientConfirmedManualBooking && manualBookingHeldSlot;
   const uploadsWithDownloadUrls = await Promise.all(
     application.uploads.map(async (upload) => ({
       ...upload,
@@ -104,18 +117,48 @@ export default async function ApplicationDetailPage({
 
   return (
     <AdminShell
-      title={<span className="admin-page-title">Карточка заявки {application.id}</span>}
+      title={<span className="admin-page-title">Карточка заявки {application.displayNumber}</span>}
       description="Здесь можно проверить материалы, принять решение по кейсу, открыть или завершить сопровождение и работать с перепиской внутри системы."
     >
-      {noticeMessage ? (
+      {rejectionNoticeMessage ?? noticeMessage ? (
         <div className="notice">
-          <p>{noticeMessage}</p>
+          <p>{rejectionNoticeMessage ?? noticeMessage}</p>
         </div>
       ) : null}
 
       {flash.error ? (
         <div className="notice notice--danger">
           <p>Не удалось выполнить действие. Проверьте заполнение формы и попробуйте ещё раз.</p>
+        </div>
+      ) : null}
+
+      {showManualBookingConfirmation ? (
+        <div className="notice">
+          <p>
+            <strong>{manualBookingBadgeLabel()}</strong>
+          </p>
+          <p>{manualPaymentPendingLabel()}</p>
+          <p>Номер заявки: {application.displayNumber}</p>
+          <p>
+            Выбранный слот: {formatDateTime(manualBookingHeldSlot.startsAt)} —{" "}
+            {formatDateTime(manualBookingHeldSlot.endsAt)}
+          </p>
+          {manualBookingHeldSlot.holdExpiresAt ? (
+            <p>Удержание действует до: {formatDateTime(manualBookingHeldSlot.holdExpiresAt)}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {latestMaterialsSubmission ? (
+        <div className="notice">
+          <p>
+            <strong>Пациент отправил дополнительные материалы</strong>
+          </p>
+          <p>Получено: {formatDateTime(latestMaterialsSubmission.createdAt)}</p>
+          <p>
+            Файлы: {latestMaterialsSubmission.filesCount} · Внешние ссылки:{" "}
+            {latestMaterialsSubmission.linksCount}
+          </p>
         </div>
       ) : null}
 
@@ -149,8 +192,18 @@ export default async function ApplicationDetailPage({
       <section className="two-column">
         <article className="card stack">
           <h2 className="admin-section-title">Пациент и кейс</h2>
+          {!thread ? (
+            <div className="notice">
+              <p>
+                {application.status === "PAID"
+                  ? "Оплата уже подтверждена. Теперь врач может нажать «Активировать кейс и открыть центр сообщений»."
+                  : "Центр сообщений остаётся закрытым до оплаты и ручной активации кейса врачом."}
+              </p>
+            </div>
+          ) : null}
           <DefinitionList
             items={[
+              { label: "Номер анкеты", value: application.displayNumber },
               { label: "Статус", value: applicationStatusLabel(application.status) },
               {
                 label: "Запрошенный продукт",

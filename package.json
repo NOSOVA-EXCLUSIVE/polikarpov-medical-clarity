@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "postbuild": "node fix-next-server-runtime.cjs",
+    "build": "next build && node fix-next-server-runtime.cjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

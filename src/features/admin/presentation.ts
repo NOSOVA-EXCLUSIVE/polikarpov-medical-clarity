@@ -56,6 +56,14 @@ export function applicationStatusLabel(status: ApplicationStatus) {
   }
 }
 
+export function manualBookingBadgeLabel() {
+  return "Подтверждена пациентом";
+}
+
+export function manualPaymentPendingLabel() {
+  return "Ожидает ручной оплаты";
+}
+
 export function requirementTypeLabel(type: RequirementType) {
   return type === "UPLOAD"
     ? "Запрос материалов"

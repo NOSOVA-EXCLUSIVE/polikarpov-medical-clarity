@@ -13,7 +13,12 @@ import type {
 } from "@prisma/client";
 import Stripe from "stripe";
 
+import {
+  attachApplicationDisplayNumbers,
+  getApplicationDisplayNumber
+} from "@/features/applications/display-number";
 import { normalizeCurrencyCode, productLabel } from "@/features/admin/presentation";
+import { sendManualBookingConfirmedStaffEmail } from "@/features/messages/notifications";
 import { prisma } from "@/lib/db/prisma";
 import { env } from "@/lib/env/server";
 import { getStripe } from "@/lib/payments/stripe";
@@ -41,10 +46,12 @@ type BookingAccess = {
     application: {
       id: string;
       status: string;
+      submittedAt: Date;
       patient: {
         id: string;
         fullName: string;
         email: string;
+        preferredContact: string;
         timezone: string;
       };
     };
@@ -140,6 +147,7 @@ async function resolveBookingAccess(rawToken: string): Promise<BookingAccess> {
                   id: true,
                   fullName: true,
                   email: true,
+                  preferredContact: true,
                   timezone: true
                 }
               }
@@ -188,6 +196,7 @@ async function resolveBookingAccess(rawToken: string): Promise<BookingAccess> {
       application: {
         id: token.offer.application.id,
         status: token.offer.application.status,
+        submittedAt: token.offer.application.submittedAt,
         patient: token.offer.application.patient
       }
     }
@@ -315,6 +324,11 @@ function mapSlotSummary(slot: Pick<CalendarSlot, "id" | "startsAt" | "endsAt" | 
 export async function getBookingPageContext(rawToken: string) {
   await releaseExpiredSlotHolds();
   const access = await resolveBookingAccess(rawToken);
+  const applicationDisplayNumber =
+    (await getApplicationDisplayNumber({
+      applicationId: access.offer.application.id,
+      submittedAt: access.offer.application.submittedAt
+    })) ?? access.offer.application.id;
 
   const [slots, currentHeldSlot, appointment] = await Promise.all([
     prisma.calendarSlot.findMany({
@@ -345,6 +359,7 @@ export async function getBookingPageContext(rawToken: string) {
   return {
     token: rawToken,
     offer: access.offer,
+    applicationDisplayNumber,
     patient: access.offer.application.patient,
     slots: slots.map(mapSlotSummary),
     heldSlot: currentHeldSlot ? mapSlotSummary(currentHeldSlot) : null,
@@ -559,6 +574,11 @@ export async function createStripeCheckout(rawToken: string, slotId: string) {
 export async function confirmManualBooking(rawToken: string, slotId: string) {
   const hold = await holdBookingSlot(rawToken, slotId);
   const access = await resolveBookingAccess(rawToken);
+  const applicationDisplayNumber =
+    (await getApplicationDisplayNumber({
+      applicationId: access.offer.application.id,
+      submittedAt: access.offer.application.submittedAt
+    })) ?? access.offer.application.id;
 
   await createSystemAudit({
     applicationId: access.offer.application.id,
@@ -571,9 +591,38 @@ export async function confirmManualBooking(rawToken: string, slotId: string) {
     }
   });
 
+  const emailDelivery = await sendManualBookingConfirmedStaffEmail({
+    applicationId: access.offer.application.id,
+    applicationDisplayNumber,
+    patientName: access.offer.application.patient.fullName,
+    patientEmail: access.offer.application.patient.email,
+    productCode: access.offer.productCode,
+    slot: hold.slot,
+    heldUntil: hold.heldUntil
+  });
+
+  await createSystemAudit({
+    applicationId: access.offer.application.id,
+    entityType: "OFFER",
+    entityId: access.offer.id,
+    action:
+      emailDelivery.status === "sent"
+        ? "manual_booking_staff_email_sent"
+        : "manual_booking_staff_email_failed",
+    metadataJson: {
+      slotId: hold.slot.id,
+      heldUntil: hold.heldUntil.toISOString(),
+      provider: emailDelivery.provider,
+      manualFallbackRequired: emailDelivery.manualFallbackRequired,
+      errorMessage:
+        emailDelivery.status === "failed" ? emailDelivery.errorMessage ?? null : null
+    }
+  });
+
   return {
     heldUntil: hold.heldUntil,
-    slot: hold.slot
+    slot: hold.slot,
+    emailDelivery
   };
 }
 
@@ -833,7 +882,7 @@ export async function getPaymentSuccessContext(sessionId: string) {
 export async function listCalendarSlotsForAdmin() {
   await releaseExpiredSlotHolds();
 
-  return prisma.calendarSlot.findMany({
+  const slots = await prisma.calendarSlot.findMany({
     where: {
       startsAt: {
         gte: new Date(Date.now() - 12 * 60 * 60 * 1000)
@@ -848,6 +897,7 @@ export async function listCalendarSlotsForAdmin() {
           application: {
             select: {
               id: true,
+              submittedAt: true,
               patient: {
                 select: {
                   fullName: true,
@@ -864,6 +914,7 @@ export async function listCalendarSlotsForAdmin() {
           application: {
             select: {
               id: true,
+              submittedAt: true,
               patient: {
                 select: {
                   fullName: true,
@@ -876,6 +927,53 @@ export async function listCalendarSlotsForAdmin() {
       }
     }
   });
+
+  const relatedApplications = slots.flatMap((slot) => {
+    const applications = [];
+
+    if (slot.heldOffer?.application) {
+      applications.push(slot.heldOffer.application);
+    }
+
+    if (slot.bookedAppointment?.application) {
+      applications.push(slot.bookedAppointment.application);
+    }
+
+    return applications;
+  });
+
+  const uniqueApplications = Array.from(
+    new Map(relatedApplications.map((application) => [application.id, application])).values()
+  );
+  const applicationsWithDisplayNumbers = await attachApplicationDisplayNumbers(uniqueApplications);
+  const displayNumberById = new Map(
+    applicationsWithDisplayNumbers.map((application) => [application.id, application.displayNumber])
+  );
+
+  return slots.map((slot) => ({
+    ...slot,
+    heldOffer: slot.heldOffer
+      ? {
+          ...slot.heldOffer,
+          application: {
+            ...slot.heldOffer.application,
+            displayNumber:
+              displayNumberById.get(slot.heldOffer.application.id) ?? slot.heldOffer.application.id
+          }
+        }
+      : null,
+    bookedAppointment: slot.bookedAppointment
+      ? {
+          ...slot.bookedAppointment,
+          application: {
+            ...slot.bookedAppointment.application,
+            displayNumber:
+              displayNumberById.get(slot.bookedAppointment.application.id) ??
+              slot.bookedAppointment.application.id
+          }
+        }
+      : null
+  }));
 }
 
 export async function createCalendarSlot(input: {

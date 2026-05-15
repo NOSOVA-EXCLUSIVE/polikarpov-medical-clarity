@@ -497,9 +497,9 @@ button {
 }
 
 .booking-page__title--manual {
-  font-size: clamp(1.85rem, 3.2vw, 2.2rem);
+  font-size: clamp(1.55rem, 2.6vw, 1.95rem);
   line-height: 1.14;
-  max-width: 14ch;
+  max-width: 22ch;
   text-wrap: balance;
 }
 
@@ -613,6 +613,30 @@ button {
 .status--active {
   border-color: rgba(36, 55, 70, 0.18);
   background: var(--accent-soft);
+}
+
+.status--held {
+  border-color: rgba(109, 97, 77, 0.26);
+  background: rgba(231, 220, 205, 0.7);
+  color: var(--graphite);
+}
+
+.status--booked {
+  border-color: rgba(36, 55, 70, 0.2);
+  background: rgba(36, 55, 70, 0.12);
+  color: var(--graphite);
+}
+
+.status--manual-pending {
+  border-color: rgba(109, 97, 77, 0.22);
+  background: rgba(250, 247, 241, 0.92);
+  color: var(--graphite);
+}
+
+.status--new-materials {
+  border-color: rgba(109, 97, 77, 0.18);
+  background: rgba(244, 238, 229, 0.9);
+  color: var(--graphite);
 }
 
 .button {
@@ -2441,13 +2465,21 @@ button {
   padding-top: 0.2rem;
 }
 
-.service-detail-hero .button {
-  min-height: 42px;
-  padding: 0.62rem 0.98rem;
-  font-size: 0.92rem;
+.service-detail-page .button {
+  min-height: 46px;
+  padding: 0.68rem 1.05rem;
+  font-size: 0.95rem;
   font-weight: 500;
   line-height: 1.2;
-  box-shadow: none;
+  box-shadow: 0 6px 12px rgba(36, 55, 70, 0.08);
+}
+
+.service-detail-hero .button {
+  min-height: 46px;
+  padding: 0.68rem 1.05rem;
+  font-weight: 500;
+  line-height: 1.2;
+  box-shadow: 0 6px 12px rgba(36, 55, 70, 0.08);
 }
 
 .service-detail-hero .button--secondary {
@@ -2582,6 +2614,21 @@ button {
 
 .service-detail-final-cta .services-final-cta__lead {
   max-width: 44rem;
+}
+
+.portal-materials-page .card > h1 {
+  max-width: none;
+  font-size: clamp(1.65rem, 2.2vw, 2.1rem);
+  font-weight: 500;
+  line-height: 1.14;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+.admin-application-card--confirmed {
+  border-color: rgba(109, 97, 77, 0.16);
+  background: rgba(247, 242, 234, 0.9);
+  box-shadow: 0 16px 30px rgba(25, 22, 18, 0.04);
 }
 
 .service-detail-choice-note {
@@ -3752,9 +3799,8 @@ button {
 .documents-page .button,
 .questionnaire-form .button,
 .services-final-cta__actions .button {
-  min-height: 42px;
-  padding: 0.62rem 0.98rem;
-  font-size: 0.92rem;
+  min-height: 46px;
+  padding: 0.68rem 1.05rem;
   font-weight: 500;
   line-height: 1.2;
 }
@@ -5224,6 +5270,11 @@ button {
 }
 
 @media (max-width: 768px) {
+  .portal-materials-page .card > h1 {
+    font-size: clamp(1.45rem, 7vw, 1.75rem);
+    white-space: normal;
+  }
+
   .documents-page .section {
     padding: 3.5rem 0;
   }

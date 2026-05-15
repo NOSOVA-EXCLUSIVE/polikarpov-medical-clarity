@@ -29,14 +29,19 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    await rejectApplication({
+    const result = await rejectApplication({
       actor: session,
       applicationId: params.id,
       note: parsed.data.note
     });
 
+    const notice =
+      result.patientEmailDelivery.status === "sent" && result.staffEmailDelivery.status === "sent"
+        ? "rejected"
+        : "rejected_warning";
+
     return NextResponse.redirect(
-      new URL(`/admin/applications/${params.id}?notice=rejected`, request.url),
+      new URL(`/admin/applications/${params.id}?notice=${notice}`, request.url),
       303
     );
   } catch {

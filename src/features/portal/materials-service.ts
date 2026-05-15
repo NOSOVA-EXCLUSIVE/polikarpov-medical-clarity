@@ -2,6 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import { getApplicationDisplayNumber } from "@/features/applications/display-number";
+import { sendPatientMaterialsSubmittedStaffEmail } from "@/features/messages/notifications";
 import { prisma } from "@/lib/db/prisma";
 import { encryptSensitiveField } from "@/lib/security/encryption";
 import { hashOpaqueToken } from "@/lib/security/tokens";
@@ -179,20 +181,21 @@ export async function addMaterialsExternalLink(
 
 export async function submitMaterialsRequirement(rawToken: string) {
   const token = await getValidMaterialsToken(rawToken);
+  const submittedAt = new Date();
 
   await prisma.$transaction(async (tx) => {
     await tx.applicationRequirement.update({
       where: { id: token.requirementId! },
       data: {
         status: "RESOLVED",
-        resolvedAt: new Date()
+        resolvedAt: submittedAt
       }
     });
 
     await tx.accessToken.update({
       where: { id: token.id },
       data: {
-        revokedAt: new Date()
+        revokedAt: submittedAt
       }
     });
 
@@ -204,7 +207,7 @@ export async function submitMaterialsRequirement(rawToken: string) {
         where: { id: token.applicationId },
         data: {
           status: "UNDER_REVIEW",
-          reviewStartedAt: new Date()
+          reviewStartedAt: submittedAt
         }
       });
 
@@ -234,7 +237,94 @@ export async function submitMaterialsRequirement(rawToken: string) {
     });
   });
 
+  const [filesCount, linksCount, application] = await Promise.all([
+    prisma.applicationUpload.count({
+      where: {
+        applicationId: token.applicationId,
+        uploadedAt: { gte: token.requirement.createdAt }
+      }
+    }),
+    prisma.applicationExternalLink.count({
+      where: {
+        applicationId: token.applicationId,
+        createdAt: { gte: token.requirement.createdAt }
+      }
+    }),
+    prisma.application.findUnique({
+      where: { id: token.applicationId },
+      select: {
+        id: true,
+        submittedAt: true,
+        patient: {
+          select: {
+            fullName: true
+          }
+        }
+      }
+    })
+  ]);
+
+  if (!application) {
+    throw new Error("Заявка не найдена после отправки материалов.");
+  }
+
+  const applicationDisplayNumber =
+    (await getApplicationDisplayNumber({
+      applicationId: application.id,
+      submittedAt: application.submittedAt
+    })) ?? application.id;
+
+  await prisma.auditEvent.create({
+    data: {
+      actorType: "PATIENT",
+      applicationId: token.applicationId,
+      entityType: "APPLICATION",
+      entityId: token.applicationId,
+      action: "patient_materials_submitted",
+      metadataJson: {
+        requirementId: token.requirementId,
+        filesCount,
+        linksCount,
+        submittedAt: submittedAt.toISOString()
+      }
+    }
+  });
+
+  const emailDelivery = await sendPatientMaterialsSubmittedStaffEmail({
+    applicationId: token.applicationId,
+    applicationDisplayNumber,
+    patientName: application.patient.fullName,
+    filesCount,
+    linksCount,
+    submittedAt
+  });
+
+  await prisma.auditEvent.create({
+    data: {
+      actorType: "SYSTEM",
+      applicationId: token.applicationId,
+      entityType: "APPLICATION",
+      entityId: token.applicationId,
+      action:
+        emailDelivery.status === "sent"
+          ? "patient_materials_staff_email_sent"
+          : "patient_materials_staff_email_failed",
+      metadataJson: {
+        requirementId: token.requirementId,
+        filesCount,
+        linksCount,
+        provider: emailDelivery.provider,
+        manualFallbackRequired: emailDelivery.manualFallbackRequired,
+        errorMessage:
+          emailDelivery.status === "failed" ? emailDelivery.errorMessage ?? null : null
+      }
+    }
+  });
+
   return {
-    ok: true
+    ok: true,
+    filesCount,
+    linksCount,
+    emailDelivery
   };
 }

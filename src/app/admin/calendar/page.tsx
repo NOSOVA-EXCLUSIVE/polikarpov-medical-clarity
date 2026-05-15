@@ -60,29 +60,63 @@ export default async function AdminCalendarPage({ searchParams }: PageProps) {
             <div className="card-meta">
               <div className="stack-sm">
                 <strong>{formatDateTime(slot.startsAt)}</strong>
-                <p className="muted">
-                  До {formatDateTime(slot.endsAt)} · {slot.timezone}
-                </p>
+                <p className="muted">Окончание: {formatDateTime(slot.endsAt)} · {slot.timezone}</p>
               </div>
-              <span className="status">{mapSlotStatusLabel(slot.status)}</span>
+              <span
+                className={`status ${
+                  slot.status === "HELD"
+                    ? "status--held"
+                    : slot.status === "BOOKED"
+                      ? "status--booked"
+                      : ""
+                }`.trim()}
+              >
+                {slot.status === "HELD"
+                  ? "Удержан пациентом"
+                  : slot.status === "BOOKED"
+                    ? "Забронирован"
+                    : mapSlotStatusLabel(slot.status)}
+              </span>
             </div>
 
             {slot.status === "HELD" && slot.heldOffer ? (
-              <p className="muted">
-                Удерживается для:{" "}
-                <Link className="text-link" href={`/admin/applications/${slot.heldOffer.application.id}`}>
-                  {slot.heldOffer.application.patient.fullName}
-                </Link>
-              </p>
+              <div className="stack-sm">
+                <p className="muted">
+                  Статус: <strong>Удержан пациентом</strong>
+                </p>
+                <p className="muted">
+                  Пациент:{" "}
+                  <Link className="text-link" href={`/admin/applications/${slot.heldOffer.application.id}`}>
+                    {slot.heldOffer.application.patient.fullName}
+                  </Link>
+                </p>
+                <p className="muted">
+                  Заявка:{" "}
+                  <Link className="text-link" href={`/admin/applications/${slot.heldOffer.application.id}`}>
+                    {slot.heldOffer.application.displayNumber}
+                  </Link>
+                </p>
+              </div>
             ) : null}
 
             {slot.status === "BOOKED" && slot.bookedAppointment ? (
-              <p className="muted">
-                Забронирован:{" "}
-                <Link className="text-link" href={`/admin/applications/${slot.bookedAppointment.application.id}`}>
-                  {slot.bookedAppointment.application.patient.fullName}
-                </Link>
-              </p>
+              <div className="stack-sm">
+                <p className="muted">
+                  Статус: <strong>Забронирован</strong>
+                </p>
+                <p className="muted">
+                  Пациент:{" "}
+                  <Link className="text-link" href={`/admin/applications/${slot.bookedAppointment.application.id}`}>
+                    {slot.bookedAppointment.application.patient.fullName}
+                  </Link>
+                </p>
+                <p className="muted">
+                  Заявка:{" "}
+                  <Link className="text-link" href={`/admin/applications/${slot.bookedAppointment.application.id}`}>
+                    {slot.bookedAppointment.application.displayNumber}
+                  </Link>
+                </p>
+              </div>
             ) : null}
 
             {slot.blockedReason ? <p className="muted">Причина блокировки: {slot.blockedReason}</p> : null}

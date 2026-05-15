@@ -46,6 +46,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
               <aside className="card stack-sm booking-page__offer-card">
                 <p className="eyebrow">Ваше предложение</p>
                 <strong className="booking-page__offer-name">{context.patient.fullName}</strong>
+                <p className="muted booking-page__offer-expiry">Номер заявки: {context.applicationDisplayNumber}</p>
                 <p className="muted booking-page__offer-product">{productLabel(context.offer.productCode)}</p>
                 <p className="muted booking-page__offer-price">
                   {chargeModelLabel(context.offer.chargeModel)} · {formatMoney(context.offer.amountCents, context.offer.currency)}
@@ -91,6 +92,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
           {isManualConfirmed ? (
             <section className="card stack">
               <h2 className="booking-page__section-title">Заявка подтверждена</h2>
+              <p className="muted">Номер заявки: {context.applicationDisplayNumber}</p>
               <p className="lead booking-page__lead">
                 Ваше персональное предложение подготовлено. Запись и оплата сейчас оформляются вручную. Мы свяжемся с Вами по выбранному каналу связи для подтверждения времени консультации и передачи инструкций по оплате.
               </p>
