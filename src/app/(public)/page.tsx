@@ -13,6 +13,8 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/"
 });
 
+const doctorDocumentsHref = "/doctor/documents" satisfies Route;
+
 const assistanceFormats = [
   {
     title: "Экспертное второе мнение",
@@ -248,6 +250,14 @@ export default function HomePage() {
               </p>
             </div>
           </article>
+        </div>
+      </section>
+
+      <section className="home-mobile-documents-cta" aria-label="Документы врача">
+        <div className="container">
+          <Link className="button button--secondary" href={doctorDocumentsHref}>
+            Документы и квалификация
+          </Link>
         </div>
       </section>
 

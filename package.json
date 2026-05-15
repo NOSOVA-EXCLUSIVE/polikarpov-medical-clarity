@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && node fix-next-server-runtime.cjs",
-    "start": "next start",
+    "start": "node fix-next-server-runtime.cjs && next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",

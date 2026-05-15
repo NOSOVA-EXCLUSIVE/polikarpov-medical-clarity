@@ -36,7 +36,7 @@ const experienceItems: Array<{
     title: "— Группа компаний «МЕДСИ», Москва"
   },
   {
-    title: "— Клинико-диагностический центр, отделение травматологии и ортопедии"
+    title: "— Клинико-диагностический центр, отделение травматологии и ортопедии, Москва"
   },
   {
     title: "— Центр магнитно-резонансной и компьютерной томографии «Сфера»"
@@ -70,6 +70,12 @@ export default function DoctorPage() {
               <p>Травматолог-ортопед</p>
               <p>Врач магнитно-резонансной томографии</p>
               <p>Специалист по ударно-волновой терапии (УВТ)</p>
+            </div>
+
+            <div className="doctor-home-reference__documents-mobile">
+              <Link className="button button--secondary" href="/doctor/documents">
+                Документы и квалификация
+              </Link>
             </div>
 
             <p className="doctor-home-reference__statement">
@@ -213,15 +219,25 @@ export default function DoctorPage() {
             ))}
           </div>
 
-          <p className="doctor-experience-shell__closing">
-            Более 20 лет практики в травматологии, ортопедии и МРТ-диагностике
-          </p>
+          <div className="doctor-experience-shell__footer">
+            <div className="doctor-experience-shell__footer-copy stack-sm">
+              <p className="doctor-experience-shell__closing">
+                Более 20 лет практики в травматологии, ортопедии и МРТ-диагностике
+              </p>
 
-          <p className="doctor-experience-shell__accent">
-            <strong>
-              Опыт, на котором основаны клинические решения, а не предположения
-            </strong>
-          </p>
+              <p className="doctor-experience-shell__accent">
+                <strong>
+                  Опыт, на котором основаны клинические решения, а не предположения
+                </strong>
+              </p>
+            </div>
+
+            <div className="doctor-experience-shell__button-wrap">
+              <Link className="button button--secondary doctor-experience-shell__button" href="/doctor/documents">
+                Документы и квалификация
+              </Link>
+            </div>
+          </div>
         </div>
       </Section>
 

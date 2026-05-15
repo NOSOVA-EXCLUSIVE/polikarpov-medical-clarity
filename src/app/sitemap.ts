@@ -5,6 +5,7 @@ import { buildAbsoluteUrl } from "@/lib/seo";
 const publicRoutes = [
   { path: "/", priority: 1, changeFrequency: "weekly" as const },
   { path: "/doctor", priority: 0.9, changeFrequency: "monthly" as const },
+  { path: "/doctor/documents", priority: 0.75, changeFrequency: "monthly" as const },
   { path: "/services", priority: 0.9, changeFrequency: "weekly" as const },
   { path: "/services/second-opinion", priority: 0.8, changeFrequency: "weekly" as const },
   { path: "/services/clinical-review", priority: 0.8, changeFrequency: "weekly" as const },
