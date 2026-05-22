@@ -2,6 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 
+const optionalServerString = z.string().trim().optional().default("");
+
 const serverEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_URL: z.string().url(),
@@ -13,15 +15,18 @@ const serverEnvSchema = z.object({
   ADMIN_SEED_EMAIL: z.string().email().optional(),
   ADMIN_SEED_PASSWORD: z.string().min(8).optional(),
   ADMIN_SEED_NAME: z.string().min(1).default("Practice Admin"),
-  S3_REGION: z.string().min(1),
-  S3_BUCKET: z.string().min(1),
-  S3_ENDPOINT: z.string().url(),
-  S3_ACCESS_KEY_ID: z.string().min(1),
-  S3_SECRET_ACCESS_KEY: z.string().min(1),
+  S3_REGION: optionalServerString,
+  S3_BUCKET: optionalServerString,
+  S3_ENDPOINT: optionalServerString,
+  S3_ACCESS_KEY_ID: optionalServerString,
+  S3_SECRET_ACCESS_KEY: optionalServerString,
   S3_FORCE_PATH_STYLE: z
     .string()
     .default("true")
     .transform((value) => value === "true"),
+  BLOB_READ_WRITE_TOKEN: optionalServerString,
+  BLOB_STORE_ID: optionalServerString,
+  BLOB_WEBHOOK_PUBLIC_KEY: optionalServerString,
   STRIPE_SECRET_KEY: z.string().min(1),
   STRIPE_WEBHOOK_SECRET: z.string().min(1),
   POSTMARK_SERVER_TOKEN: z.string().min(1),

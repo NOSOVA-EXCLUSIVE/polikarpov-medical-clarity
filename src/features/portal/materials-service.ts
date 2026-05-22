@@ -82,7 +82,8 @@ export async function createMaterialsUploadUrl(rawToken: string, input: PresignU
 
   const uploadUrl = await createPrivateUploadUrl({
     key: storageKey,
-    contentType: input.mimeType
+    contentType: input.mimeType,
+    maximumSizeInBytes: input.sizeBytes
   });
 
   return {

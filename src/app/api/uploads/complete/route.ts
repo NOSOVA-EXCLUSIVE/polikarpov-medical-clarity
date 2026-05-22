@@ -4,8 +4,7 @@ import { completeUploadSchema } from "@/features/questionnaire/schemas";
 import { validateCompletedUpload } from "@/features/questionnaire/upload-validation";
 import {
   assertPrivateObjectStorageIsConfigured,
-  localPrivateObjectExists,
-  shouldUseLocalUploadFallback
+  privateObjectExists
 } from "@/lib/storage/s3";
 
 export async function POST(request: Request) {
@@ -16,12 +15,12 @@ export async function POST(request: Request) {
     validateCompletedUpload(input);
     assertPrivateObjectStorageIsConfigured();
 
-    if (shouldUseLocalUploadFallback()) {
-      const exists = await localPrivateObjectExists(input.storageKey);
+    const exists = await privateObjectExists(input.storageKey);
 
-      if (!exists) {
-        throw new Error("Р¤Р°Р№Р» РЅРµ РЅР°Р№РґРµРЅ РІРѕ РІСЂРµРјРµРЅРЅРѕРј С…СЂР°РЅРёР»РёС‰Рµ. РџРѕРїСЂРѕР±СѓР№С‚Рµ Р·Р°РіСЂСѓР·РёС‚СЊ РµРіРѕ РµС‰С‘ СЂР°Р·.");
-      }
+    if (!exists) {
+      throw new Error(
+        "Файл не найден во временном хранилище. Попробуйте загрузить его еще раз."
+      );
     }
 
     return NextResponse.json({

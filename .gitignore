@@ -15,3 +15,5 @@ devserver.out.log
 .env.*
 *.log
 .eslintrc.json
+.vercel
+.env*

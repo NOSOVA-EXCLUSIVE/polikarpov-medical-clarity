@@ -19,7 +19,8 @@ export async function POST(request: Request) {
 
     const uploadUrl = await createPrivateUploadUrl({
       key: storageKey,
-      contentType: input.mimeType
+      contentType: input.mimeType,
+      maximumSizeInBytes: input.sizeBytes
     });
 
     return NextResponse.json({
