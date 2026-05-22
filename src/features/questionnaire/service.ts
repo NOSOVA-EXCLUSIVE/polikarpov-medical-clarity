@@ -69,6 +69,10 @@ type SubmissionResult = {
   workflowHooks?: WorkflowHooks;
 };
 
+function canUseLocalQuestionnaireFilesystem() {
+  return process.env.NODE_ENV !== "production";
+}
+
 export async function submitQuestionnaire(
   input: QuestionnaireSubmitInput,
   requestMeta: { ip?: string | null; userAgent?: string | null }
@@ -325,7 +329,11 @@ export async function submitQuestionnaire(
         workflowHooks
       };
     });
-  } catch {
+  } catch (error) {
+    if (!canUseLocalQuestionnaireFilesystem()) {
+      throw error;
+    }
+
     result = await saveQuestionnaireSubmissionFallback(input, requestMeta);
   }
 
@@ -342,15 +350,17 @@ export async function submitQuestionnaire(
     ReturnType<typeof persistQuestionnaireOperationalArtifacts>
   > | null = null;
 
-  try {
-    operationalArtifacts = await persistQuestionnaireOperationalArtifacts({
-      submissionId: result.applicationId,
-      submittedAt,
-      workflowHooks,
-      questionnaireSnapshot
-    });
-  } catch {
-    operationalArtifacts = null;
+  if (canUseLocalQuestionnaireFilesystem()) {
+    try {
+      operationalArtifacts = await persistQuestionnaireOperationalArtifacts({
+        submissionId: result.applicationId,
+        submittedAt,
+        workflowHooks,
+        questionnaireSnapshot
+      });
+    } catch {
+      operationalArtifacts = null;
+    }
   }
 
   const displayNumber =

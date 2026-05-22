@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { completeUploadSchema } from "@/features/questionnaire/schemas";
 import { validateCompletedUpload } from "@/features/questionnaire/upload-validation";
-import { localPrivateObjectExists, shouldUseLocalUploadFallback } from "@/lib/storage/s3";
+import {
+  assertPrivateObjectStorageIsConfigured,
+  localPrivateObjectExists,
+  shouldUseLocalUploadFallback
+} from "@/lib/storage/s3";
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +14,7 @@ export async function POST(request: Request) {
     const input = completeUploadSchema.parse(json);
 
     validateCompletedUpload(input);
+    assertPrivateObjectStorageIsConfigured();
 
     if (shouldUseLocalUploadFallback()) {
       const exists = await localPrivateObjectExists(input.storageKey);

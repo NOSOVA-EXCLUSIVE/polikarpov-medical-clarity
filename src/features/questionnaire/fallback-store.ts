@@ -31,6 +31,12 @@ export async function saveQuestionnaireSubmissionFallback(
   input: QuestionnaireSubmitInput,
   requestMeta: { ip?: string | null; userAgent?: string | null }
 ) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Questionnaire filesystem fallback is disabled in production."
+    );
+  }
+
   const requestedProductCode =
     input.requestedProductCode === "NOT_SURE" ? null : input.requestedProductCode;
   const imagingSourceType = classifyImagingSourceType({

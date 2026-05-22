@@ -25,6 +25,7 @@ export const s3Client = new S3Client({
 });
 
 const LOCAL_UPLOAD_ROOT = path.join(process.cwd(), "storage", "private-uploads");
+const PRODUCTION_STORAGE_ERROR = "Production file storage is not configured";
 
 function getS3EndpointHostname() {
   try {
@@ -34,8 +35,30 @@ function getS3EndpointHostname() {
   }
 }
 
+function hasPlaceholderStorageConfig() {
+  const endpointHostname = getS3EndpointHostname();
+  const accessKeyId = env.S3_ACCESS_KEY_ID.trim().toLowerCase();
+  const secretAccessKey = env.S3_SECRET_ACCESS_KEY.trim().toLowerCase();
+
+  return (
+    endpointHostname.endsWith("example.com") ||
+    accessKeyId === "local-dev-access-key" ||
+    secretAccessKey === "local-dev-secret-key"
+  );
+}
+
+export function isProductionFileStorageConfigured() {
+  return !hasPlaceholderStorageConfig();
+}
+
 export function shouldUseLocalUploadFallback() {
-  return getS3EndpointHostname().endsWith("example.com");
+  return env.NODE_ENV !== "production" && hasPlaceholderStorageConfig();
+}
+
+export function assertPrivateObjectStorageIsConfigured() {
+  if (!shouldUseLocalUploadFallback() && !isProductionFileStorageConfigured()) {
+    throw new Error(PRODUCTION_STORAGE_ERROR);
+  }
 }
 
 function createLocalUploadSignature(key: string) {
@@ -93,6 +116,8 @@ export async function createPrivateUploadUrl(input: {
   contentType: string;
   expiresInSeconds?: number;
 }) {
+  assertPrivateObjectStorageIsConfigured();
+
   if (shouldUseLocalUploadFallback()) {
     return buildLocalUploadUrl(input.key);
   }
@@ -112,6 +137,8 @@ export async function createPrivateDownloadUrl(input: {
   key: string;
   expiresInSeconds?: number;
 }) {
+  assertPrivateObjectStorageIsConfigured();
+
   if (shouldUseLocalUploadFallback()) {
     return buildLocalFileUrl(input.key);
   }
@@ -127,6 +154,8 @@ export async function createPrivateDownloadUrl(input: {
 }
 
 export async function deletePrivateObject(key: string) {
+  assertPrivateObjectStorageIsConfigured();
+
   if (shouldUseLocalUploadFallback()) {
     const targetPath = buildPrivateStoragePath(key);
     await rm(targetPath, {
