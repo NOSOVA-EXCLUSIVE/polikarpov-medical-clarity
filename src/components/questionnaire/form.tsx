@@ -1014,6 +1014,11 @@ export function QuestionnaireForm() {
             <p className="questionnaire-field-note questionnaire-legal-note">
               Оплата производится после анализа анкеты и подтверждения формата врачом.
             </p>
+            <p className="questionnaire-field-note questionnaire-legal-note">
+              Я понимаю, что дистанционный разбор Polikarpov Medical Clarity не является
+              судебно-медицинской экспертизой, процессуальным экспертным заключением или
+              официальным радиологическим заключением медицинской организации.
+            </p>
             <label className="checkbox-row">
               <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.confirmedInformationAccuracy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, confirmedInformationAccuracy: e.target.checked } }))} />
               <span>Я подтверждаю, что указал(а) информацию корректно</span>
