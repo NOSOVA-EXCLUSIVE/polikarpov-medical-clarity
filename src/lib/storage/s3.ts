@@ -23,6 +23,10 @@ type PrivateStorageProvider = "blob" | "s3" | "local" | "unconfigured";
 
 let s3ClientInstance: S3Client | null = null;
 
+function wait(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 function getS3EndpointHostname() {
   if (!env.S3_ENDPOINT) {
     return "";
@@ -124,7 +128,8 @@ async function createPrivateBlobUrl(input: {
           pathname: input.key,
           validUntil,
           allowedContentTypes: input.contentType ? [input.contentType] : undefined,
-          maximumSizeInBytes: input.maximumSizeInBytes
+          maximumSizeInBytes: input.maximumSizeInBytes,
+          addRandomSuffix: false
         })
       : await presignUrl(signedToken, {
           access: "private",
@@ -209,13 +214,19 @@ export async function privateObjectExists(key: string) {
   }
 
   if (provider === "blob") {
-    try {
-      const blob = await headBlob(key, {
-        token: env.BLOB_READ_WRITE_TOKEN
-      });
-      return Boolean(blob);
-    } catch {
-      return false;
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      try {
+        const blob = await headBlob(key, {
+          token: env.BLOB_READ_WRITE_TOKEN
+        });
+        return Boolean(blob);
+      } catch {
+        if (attempt === 5) {
+          return false;
+        }
+
+        await wait(250 * attempt);
+      }
     }
   }
 
