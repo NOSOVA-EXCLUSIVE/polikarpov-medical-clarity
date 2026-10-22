@@ -1,9 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { createRequire } from "node:module";
 
-import { ChargeModel, MessageMode, PrismaClient, ProductCode } from "@prisma/client";
+import previewSafety from "../preview-safety/core.cjs";
 import { hashStaffPassword } from "@/lib/auth/password";
 
+previewSafety.assertPreviewAllowedOperation("database:seed");
+const requirePreviewChecked = createRequire(import.meta.url);
+const { ChargeModel, MessageMode, PrismaClient, ProductCode } =
+  requirePreviewChecked("@prisma/client") as typeof import("@prisma/client");
 const prisma = new PrismaClient();
 
 function loadEnvLocal() {

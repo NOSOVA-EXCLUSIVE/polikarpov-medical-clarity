@@ -14,6 +14,13 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { del as deleteBlob, head as headBlob, issueSignedToken, presignUrl } from "@vercel/blob";
 
 import { env } from "@/lib/env/server";
+import {
+  assertPreviewAllowedOperation,
+  assertPreviewBlobToken,
+  assertPreviewBlobUrl,
+  assertPreviewStorageKey,
+  isPreviewIsolationRequired
+} from "@/lib/preview/guard";
 import { hashOpaqueToken } from "@/lib/security/tokens";
 
 const LOCAL_UPLOAD_ROOT = path.join(process.cwd(), "storage", "private-uploads");
@@ -55,6 +62,13 @@ function hasBlobStorageConfig() {
   return Boolean(env.BLOB_READ_WRITE_TOKEN.trim());
 }
 
+function getBlobReadWriteToken() {
+  assertPreviewAllowedOperation("storage:blob");
+  const token = env.BLOB_READ_WRITE_TOKEN;
+  assertPreviewBlobToken(token);
+  return token;
+}
+
 function hasConfiguredS3Storage() {
   return (
     Boolean(env.S3_REGION.trim()) &&
@@ -67,6 +81,11 @@ function hasConfiguredS3Storage() {
 }
 
 function getPrivateStorageProvider(): PrivateStorageProvider {
+  if (isPreviewIsolationRequired()) {
+    getBlobReadWriteToken();
+    return "blob";
+  }
+
   if (hasBlobStorageConfig()) {
     return "blob";
   }
@@ -83,6 +102,8 @@ function getPrivateStorageProvider(): PrivateStorageProvider {
 }
 
 function getS3Client() {
+  assertPreviewAllowedOperation("storage:s3");
+
   if (!s3ClientInstance) {
     if (!hasConfiguredS3Storage()) {
       throw new Error(PRODUCTION_STORAGE_ERROR);
@@ -109,6 +130,8 @@ async function createPrivateBlobUrl(input: {
   expiresInSeconds?: number;
   maximumSizeInBytes?: number;
 }) {
+  assertPreviewStorageKey(input.key);
+  const token = getBlobReadWriteToken();
   const validUntil = Date.now() + (input.expiresInSeconds ?? 900) * 1000;
 
   const signedToken = await issueSignedToken({
@@ -117,7 +140,7 @@ async function createPrivateBlobUrl(input: {
     validUntil,
     allowedContentTypes: input.contentType ? [input.contentType] : undefined,
     maximumSizeInBytes: input.maximumSizeInBytes,
-    token: env.BLOB_READ_WRITE_TOKEN
+    token
   });
 
   const { presignedUrl } =
@@ -138,6 +161,7 @@ async function createPrivateBlobUrl(input: {
           validUntil
         });
 
+  assertPreviewBlobUrl(presignedUrl);
   return presignedUrl;
 }
 
@@ -157,6 +181,7 @@ export function assertPrivateObjectStorageIsConfigured() {
 }
 
 function createLocalUploadSignature(key: string) {
+  assertPreviewAllowedOperation("storage:local");
   return hashOpaqueToken(key);
 }
 
@@ -175,6 +200,7 @@ function buildLocalFileUrl(key: string) {
 }
 
 export function buildPrivateStoragePath(key: string) {
+  assertPreviewAllowedOperation("storage:local");
   const rootPath = path.resolve(LOCAL_UPLOAD_ROOT);
   const targetPath = path.resolve(rootPath, ...key.split("/"));
 
@@ -186,6 +212,7 @@ export function buildPrivateStoragePath(key: string) {
 }
 
 export function isValidLocalUploadSignature(key: string, signature: string | null) {
+  assertPreviewAllowedOperation("storage:local");
   return Boolean(signature) && signature === createLocalUploadSignature(key);
 }
 
@@ -208,16 +235,18 @@ export async function localPrivateObjectExists(key: string) {
 
 export async function privateObjectExists(key: string) {
   const provider = getPrivateStorageProvider();
+  assertPreviewStorageKey(key);
 
   if (provider === "local") {
     return localPrivateObjectExists(key);
   }
 
   if (provider === "blob") {
+    const token = getBlobReadWriteToken();
     for (let attempt = 1; attempt <= 5; attempt += 1) {
       try {
         const blob = await headBlob(key, {
-          token: env.BLOB_READ_WRITE_TOKEN
+          token
         });
         return Boolean(blob);
       } catch {
@@ -254,6 +283,7 @@ export async function createPrivateUploadUrl(input: {
   maximumSizeInBytes?: number;
 }) {
   assertPrivateObjectStorageIsConfigured();
+  assertPreviewStorageKey(input.key);
 
   const provider = getPrivateStorageProvider();
 
@@ -287,6 +317,7 @@ export async function createPrivateDownloadUrl(input: {
   expiresInSeconds?: number;
 }) {
   assertPrivateObjectStorageIsConfigured();
+  assertPreviewStorageKey(input.key);
 
   const provider = getPrivateStorageProvider();
 
@@ -314,6 +345,7 @@ export async function createPrivateDownloadUrl(input: {
 
 export async function deletePrivateObject(key: string) {
   assertPrivateObjectStorageIsConfigured();
+  assertPreviewStorageKey(key);
 
   const provider = getPrivateStorageProvider();
 
@@ -327,7 +359,7 @@ export async function deletePrivateObject(key: string) {
 
   if (provider === "blob") {
     await deleteBlob(key, {
-      token: env.BLOB_READ_WRITE_TOKEN
+      token: getBlobReadWriteToken()
     });
     return;
   }
@@ -341,9 +373,12 @@ export async function deletePrivateObject(key: string) {
 }
 
 export function buildPrivateStorageKey(parts: string[]) {
-  return parts
+  const key = parts
     .map((part) => part.trim())
     .filter(Boolean)
     .join("/")
     .replace(/\/+/g, "/");
+
+  assertPreviewStorageKey(key);
+  return key;
 }

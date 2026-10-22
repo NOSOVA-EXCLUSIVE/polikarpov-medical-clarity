@@ -1,6 +1,9 @@
 import "server-only";
 
 import { z } from "zod";
+import { assertPreviewIsolation } from "@/lib/preview/guard";
+
+const previewContext = assertPreviewIsolation();
 
 const optionalServerString = z.string().trim().optional().default("");
 
@@ -45,6 +48,9 @@ const serverEnvSchema = z.object({
   LEGAL_CONSENT_VERSION: z.string().min(1).default("2026-04-09")
 });
 
-export const env = serverEnvSchema.parse(process.env);
+export const env = serverEnvSchema.parse({
+  ...process.env,
+  ...(previewContext ? { APP_URL: previewContext.appUrl } : {})
+});
 
 export type ServerEnv = typeof env;

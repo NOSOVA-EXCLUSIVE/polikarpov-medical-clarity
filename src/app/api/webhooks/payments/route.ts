@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { handleStripeWebhookEvent, isStripeSignatureValid } from "@/features/booking/service";
+import { assertPreviewAllowedOperation } from "@/lib/preview/guard";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  assertPreviewAllowedOperation("payments:stripe");
   const signature = request.headers.get("stripe-signature");
 
   if (!signature) {

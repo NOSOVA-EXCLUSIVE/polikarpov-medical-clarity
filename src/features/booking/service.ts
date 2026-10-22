@@ -11,7 +11,7 @@ import type {
   SlotStatus,
   UserRole
 } from "@prisma/client";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
 import {
   attachApplicationDisplayNumbers,
@@ -23,6 +23,7 @@ import { prisma } from "@/lib/db/prisma";
 import { env } from "@/lib/env/server";
 import { getStripe } from "@/lib/payments/stripe";
 import { hashOpaqueToken } from "@/lib/security/tokens";
+import { assertPreviewAllowedOperation } from "@/lib/preview/guard";
 
 type StaffActor = {
   id: string;
@@ -478,6 +479,7 @@ export async function holdBookingSlot(rawToken: string, slotId: string) {
 }
 
 export async function createStripeCheckout(rawToken: string, slotId: string) {
+  assertPreviewAllowedOperation("payments:stripe");
   const hold = await holdBookingSlot(rawToken, slotId);
   const access = await resolveBookingAccess(rawToken);
   const checkoutExpiresAt = stripeCheckoutExpiresAt(hold.heldUntil);
@@ -608,11 +610,14 @@ export async function confirmManualBooking(rawToken: string, slotId: string) {
     action:
       emailDelivery.status === "sent"
         ? "manual_booking_staff_email_sent"
-        : "manual_booking_staff_email_failed",
+        : emailDelivery.status === "captured"
+          ? "manual_booking_staff_email_captured"
+          : "manual_booking_staff_email_failed",
     metadataJson: {
       slotId: hold.slot.id,
       heldUntil: hold.heldUntil.toISOString(),
       provider: emailDelivery.provider,
+      captureId: emailDelivery.captureId ?? null,
       manualFallbackRequired: emailDelivery.manualFallbackRequired,
       errorMessage:
         emailDelivery.status === "failed" ? emailDelivery.errorMessage ?? null : null
@@ -684,6 +689,7 @@ async function ensureAppointmentForPayment(tx: Prisma.TransactionClient, payment
 }
 
 export async function finalizeStripeCheckoutSession(sessionId: string) {
+  assertPreviewAllowedOperation("payments:stripe");
   const payment = await getPaymentByStripeSession(sessionId);
 
   if (!payment) {
@@ -807,6 +813,7 @@ export async function markStripeCheckoutFailed(
   sessionId: string,
   nextStatus: PaymentStatus = "FAILED"
 ) {
+  assertPreviewAllowedOperation("payments:stripe");
   const payment = await getPaymentByStripeSession(sessionId);
 
   if (!payment || payment.status === "PAID") {
@@ -859,6 +866,7 @@ export async function markStripeCheckoutFailed(
 }
 
 export async function getPaymentSuccessContext(sessionId: string) {
+  assertPreviewAllowedOperation("payments:stripe");
   let payment = await getPaymentByStripeSession(sessionId);
 
   if (!payment) {
@@ -1138,6 +1146,7 @@ export function isStripeSignatureValid(rawBody: string, signature: string) {
 }
 
 export async function handleStripeWebhookEvent(event: Stripe.Event) {
+  assertPreviewAllowedOperation("payments:stripe");
   switch (event.type) {
     case "checkout.session.completed":
       await finalizeStripeCheckoutSession(event.data.object.id);

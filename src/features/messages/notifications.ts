@@ -14,11 +14,13 @@ import { getCloseReasonText, getReadOnlyReasonText, getThreadRulesText } from "@
 import { prisma } from "@/lib/db/prisma";
 import { sendTransactionalEmail } from "@/lib/email/postmark";
 import { env } from "@/lib/env/server";
+import { isPreviewIsolationRequired } from "@/lib/preview/guard";
 
 export type NotificationDeliveryResult = {
-  status: "sent" | "failed";
+  status: "sent" | "captured" | "failed";
   manualFallbackRequired: boolean;
-  provider: "postmark";
+  provider: "postmark" | "capture";
+  captureId?: string;
   errorMessage?: string;
 };
 
@@ -29,19 +31,22 @@ async function sendEmailSafely(input: {
   textBody: string;
 }): Promise<NotificationDeliveryResult> {
   try {
-    await sendTransactionalEmail(input);
+    const delivery = await sendTransactionalEmail(input);
     return {
-      status: "sent",
+      ...delivery,
       manualFallbackRequired: false,
-      provider: "postmark"
     };
   } catch (error) {
-    console.error("Email notification failed", error);
+    const previewCapture = isPreviewIsolationRequired();
+    if (previewCapture) console.error("Preview email capture failed; no mail fallback attempted.");
+    else console.error("Email notification failed", error);
     return {
       status: "failed",
       manualFallbackRequired: true,
-      provider: "postmark",
-      errorMessage: error instanceof Error ? error.message : "Unknown email error"
+      provider: previewCapture ? "capture" : "postmark",
+      errorMessage: previewCapture
+        ? "Preview email capture failed; no mail fallback attempted."
+        : error instanceof Error ? error.message : "Unknown email error"
     };
   }
 }
@@ -103,7 +108,7 @@ export async function sendQuestionnaireSubmittedStaffEmail(input: {
     return {
       status: "failed",
       manualFallbackRequired: true,
-      provider: "postmark",
+      provider: isPreviewIsolationRequired() ? "capture" : "postmark",
       errorMessage: "No staff recipient configured"
     } satisfies NotificationDeliveryResult;
   }
@@ -264,7 +269,7 @@ export async function sendManualBookingConfirmedStaffEmail(input: {
     return {
       status: "failed",
       manualFallbackRequired: true,
-      provider: "postmark",
+      provider: isPreviewIsolationRequired() ? "capture" : "postmark",
       errorMessage: "No staff recipient configured"
     } satisfies NotificationDeliveryResult;
   }
@@ -319,7 +324,7 @@ export async function sendPatientMaterialsSubmittedStaffEmail(input: {
     return {
       status: "failed",
       manualFallbackRequired: true,
-      provider: "postmark",
+      provider: isPreviewIsolationRequired() ? "capture" : "postmark",
       errorMessage: "No staff recipient configured"
     } satisfies NotificationDeliveryResult;
   }
@@ -393,7 +398,7 @@ export async function sendApplicationRejectedStaffEmail(input: {
     return {
       status: "failed",
       manualFallbackRequired: true,
-      provider: "postmark",
+      provider: isPreviewIsolationRequired() ? "capture" : "postmark",
       errorMessage: "No staff recipient configured"
     } satisfies NotificationDeliveryResult;
   }

@@ -393,9 +393,12 @@ export async function submitQuestionnaire(
         action:
           staffNotification.status === "sent"
             ? "questionnaire_staff_email_sent"
-            : "questionnaire_staff_email_failed",
+            : staffNotification.status === "captured"
+              ? "questionnaire_staff_email_captured"
+              : "questionnaire_staff_email_failed",
         metadataJson: {
           provider: staffNotification.provider,
+          captureId: staffNotification.captureId ?? null,
           manualFallbackRequired: staffNotification.manualFallbackRequired,
           errorMessage:
             staffNotification.status === "failed"

@@ -1,10 +1,20 @@
 import "server-only";
 
-import { Inngest } from "inngest";
+import type { Inngest } from "inngest";
 
 import { env } from "@/lib/env/server";
+import { assertPreviewAllowedOperation, assertPreviewIsolation } from "@/lib/preview/guard";
 
-export const inngest = new Inngest({
-  id: env.INNGEST_APP_ID,
-  eventKey: env.INNGEST_EVENT_KEY
-});
+const previewContext = assertPreviewIsolation();
+
+export const inngest: Inngest = previewContext
+  ? new Proxy({} as Inngest, {
+      get() {
+        assertPreviewAllowedOperation("jobs:inngest");
+        throw new Error("Preview Inngest is disabled.");
+      }
+    })
+  : (() => {
+      const { Inngest: InngestConstructor } = require("inngest") as typeof import("inngest");
+      return new InngestConstructor({ id: env.INNGEST_APP_ID, eventKey: env.INNGEST_EVENT_KEY });
+    })();

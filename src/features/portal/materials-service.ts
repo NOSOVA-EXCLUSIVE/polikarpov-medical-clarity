@@ -309,12 +309,15 @@ export async function submitMaterialsRequirement(rawToken: string) {
       action:
         emailDelivery.status === "sent"
           ? "patient_materials_staff_email_sent"
-          : "patient_materials_staff_email_failed",
+          : emailDelivery.status === "captured"
+            ? "patient_materials_staff_email_captured"
+            : "patient_materials_staff_email_failed",
       metadataJson: {
         requirementId: token.requirementId,
         filesCount,
         linksCount,
         provider: emailDelivery.provider,
+        captureId: emailDelivery.captureId ?? null,
         manualFallbackRequired: emailDelivery.manualFallbackRequired,
         errorMessage:
           emailDelivery.status === "failed" ? emailDelivery.errorMessage ?? null : null

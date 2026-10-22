@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getPreviewAppUrl } from "@/lib/preview/guard";
 
 export const SITE_NAME = "Polikarpov Medical Clarity";
 export const DEFAULT_SITE_URL = "http://localhost:3000";
@@ -77,6 +78,8 @@ export type ServiceSeoSlug = keyof typeof serviceSeoBySlug;
 export type DocumentSeoSlug = keyof typeof documentSeoBySlug;
 
 export function getSiteUrl() {
+  const previewUrl = getPreviewAppUrl();
+  if (previewUrl) return previewUrl;
   const configuredUrl =
     process.env.APP_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() || DEFAULT_SITE_URL;
 

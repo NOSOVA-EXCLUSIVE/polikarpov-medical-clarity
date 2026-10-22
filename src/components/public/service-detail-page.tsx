@@ -1,6 +1,10 @@
 import Link from "next/link";
 
 import { BulletList, PageHero, Section } from "@/components/public/shell";
+import {
+  canonicalServiceDetailPathByCode,
+  publicProducts
+} from "@/features/products/catalog";
 import type { ServiceDetailContent } from "@/features/products/service-detail-content";
 
 type ServiceDetailPageProps = {
@@ -8,6 +12,15 @@ type ServiceDetailPageProps = {
 };
 
 export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
+  const product = publicProducts.find(
+    (item) =>
+      canonicalServiceDetailPathByCode[item.code] === `/services/${service.slug}`
+  );
+  const questionnaireHref = {
+    pathname: "/questionnaire",
+    ...(product ? { query: { product: product.slug } } : {})
+  };
+
   return (
     <main className={`service-detail-page service-detail-page--${service.slug}`}>
       <PageHero
@@ -26,7 +39,7 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
         }
         actions={
           <>
-            <Link className="button" href="/questionnaire">
+            <Link className="button" href={questionnaireHref}>
               Разобрать мою ситуацию
             </Link>
             <Link className="button button--secondary" href="#service-process">
@@ -87,7 +100,7 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
               Если этот формат соответствует вашей задаче, начать можно с анкеты пациента.
             </p>
             <div className="hero-actions">
-              <Link className="button" href="/questionnaire">
+              <Link className="button" href={questionnaireHref}>
                 Разобрать мою ситуацию
               </Link>
             </div>
@@ -137,7 +150,7 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
               действительно уместен.
             </p>
             <div className="hero-actions">
-              <Link className="button" href="/questionnaire">
+              <Link className="button" href={questionnaireHref}>
                 Разобрать мою ситуацию
               </Link>
             </div>
@@ -175,7 +188,7 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
 
             <div className="services-final-cta__actions stack-sm">
               <div className="hero-actions">
-                <Link className="button" href="/questionnaire">
+                <Link className="button" href={questionnaireHref}>
                   Разобрать мою ситуацию
                 </Link>
               </div>

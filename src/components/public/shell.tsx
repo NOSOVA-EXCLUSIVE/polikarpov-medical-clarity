@@ -91,11 +91,57 @@ export function PublicFooter() {
             </p>
             <div className="site-footer__business">
               <p>Исполнитель: Поликарпов Евгений Сергеевич</p>
-              <p>Форма деятельности: самозанятый (налог на профессиональный доход)</p>
               <p>ИНН: 771873883546</p>
-              <p>
-                Email: <a href="mailto:medicalclarity@proton.me">medicalclarity@proton.me</a>
-              </p>
+              <nav className="site-footer__contacts" aria-label="Контакты">
+                <a
+                  className="site-footer__contact"
+                  href="https://wa.me/79165821523"
+                  aria-label="Написать в WhatsApp"
+                  title="WhatsApp"
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M20.5 11.8a8.5 8.5 0 0 1-12.6 7.5L3 20.7l1.4-4.8A8.5 8.5 0 1 1 20.5 11.8Z" />
+                    <path d="m8 7 2 1-1 2a9 9 0 0 0 5 5l2-1 1 2c-1 2-3 2-6-1s-5-6-3-8Z" />
+                  </svg>
+                </a>
+                <a
+                  className="site-footer__contact"
+                  href="https://t.me/EvgeniyPolikarpov"
+                  aria-label="Написать в Telegram"
+                  title="Telegram"
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                    <path d="m21 3-6.5 18-4-7.5L3 10Z" />
+                    <path d="m10.5 13.5 5-5" />
+                  </svg>
+                </a>
+                <a
+                  className="site-footer__contact"
+                  href="mailto:medicalclarity@proton.me"
+                  aria-label="Написать на medicalclarity@proton.me"
+                  title="Email"
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <path d="m3 7 9 6 9-6" />
+                  </svg>
+                </a>
+                <a
+                  className="site-footer__contact"
+                  href="https://www.instagram.com/polikarpovclarity/"
+                  aria-label="Instagram Polikarpov Medical Clarity"
+                  title="Instagram"
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                    <rect x="3" y="3" width="18" height="18" rx="5" />
+                    <circle cx="12" cy="12" r="4" />
+                    <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
+                  </svg>
+                </a>
+                <p>
+                  Email: <a href="mailto:medicalclarity@proton.me">medicalclarity@proton.me</a>
+                </p>
+              </nav>
             </div>
           </div>
           <a className="site-footer__backtop" href="#top">

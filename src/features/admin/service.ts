@@ -646,10 +646,13 @@ export async function requestApplicationMaterials(input: {
     action:
       emailDelivery.status === "sent"
         ? "materials_request_email_sent"
-        : "materials_request_email_failed",
+        : emailDelivery.status === "captured"
+          ? "materials_request_email_captured"
+          : "materials_request_email_failed",
     metadataJson: {
       requirementType: input.type,
       provider: emailDelivery.provider,
+      captureId: emailDelivery.captureId ?? null,
       manualFallbackRequired: emailDelivery.manualFallbackRequired,
       errorMessage:
         emailDelivery.status === "failed" ? emailDelivery.errorMessage ?? null : null
@@ -749,9 +752,12 @@ export async function rejectApplication(input: {
     action:
       patientEmailDelivery.status === "sent"
         ? "application_rejected_patient_email_sent"
-        : "application_rejected_patient_email_failed",
+        : patientEmailDelivery.status === "captured"
+          ? "application_rejected_patient_email_captured"
+          : "application_rejected_patient_email_failed",
     metadataJson: {
       provider: patientEmailDelivery.provider,
+      captureId: patientEmailDelivery.captureId ?? null,
       manualFallbackRequired: patientEmailDelivery.manualFallbackRequired,
       errorMessage:
         patientEmailDelivery.status === "failed"
@@ -768,9 +774,12 @@ export async function rejectApplication(input: {
     action:
       staffEmailDelivery.status === "sent"
         ? "application_rejected_staff_email_sent"
-        : "application_rejected_staff_email_failed",
+        : staffEmailDelivery.status === "captured"
+          ? "application_rejected_staff_email_captured"
+          : "application_rejected_staff_email_failed",
     metadataJson: {
       provider: staffEmailDelivery.provider,
+      captureId: staffEmailDelivery.captureId ?? null,
       manualFallbackRequired: staffEmailDelivery.manualFallbackRequired,
       errorMessage:
         staffEmailDelivery.status === "failed" ? staffEmailDelivery.errorMessage ?? null : null
@@ -917,7 +926,9 @@ export async function createOfferForApplication(input: {
     applicationId: input.applicationId,
     entityType: "OFFER",
     entityId: result.offerId,
-    action: emailDelivery.status === "sent" ? "offer_email_sent" : "offer_email_failed",
+    action: emailDelivery.status === "sent"
+      ? "offer_email_sent"
+      : emailDelivery.status === "captured" ? "offer_email_captured" : "offer_email_failed",
     metadataJson: {
       productCode: input.productCode,
       chargeModel: input.chargeModel,
@@ -925,6 +936,7 @@ export async function createOfferForApplication(input: {
       currency: input.currency,
       offerStatus: result.offerStatus,
       provider: emailDelivery.provider,
+      captureId: emailDelivery.captureId ?? null,
       manualFallbackRequired: emailDelivery.manualFallbackRequired,
       errorMessage:
         emailDelivery.status === "failed" ? emailDelivery.errorMessage ?? null : null

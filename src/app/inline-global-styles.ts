@@ -349,6 +349,41 @@ button {
   border-bottom-color: rgba(36, 33, 29, 0.28);
 }
 
+.site-footer__contacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding-top: 0.3rem;
+}
+
+.site-footer__contacts .site-footer__contact {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  text-decoration: none;
+}
+
+.site-footer__contacts .site-footer__contact:hover {
+  color: var(--graphite);
+  border-color: var(--muted);
+}
+
+.site-footer__contact:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.site-footer__contact svg {
+  display: block;
+}
+
 .site-footer__backtop {
   margin-left: auto;
   color: rgba(36, 33, 29, 0.64);
