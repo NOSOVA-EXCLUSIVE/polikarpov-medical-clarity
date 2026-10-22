@@ -1,6 +1,6 @@
 "use strict";
 
-const { createHash, timingSafeEqual } = require("node:crypto");
+const { createHash, createHmac, timingSafeEqual } = require("node:crypto");
 const resourcePins = require("./pins.cjs");
 const DISABLED = "disabled-for-preview";
 const APP_URL_SENTINEL = "https://mc-preview.invalid";
@@ -101,6 +101,11 @@ function assertPreviewIsolation(raw = process.env, pins = resourcePins) {
     fail("DEPLOYMENT_IDENTITY_MISMATCH");
   }
   assertReadyPins(pins);
+  // SDK 2.4.0 reads these before issuing a signed token (and in head/put/del).
+  // Reject overrides before any SDK request, not only after building its URL.
+  for (const key of ["VERCEL_BLOB_API_URL", "NEXT_PUBLIC_VERCEL_BLOB_API_URL"]) {
+    if (raw[key]) fail("BLOB_API_OVERRIDE_NOT_ALLOWED");
+  }
   assertDatabaseUrlValue(raw.DATABASE_URL, pins);
   assertDatabaseUrlValue(raw.DIRECT_URL, pins);
   assertTokenValue(raw.BLOB_READ_WRITE_TOKEN, pins);
@@ -175,21 +180,100 @@ function assertPreviewStorageKey(key) {
   if (assertPreviewIsolation()) assertStorageKeyValue(key);
 }
 
-function assertPreviewBlobUrl(value) {
+function parseBlobUrl(value) {
+  if (typeof value !== "string" || /[\\\u0000-\u0020\u007f]/.test(value)) {
+    fail("BLOB_URL_INVALID_OR_UNPINNED");
+  }
+  const raw = /^https:\/\/([^/?#]+)(\/[^?#]*)?(?:\?[^#]*)?$/.exec(value);
+  const parsed = new URL(value);
+  if (!raw || raw[2] !== parsed.pathname || parsed.username || parsed.password || parsed.port || parsed.hash) {
+    fail("BLOB_URL_INVALID_OR_UNPINNED");
+  }
+  return { rawHost: raw[1], parsed };
+}
+
+function assertPrivateBlobPath(url, key, pins) {
+  assertStorageKeyValue(key);
+  if (
+    url.rawHost !== pins.blobHostname || url.parsed.hostname !== pins.blobHostname ||
+    url.parsed.pathname !== `/${key}`
+  ) fail("BLOB_OBJECT_NOT_PINNED");
+}
+
+// A stored object's plain URL (including the mail-capture artifact), not a PUT URL.
+function assertPreviewBlobUrl(value, expectedKey) {
   const context = assertPreviewIsolation();
   if (!context) return;
   try {
-    const parsed = new URL(value);
-    const raw = /^https:\/\/([^/?#]+)(\/[^?#]*)?/.exec(value);
+    const url = parseBlobUrl(value);
+    assertPrivateBlobPath(url, expectedKey, context.pins);
+    if (url.parsed.search) fail("BLOB_OBJECT_QUERY_NOT_ALLOWED");
+  } catch {
+    fail("BLOB_URL_INVALID_OR_UNPINNED");
+  }
+}
+
+// Context comes from the server's pinned-token SDK call, never from a client URL.
+function assertPreviewBlobSignedUrl(value, expected) {
+  const context = assertPreviewIsolation();
+  if (!context) return;
+  try {
+    const { key, operation, signedToken, validUntil, contentType, maximumSizeInBytes } = expected;
+    assertStorageKeyValue(key);
     if (
-      !raw || raw[1] !== context.pins.blobHostname || raw[2] !== parsed.pathname ||
-      parsed.protocol !== "https:" || parsed.hostname !== context.pins.blobHostname ||
-      parsed.username || parsed.password || parsed.port || parsed.hash ||
-      /[\\\u0000-\u0020\u007f]/.test(value)
-    ) {
-      fail("BLOB_URL_NOT_PINNED");
+      !["get", "put"].includes(operation) ||
+      typeof signedToken?.delegationToken !== "string" ||
+      !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(signedToken.delegationToken) ||
+      typeof signedToken.clientSigningToken !== "string" || !signedToken.clientSigningToken
+    ) fail("BLOB_SIGNED_CONTEXT_INVALID");
+    const scope = JSON.parse(Buffer.from(signedToken.delegationToken.split(".")[0], "base64url").toString("utf8"));
+    if (
+      ![context.pins.blobStoreId, context.pins.blobStoreId.replace(/^store_/, "")].includes(scope.storeId) ||
+      scope.pathname !== key || !Array.isArray(scope.operations) ||
+      scope.operations.length !== 1 || scope.operations[0] !== operation ||
+      !Number.isSafeInteger(scope.validUntil) || !Number.isSafeInteger(validUntil) ||
+      scope.validUntil <= Date.now() || scope.validUntil > validUntil
+    ) fail("BLOB_DELEGATION_NOT_PINNED");
+
+    const url = parseBlobUrl(value);
+    const wanted = new Map([["vercel-blob-delegation", signedToken.delegationToken]]);
+    if (operation === "get") {
+      assertPrivateBlobPath(url, key, context.pins);
+    } else {
+      // SDK 2.4.0 PUT uses the API endpoint, not the private GET hostname.
+      if (url.rawHost !== "vercel.com" || url.parsed.pathname !== "/api/blob/") {
+        fail("BLOB_PUT_ENDPOINT_NOT_PINNED");
+      }
+      wanted.set("pathname", key);
+      wanted.set("vercel-blob-add-random-suffix", "false");
+      if (contentType !== undefined) {
+        if (!Array.isArray(scope.allowedContentTypes) || scope.allowedContentTypes.length !== 1 ||
+            scope.allowedContentTypes[0] !== contentType) fail("BLOB_CONTENT_TYPE_NOT_PINNED");
+        wanted.set("vercel-blob-allowed-content-types", contentType);
+      }
+      if (maximumSizeInBytes !== undefined) {
+        if (!Number.isSafeInteger(maximumSizeInBytes) || maximumSizeInBytes <= 0 ||
+            scope.maximumSizeInBytes !== maximumSizeInBytes) fail("BLOB_SIZE_NOT_PINNED");
+        wanted.set("vercel-blob-maximum-size-in-bytes", String(maximumSizeInBytes));
+      }
     }
-    assertStorageKeyValue(raw[2].slice(1));
+
+    // The SDK signs these exact query entries plus operation and pathname.
+    // Checking HMAC also detects mutation; decoding delegation alone is not authentication.
+    const canonical = [`operation=${operation}`, `pathname=${key}`];
+    for (const [name, entry] of wanted) {
+      if (name.startsWith("vercel-blob-") && name !== "vercel-blob-delegation") canonical.push(`${name}=${entry}`);
+    }
+    const signature = createHmac("sha256", signedToken.clientSigningToken)
+      .update(canonical.sort().join("\n")).digest("base64url");
+    wanted.set("vercel-blob-signature", signature);
+    const actual = url.parsed.searchParams;
+    if ([...actual.keys()].length !== wanted.size) fail("BLOB_QUERY_NOT_PINNED");
+    for (const [name, entry] of actual) {
+      if (actual.getAll(name).length !== 1 || !wanted.has(name) || wanted.get(name) !== entry) {
+        fail("BLOB_QUERY_NOT_PINNED");
+      }
+    }
   } catch {
     fail("BLOB_URL_INVALID_OR_UNPINNED");
   }
@@ -210,6 +294,6 @@ function getPreviewAppUrl() {
 
 module.exports = {
   isPreviewIsolationRequired, assertPreviewIsolation, assertPreviewDatabaseUrl,
-  assertPreviewBlobToken, assertPreviewStorageKey, assertPreviewBlobUrl,
+  assertPreviewBlobToken, assertPreviewStorageKey, assertPreviewBlobUrl, assertPreviewBlobSignedUrl,
   assertPreviewAllowedOperation, getPreviewAppUrl, isSyntheticEmail
 };

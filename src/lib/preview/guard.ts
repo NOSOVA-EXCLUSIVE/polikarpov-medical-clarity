@@ -7,6 +7,7 @@ export {
   assertPreviewBlobToken,
   assertPreviewStorageKey,
   assertPreviewBlobUrl,
+  assertPreviewBlobSignedUrl,
   assertPreviewAllowedOperation,
   getPreviewAppUrl,
   isSyntheticEmail

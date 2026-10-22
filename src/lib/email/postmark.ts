@@ -78,7 +78,7 @@ export async function sendTransactionalEmail(input: {
       contentType: "application/json",
       addRandomSuffix: false
     });
-    assertPreviewBlobUrl(blob.url);
+    assertPreviewBlobUrl(blob.url, key);
     return { status: "captured", provider: "capture", captureId };
   }
   const envelope = getDefaultEmailEnvelope();

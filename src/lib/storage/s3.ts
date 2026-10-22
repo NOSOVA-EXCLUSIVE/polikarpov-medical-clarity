@@ -17,7 +17,7 @@ import { env } from "@/lib/env/server";
 import {
   assertPreviewAllowedOperation,
   assertPreviewBlobToken,
-  assertPreviewBlobUrl,
+  assertPreviewBlobSignedUrl,
   assertPreviewStorageKey,
   isPreviewIsolationRequired
 } from "@/lib/preview/guard";
@@ -161,7 +161,14 @@ async function createPrivateBlobUrl(input: {
           validUntil
         });
 
-  assertPreviewBlobUrl(presignedUrl);
+  assertPreviewBlobSignedUrl(presignedUrl, {
+    key: input.key,
+    operation: input.operation,
+    signedToken,
+    validUntil,
+    contentType: input.contentType,
+    maximumSizeInBytes: input.maximumSizeInBytes
+  });
   return presignedUrl;
 }
 

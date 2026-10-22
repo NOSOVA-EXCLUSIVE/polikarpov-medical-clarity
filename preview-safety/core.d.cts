@@ -22,7 +22,15 @@ export function assertPreviewIsolation(
 export function assertPreviewDatabaseUrl(value: string): void;
 export function assertPreviewBlobToken(value: string): void;
 export function assertPreviewStorageKey(value: string): void;
-export function assertPreviewBlobUrl(value: string): void;
+export function assertPreviewBlobUrl(value: string, expectedKey: string): void;
+export function assertPreviewBlobSignedUrl(value: string, expected: {
+  key: string;
+  operation: "get" | "put";
+  signedToken: { delegationToken: string; clientSigningToken: string };
+  validUntil: number;
+  contentType?: string;
+  maximumSizeInBytes?: number;
+}): void;
 export function assertPreviewAllowedOperation(operation: string): void;
 export function getPreviewAppUrl(): string | null;
 export function isSyntheticEmail(value: unknown): boolean;
