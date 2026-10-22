@@ -17,3 +17,6 @@ devserver.out.log
 .eslintrc.json
 .vercel
 .env*
+
+# Runtime JSON exports can contain contact details, sessions and booking tokens.
+/runtime-test-assets/**/*.json
