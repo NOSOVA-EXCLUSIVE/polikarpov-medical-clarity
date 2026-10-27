@@ -18,6 +18,7 @@ import {
   assertPreviewAllowedOperation,
   assertPreviewBlobToken,
   assertPreviewBlobSignedUrl,
+  assertPreviewBlobUrl,
   assertPreviewStorageKey,
   isPreviewIsolationRequired
 } from "@/lib/preview/guard";
@@ -281,6 +282,19 @@ export async function privateObjectExists(key: string) {
   }
 
   return false;
+}
+
+// Metadata for the manual deliverable flow. Accepts a server-generated key, never a client URL.
+export async function getPrivateBlobMetadata(key: string) {
+  assertPreviewStorageKey(key);
+  if (getPrivateStorageProvider() !== "blob") throw new Error("Private Blob storage is required for this operation.");
+  const blob = await headBlob(key, { token: getBlobReadWriteToken() });
+  assertPreviewBlobUrl(blob.url, key);
+  if (blob.pathname !== key || !Number.isSafeInteger(blob.size) || blob.size <= 0 ||
+      typeof blob.etag !== "string" || !blob.etag || blob.etag.length > 200 || /[\r\n]/.test(blob.etag)) {
+    throw new Error("Private object metadata does not match the requested key.");
+  }
+  return { sizeBytes: blob.size, contentType: blob.contentType, etag: blob.etag };
 }
 
 export async function createPrivateUploadUrl(input: {

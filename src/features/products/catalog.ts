@@ -1,4 +1,5 @@
 import type { ProductCode } from "@prisma/client";
+import { formatServicePrice, getServiceV21 } from "@/features/products/services-v21";
 
 export type PublicProduct = {
   code: ProductCode;
@@ -72,7 +73,7 @@ export const publicProducts: PublicProduct[] = [
     activeSale: true,
     bookingMode: "direct_questionnaire",
     entryLabel: "Можно начать с анкеты",
-    priceModel: "120 € · разовый разбор ситуации с письменным итогом",
+    priceModel: `${formatServicePrice(getServiceV21("second-opinion")!)} · разовый разбор ситуации с письменным итогом`,
     duration: "Дистанционный формат взаимодействия 30–35 минут и окно уточнений 72 часа",
     positioningNote:
       "Это формат скорости и ясности. Его задача не просто добавить ещё одно мнение, а спокойно собрать картину, объяснить ситуацию человеческим языком и дать следующий шаг без потери времени.",
@@ -126,7 +127,7 @@ export const publicProducts: PublicProduct[] = [
     activeSale: false,
     bookingMode: "individual_fit_questionnaire",
     entryLabel: "Подбирается после разбора",
-    priceModel: "250 € · глубокий разбор и персональный маршрут",
+    priceModel: `${formatServicePrice(getServiceV21("clinical-review")!)} · расширенный клинический разбор`,
     duration: "Расширенный разбор и окно уточнений 7 дней",
     positioningNote:
       "Это не просто более длинная консультация. Это формат для случая, где нужно соединить документы, обследования, мнения специалистов и ваши вопросы в один понятный маршрут дальнейших шагов.",
@@ -179,7 +180,7 @@ export const publicProducts: PublicProduct[] = [
     activeSale: true,
     bookingMode: "direct_questionnaire",
     entryLabel: "Можно начать с анкеты",
-    priceModel: "590 € · 4 недели структурного сопровождения",
+    priceModel: `${formatServicePrice(getServiceV21("recovery-control")!)} · контроль восстановления`,
     duration: "4 недели по регламенту и закрытый центр сообщений",
     positioningNote:
       "В этом формате важны не случайные советы, а система: правила восстановления, красные флажки, ориентиры по нагрузке, понятные касания с врачом и меньше предотвратимых ошибок между очными визитами. Его задача — помочь пройти самый уязвимый период спокойно, безопасно и без хаоса.",
@@ -235,7 +236,7 @@ export const publicProducts: PublicProduct[] = [
     activeSale: false,
     bookingMode: "individual_fit_questionnaire",
     entryLabel: "Подбирается после разбора",
-    priceModel: "1100 € · индивидуальный пакет сопровождения",
+    priceModel: `${formatServicePrice(getServiceV21("personal-support")!)} · индивидуальное сопровождение`,
     duration: "Пакетная работа с возможностью продления",
     positioningNote:
       "Этот формат нужен там, где стандартного сопровождения уже мало. Его задача — дать не только ответы врачу, но и больше спокойствия, понятности и структуры для пациента и семьи.",

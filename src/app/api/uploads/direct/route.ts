@@ -1,58 +1,53 @@
 import { NextResponse } from "next/server";
 
 import {
+  assertIntakeUploadOwnership,
+  intakeConsentErrorResponse,
+  requireIntakeConsent
+} from "@/features/questionnaire/intake-consent";
+import {
   isValidLocalUploadSignature,
   shouldUseLocalUploadFallback,
   writePrivateObjectLocally
 } from "@/lib/storage/s3";
 
 export async function PUT(request: Request) {
-  if (!shouldUseLocalUploadFallback()) {
-    return NextResponse.json(
-      {
+  try {
+    const consent = await requireIntakeConsent(request);
+    if (!shouldUseLocalUploadFallback()) {
+      return NextResponse.json({
         ok: false,
-        error: {
-          code: "DIRECT_UPLOAD_DISABLED",
-          message: "Р›РѕРєР°Р»СЊРЅР°СЏ Р·Р°РіСЂСѓР·РєР° РІ С…СЂР°РЅРёР»РёС‰Рµ РѕС‚РєР»СЋС‡РµРЅР°."
-        }
-      },
-      { status: 404 }
-    );
-  }
+        error: { code: "DIRECT_UPLOAD_DISABLED", message: "Локальная загрузка в хранилище отключена." }
+      }, { status: 404 });
+    }
 
-  const url = new URL(request.url);
-  const key = url.searchParams.get("key")?.trim() ?? "";
-  const signature = url.searchParams.get("signature");
-
-  if (!key || !isValidLocalUploadSignature(key, signature)) {
-    return NextResponse.json(
-      {
+    const url = new URL(request.url);
+    const key = url.searchParams.get("key")?.trim() ?? "";
+    const signature = url.searchParams.get("signature");
+    assertIntakeUploadOwnership(key, consent.receiptId);
+    if (!key || !isValidLocalUploadSignature(key, signature)) {
+      return NextResponse.json({
         ok: false,
-        error: {
-          code: "DIRECT_UPLOAD_INVALID_SIGNATURE",
-          message: "РќРµРґРµР№СЃС‚РІРёС‚РµР»СЊРЅР°СЏ СЃСЃС‹Р»РєР° Р·Р°РіСЂСѓР·РєРё."
-        }
-      },
-      { status: 403 }
-    );
-  }
+        error: { code: "DIRECT_UPLOAD_INVALID_SIGNATURE", message: "Недействительная ссылка загрузки." }
+      }, { status: 403 });
+    }
 
-  const bytes = new Uint8Array(await request.arrayBuffer());
-
-  if (bytes.byteLength === 0) {
-    return NextResponse.json(
-      {
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    if (bytes.byteLength === 0) {
+      return NextResponse.json({
         ok: false,
-        error: {
-          code: "DIRECT_UPLOAD_EMPTY",
-          message: "РџСѓСЃС‚РѕР№ С„Р°Р№Р» РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ Р·Р°РіСЂСѓР¶РµРЅ."
-        }
-      },
-      { status: 400 }
-    );
+        error: { code: "DIRECT_UPLOAD_EMPTY", message: "Пустой файл не может быть загружен." }
+      }, { status: 400 });
+    }
+
+    await writePrivateObjectLocally(key, bytes);
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    const consentError = intakeConsentErrorResponse(error);
+    if (consentError) return consentError;
+    return NextResponse.json({
+      ok: false,
+      error: { code: "DIRECT_UPLOAD_FAILED", message: "Не удалось загрузить файл. Попробуйте ещё раз." }
+    }, { status: 400 });
   }
-
-  await writePrivateObjectLocally(key, bytes);
-
-  return new NextResponse(null, { status: 204 });
 }

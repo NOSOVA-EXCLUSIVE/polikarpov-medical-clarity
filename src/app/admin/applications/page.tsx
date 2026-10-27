@@ -11,11 +11,16 @@ import {
   productLabel
 } from "@/features/admin/presentation";
 import { listApplications } from "@/features/admin/service";
+import { allServicesV21 } from "@/features/products/services-v21";
+import { describeServiceSelection } from "@/features/questionnaire/service-selection";
+import { manualPhaseLabels } from "@/features/manual-v21/presentation";
 import { requireStaffSession } from "@/lib/auth/session";
 
 type SearchParams = {
   status?: ApplicationStatus | "ALL";
   productCode?: ProductCode | "ALL";
+  selectedServiceId?: string;
+  manualPhase?: string;
   query?: string;
 };
 
@@ -30,6 +35,8 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
   const applications = await listApplications({
     status: params.status,
     productCode: params.productCode,
+    selectedServiceId: params.selectedServiceId,
+    manualPhase: params.manualPhase,
     query: params.query
   });
 
@@ -42,7 +49,7 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
         <h2 className="admin-section-title">Фильтры</h2>
         <form className="form-grid" method="get">
           <label className="field">
-            <span>Статус</span>
+            <span>Статус анкеты</span>
             <select defaultValue={params.status ?? "ALL"} name="status">
               <option value="ALL">Все</option>
               <option value="NEW">Новые</option>
@@ -54,13 +61,32 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
             </select>
           </label>
           <label className="field">
-            <span>Продукт</span>
+            <span>Этап ручного маршрута v2.1</span>
+            <select defaultValue={params.manualPhase ?? "ALL"} name="manualPhase">
+              <option value="ALL">Все обращения</option>
+              <option value="NOT_STARTED">Ручной маршрут v2.1 ещё не создан</option>
+              <option value="OPEN">Все незавершённые обращения v2.1</option>
+              {Object.entries(manualPhaseLabels).map(([phase, label]) => (
+                <option key={phase} value={phase}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Выбранная услуга v2.1</span>
+            <select defaultValue={params.selectedServiceId ?? "ALL"} name="selectedServiceId">
+              <option value="ALL">Все</option>
+              {allServicesV21.map((service) => (
+                <option key={service.id} value={service.id}>{service.title}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Продукт прежнего каталога</span>
             <select defaultValue={params.productCode ?? "ALL"} name="productCode">
               <option value="ALL">Все</option>
-              <option value="SECOND_OPINION">Продукт 1</option>
-              <option value="MEDICAL_ROUTE">Продукт 2</option>
-              <option value="RECOVERY_4_WEEKS">Продукт 3</option>
-              <option value="PERSONAL_SUPPORT">Продукт 4</option>
+              {(["SECOND_OPINION", "MEDICAL_ROUTE", "RECOVERY_4_WEEKS", "PERSONAL_SUPPORT"] as const).map((code) => (
+                <option key={code} value={code}>{productLabel(code)}</option>
+              ))}
             </select>
           </label>
           <label className="field field--full">
@@ -99,7 +125,9 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
                 </p>
               </div>
               <div className="stack-sm">
-                <span className="status">{applicationStatusLabel(application.status)}</span>
+                <span className="status">{application.manualCase
+                  ? `v2.1 · ${manualPhaseLabels[application.manualCase.phase] ?? application.manualCase.phase}`
+                  : applicationStatusLabel(application.status)}</span>
                 {application.patientConfirmedManualBooking ? (
                   <>
                     <span className="status status--held">{manualBookingBadgeLabel()}</span>
@@ -113,14 +141,17 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
             </div>
             <p>{application.chiefComplaint}</p>
             <p className="muted">
-              {productLabel(application.assignedProductCode ?? application.requestedProductCode)} ·{" "}
+              {application.serviceSelection ? describeServiceSelection(application.serviceSelection) : productLabel(application.assignedProductCode ?? application.requestedProductCode)} ·{" "}
               {imagingSourceTypeLabel(application.imagingSourceType)} · {formatDateTime(application.submittedAt)}
             </p>
             <p className="muted">
               Файлы: {application._count.uploads} · внешние ссылки: {application._count.externalLinks} · запросы:{" "}
               {application._count.requirements} · офферы: {application._count.offers}
             </p>
-            <div>
+            <div className="stack-sm">
+              {application.manualCase ? <Link className="text-link" href={`/admin/manual/${application.manualCase.id}`}>
+                Открыть ручную запись и кабинет v2.1
+              </Link> : null}
               <Link className="text-link" href={`/admin/applications/${application.id}`}>
                 Открыть карточку заявки
               </Link>

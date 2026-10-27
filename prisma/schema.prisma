@@ -182,6 +182,10 @@ model User {
   sentMessages       Message[]
   updatedSettings    AppSetting[]
   auditEvents        AuditEvent[]
+  manualAgreements   ManualAgreement[]
+  manualReceipts     ManualReceipt[]
+  manualMessages     ManualMessage[]
+  manualDeliverables ManualDeliverable[]
 }
 
 model ProductConfig {
@@ -259,11 +263,147 @@ model Application {
   messageThread        MessageThread?
   accessTokens         AccessToken[]
   auditEvents          AuditEvent[]
+  manualCase           ManualCase?
 
   @@index([status, submittedAt])
   @@index([patientId, submittedAt])
   @@index([requestedProductCode, status])
   @@index([assignedProductCode, status])
+}
+
+// Additive v2.1 workflow. Legacy Offer/Payment/MessageThread rows retain their original contract.
+model ManualCase {
+  id                   String   @id @default(cuid())
+  applicationId        String   @unique
+  reference            String   @unique
+  phase                String   @default("REVIEW")
+  version              Int      @default(0)
+  currentAgreementId   String?  @unique
+  callRequestedAt      DateTime?
+  callConfirmedAt      DateTime?
+  callCompletedAt      DateTime?
+  callStartsAt         DateTime?
+  callEndsAt           DateTime?
+  callTimezone         String?
+  workStartedAt        DateTime?
+  workEndsAt           DateTime?
+  resultDeliveredAt    DateTime?
+  completedAt          DateTime?
+  patientAccessEndsAt  DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  application          Application @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  currentAgreement     ManualAgreement? @relation("ManualCurrentAgreement", fields: [currentAgreementId], references: [id], onDelete: Restrict)
+  agreements           ManualAgreement[] @relation("ManualCaseAgreements")
+  discountAgreements   ManualAgreement[] @relation("ManualDiscountSource")
+  receipts             ManualReceipt[]
+  contacts             ManualContact[]
+  messages             ManualMessage[]
+  grants               ManualGrant[]
+  deliverables         ManualDeliverable[]
+
+  @@index([phase, createdAt])
+}
+
+model ManualAgreement {
+  id                   String @id @default(cuid())
+  caseId               String
+  revision             Int
+  serviceId            String
+  catalogVersion       String @default("2.1")
+  title                String
+  scopeJson            Json
+  amountCents          Int
+  currency             String @default("EUR")
+  turnaround           String
+  policyJson           Json
+  discountSourceCaseId String?
+  acceptedAt           DateTime?
+  supersededAt         DateTime?
+  createdByUserId      String
+  createdAt            DateTime @default(now())
+  case                 ManualCase @relation("ManualCaseAgreements", fields: [caseId], references: [id], onDelete: Restrict)
+  currentForCase       ManualCase? @relation("ManualCurrentAgreement")
+  receipt              ManualReceipt?
+  createdBy            User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  discountSourceCase   ManualCase? @relation("ManualDiscountSource", fields: [discountSourceCaseId], references: [id], onDelete: Restrict)
+
+  @@unique([caseId, revision])
+  @@index([discountSourceCaseId])
+}
+
+model ManualReceipt {
+  id                   String @id @default(cuid())
+  caseId               String
+  agreementId          String @unique
+  amountCents          Int
+  currency             String
+  receivedAt           DateTime
+  recordedByUserId     String
+  createdAt            DateTime @default(now())
+  case                 ManualCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  agreement            ManualAgreement @relation(fields: [agreementId], references: [id], onDelete: Restrict)
+  recordedBy           User @relation(fields: [recordedByUserId], references: [id], onDelete: Restrict)
+}
+
+model ManualContact {
+  id                   String @id @default(cuid())
+  caseId               String
+  ordinal              Int
+  status               String @default("OPEN")
+  openedAt             DateTime @default(now())
+  completedAt          DateTime?
+  case                 ManualCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  messages             ManualMessage[]
+
+  @@unique([caseId, ordinal])
+}
+
+model ManualMessage {
+  id                   String @id @default(cuid())
+  caseId               String
+  contactId            String?
+  authorRole           String
+  kind                 String @default("MESSAGE")
+  body                 String @db.Text
+  senderUserId         String?
+  createdAt            DateTime @default(now())
+  case                 ManualCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  contact              ManualContact? @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  senderUser           User? @relation(fields: [senderUserId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, createdAt])
+}
+
+model ManualGrant {
+  id                   String @id @default(cuid())
+  caseId               String
+  tokenHash            String @unique
+  expiresAt            DateTime
+  revokedAt            DateTime?
+  createdAt            DateTime @default(now())
+  case                 ManualCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, expiresAt])
+}
+
+model ManualDeliverable {
+  id                   String @id @default(cuid())
+  caseId               String
+  storageKey           String @unique
+  title                String
+  mimeType             String
+  sizeBytes            BigInt
+  uploadedByUserId     String
+  createdAt            DateTime @default(now())
+  markedInFile         Boolean @default(false)
+  status               String @default("READY")
+  verifiedEtag         String?
+  case                 ManualCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  uploadedBy           User @relation(fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, createdAt])
+  @@index([caseId, status])
 }
 
 model ApplicationRedFlag {

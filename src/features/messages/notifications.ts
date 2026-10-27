@@ -10,6 +10,7 @@ import {
   requirementTypeLabel
 } from "@/features/admin/presentation";
 import { getBookingMode } from "@/features/booking/mode";
+import { describeServiceSelection, type ServiceSelectionSnapshot } from "@/features/questionnaire/service-selection";
 import { getCloseReasonText, getReadOnlyReasonText, getThreadRulesText } from "@/features/messages/content";
 import { prisma } from "@/lib/db/prisma";
 import { sendTransactionalEmail } from "@/lib/email/postmark";
@@ -89,6 +90,16 @@ async function getQuestionnaireStaffRecipients() {
   return [configuredRecipient || DEFAULT_STAFF_NOTIFICATION_EMAIL];
 }
 
+function escapeEmailHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[character]!);
+}
+
 export async function sendQuestionnaireSubmittedStaffEmail(input: {
   applicationId: string;
   applicationDisplayNumber: string;
@@ -100,6 +111,7 @@ export async function sendQuestionnaireSubmittedStaffEmail(input: {
   country: string;
   timezone: string;
   requestedProductCode: ProductCode | null;
+  serviceSelection?: ServiceSelectionSnapshot | null;
   useQueueLink?: boolean;
 }) {
   const recipients = await getQuestionnaireStaffRecipients();
@@ -116,9 +128,11 @@ export async function sendQuestionnaireSubmittedStaffEmail(input: {
   const adminUrl = input.useQueueLink
     ? `${env.APP_URL}/admin/applications`
     : `${env.APP_URL}/admin/applications/${input.applicationId}`;
-  const requestedFormat = input.requestedProductCode
-    ? productLabel(input.requestedProductCode)
-    : "Пациент пока не выбрал конкретный формат";
+  const requestedFormat = input.serviceSelection
+    ? describeServiceSelection(input.serviceSelection)
+    : input.requestedProductCode
+      ? productLabel(input.requestedProductCode)
+      : "Пациент пока не выбрал конкретный формат";
 
   return sendEmailSafely({
     to: recipients,
@@ -139,14 +153,14 @@ export async function sendQuestionnaireSubmittedStaffEmail(input: {
     ].join("\n"),
     htmlBody: [
       "<p>Поступила новая анкета.</p>",
-      `<p><strong>Пациент:</strong> ${input.patientName}</p>`,
-      `<p><strong>Номер анкеты:</strong> ${input.applicationDisplayNumber}</p>`,
-      `<p><strong>Email:</strong> ${input.patientEmail}<br />`,
-      `<strong>Телефон:</strong> ${input.patientPhone}<br />`,
+      `<p><strong>Пациент:</strong> ${escapeEmailHtml(input.patientName)}</p>`,
+      `<p><strong>Номер анкеты:</strong> ${escapeEmailHtml(input.applicationDisplayNumber)}</p>`,
+      `<p><strong>Email:</strong> ${escapeEmailHtml(input.patientEmail)}<br />`,
+      `<strong>Телефон:</strong> ${escapeEmailHtml(input.patientPhone)}<br />`,
       `<strong>Предпочтительный контакт:</strong> ${preferredContactLabel(input.preferredContact)}<br />`,
-      `<strong>Город / страна:</strong> ${input.city}, ${input.country}<br />`,
-      `<strong>Часовой пояс:</strong> ${input.timezone}<br />`,
-      `<strong>Запрошенный формат:</strong> ${requestedFormat}</p>`,
+      `<strong>Город / страна:</strong> ${escapeEmailHtml(input.city)}, ${escapeEmailHtml(input.country)}<br />`,
+      `<strong>Часовой пояс:</strong> ${escapeEmailHtml(input.timezone)}<br />`,
+      `<strong>Запрошенный формат:</strong> ${escapeEmailHtml(requestedFormat)}</p>`,
       `<p><a href="${adminUrl}">Открыть заявку в admin</a></p>`
     ].join("")
   });

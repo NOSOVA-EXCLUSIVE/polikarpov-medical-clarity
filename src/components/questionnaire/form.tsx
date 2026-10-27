@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -12,17 +12,28 @@ import type {
   UploadDescriptorInput
 } from "@/features/questionnaire/schemas";
 import { classifyImagingSourceType } from "@/features/questionnaire/status";
-import { publicProducts } from "@/features/products/catalog";
+import {
+  paidServicesV21,
+  organizationalSelection,
+  getServiceV21,
+  formatServicePrice,
+  legacyServiceIds,
+  legacyServiceSlugIds
+} from "@/features/products/services-v21";
+import {
+  INTAKE_DATA_CONSENT_LABEL,
+  INTAKE_DATA_CONSENT_VERSION
+} from "@/features/questionnaire/intake-consent-content";
 import { VIDEO_UPLOAD_POLICY } from "@/features/uploads/policies";
 
 import {
   canContinueFromStep,
+  canNavigateToStep,
   createInitialWizardState,
   getInvalidExternalLinkCount,
   hasBlockingRedFlags,
   hasText,
   nextStep,
-  normalizeRequestedProductForSelection,
   previousStep,
   trimValue,
   type LinkDraftState,
@@ -51,6 +62,7 @@ type SubmitSuccessResponse = {
 type SubmitErrorResponse = {
   success: false;
   error?: string;
+  code?: string;
   redirectTo?: string;
 };
 
@@ -80,27 +92,18 @@ function getPreferredContactLabel(value: QuestionnaireWizardState["patient"]["pr
   return preferredContactOptions.find((option) => option.value === value)?.label ?? value;
 }
 
-function createInitialFormState(requestedProduct: RequestedProductValue): ExtendedQuestionnaireState {
+function createInitialFormState(requestedProduct: RequestedProductValue, selectedServiceId = ""): ExtendedQuestionnaireState {
   const initialState = createInitialWizardState(requestedProduct);
 
   return {
     ...initialState,
+    selectedServiceId,
     legal: {
       ...initialState.legal,
       acceptedMedicalData: false
     }
   };
 }
-
-const formatOptions: Array<{
-  value: RequestedProductValue;
-  label: string;
-}> = [
-  { value: "NOT_SURE", label: "Не уверен(а), хочу разобраться в ситуации" },
-  { value: "SECOND_OPINION", label: "Второе мнение" },
-  { value: "MEDICAL_ROUTE", label: "Разбор ситуации и план действий" },
-  { value: "RECOVERY_4_WEEKS", label: "Сопровождение" }
-];
 
 const redFlagOptions: Array<{
   key: keyof QuestionnaireWizardState["redFlags"];
@@ -130,16 +133,8 @@ function getRequestedProductFromQuery(value: string | null): RequestedProductVal
     return "NOT_SURE";
   }
 
-  const matchedProduct = publicProducts.find((product) => product.slug === value);
-  switch (matchedProduct?.code) {
-    case "SECOND_OPINION":
-    case "MEDICAL_ROUTE":
-    case "RECOVERY_4_WEEKS":
-    case "PERSONAL_SUPPORT":
-      return matchedProduct.code;
-    default:
-      return "NOT_SURE";
-  }
+  const serviceId = legacyServiceSlugIds[value] ?? value;
+  return (Object.entries(legacyServiceIds).find(([, id]) => id === serviceId)?.[0] as RequestedProductValue) ?? "NOT_SURE";
 }
 
 function getExtension(filename: string) {
@@ -212,19 +207,43 @@ async function readJsonResponse<T>(response: Response): Promise<T> {
   );
 }
 
-export function QuestionnaireForm() {
+export function QuestionnaireForm({
+  initialRequestedProductCode,
+  initialSelectedServiceId
+}: {
+  initialRequestedProductCode?: RequestedProductValue;
+  initialSelectedServiceId?: string;
+} = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedProductFromQuery = useMemo(
-    () => getRequestedProductFromQuery(searchParams.get("product")),
-    [searchParams]
+    () => initialRequestedProductCode ?? getRequestedProductFromQuery(searchParams.get("product")),
+    [searchParams, initialRequestedProductCode]
   );
 
+  const initialServiceId = useMemo(() => {
+    const direct = searchParams.get("service") ?? initialSelectedServiceId;
+    if (direct) return getServiceV21(direct)?.kind === "paid_service" ? direct : "";
+    const legacy = searchParams.get("product");
+    const mapped = legacy ? legacyServiceSlugIds[legacy] ?? legacy :
+      initialRequestedProductCode ? legacyServiceIds[initialRequestedProductCode] : "";
+    return getServiceV21(mapped)?.kind === "paid_service" ? mapped : "";
+  }, [searchParams, initialSelectedServiceId, initialRequestedProductCode]);
   const [step, setStep] = useState<WizardStep>(1);
   const [state, setState] = useState<ExtendedQuestionnaireState>(() =>
-    createInitialFormState(requestedProductFromQuery)
+    createInitialFormState(requestedProductFromQuery, initialServiceId)
   );
+  useEffect(() => {
+    setState((current) => ({
+      ...current,
+      selectedServiceId: initialServiceId,
+      requestedProductCode: requestedProductFromQuery
+    }));
+  }, [initialServiceId, requestedProductFromQuery]);
   const [submitting, setSubmitting] = useState(false);
+  const [consentSaving, setConsentSaving] = useState(false);
+  const [intakeReceipt, setIntakeReceipt] = useState<{ acceptedAt: string; textVersion: string } | null>(null);
+  const consentRequestRef = useRef<Promise<void> | null>(null);
   const [uploadingCategory, setUploadingCategory] = useState<UploadCategoryValue | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successState, setSuccessState] = useState<SuccessState | null>(null);
@@ -235,7 +254,8 @@ export function QuestionnaireForm() {
     invalidExternalLinks,
     uploadingInProgress: uploadingCategory !== null
   });
-  const isReadyToSubmit = wizardSteps.every((item) =>
+  const selectedService = getServiceV21(state.selectedServiceId);
+  const isReadyToSubmit = Boolean(intakeReceipt) && wizardSteps.every((item) =>
     canContinueFromStep(item.step, state, {
       invalidExternalLinks,
       uploadingInProgress: uploadingCategory !== null
@@ -246,21 +266,55 @@ export function QuestionnaireForm() {
     externalLinks: state.externalLinks.filter((item) => hasText(item.url))
   });
 
-  const goToStep = (next: WizardStep) => {
-    if (next === 6 && step !== 6) {
-      setState((current) => ({
-        ...current,
-        confirmsNonEmergency: false
-      }));
+  const ensureIntakeConsent = async () => {
+    if (intakeReceipt) return;
+    if (!state.acceptedIntakeData) throw new Error("Сначала подтвердите согласие на обработку данных.");
+    if (!consentRequestRef.current) {
+      consentRequestRef.current = (async () => {
+        setConsentSaving(true);
+        try {
+          const response = await fetch("/api/questionnaire/consent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accepted: true, textVersion: INTAKE_DATA_CONSENT_VERSION })
+          });
+          const json = await readJsonResponse<{
+            ok?: boolean;
+            data?: { acceptedAt: string; textVersion: string };
+            error?: { message?: string };
+          }>(response);
+          if (!response.ok || !json.ok || !json.data) {
+            throw new Error(json.error?.message ?? "Не удалось сохранить согласие. Попробуйте ещё раз.");
+          }
+          setIntakeReceipt(json.data);
+        } finally {
+          setConsentSaving(false);
+        }
+      })();
     }
+    try {
+      await consentRequestRef.current;
+    } finally {
+      consentRequestRef.current = null;
+    }
+  };
 
-    setStep(next);
-    setErrorMessage(null);
-
-    if (typeof window !== "undefined") {
-      window.requestAnimationFrame(() => {
-        panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+  const goToStep = async (next: WizardStep) => {
+    if (!canNavigateToStep(next, state, { invalidExternalLinks, uploadingInProgress: uploadingCategory !== null })) {
+      setErrorMessage("Сначала подтвердите согласия и заполните обязательные поля предыдущих шагов.");
+      return;
+    }
+    try {
+      if (next > 1) await ensureIntakeConsent();
+      setStep(next);
+      setErrorMessage(null);
+      if (typeof window !== "undefined") {
+        window.requestAnimationFrame(() => {
+          panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Не удалось сохранить согласие.");
     }
   };
 
@@ -319,6 +373,11 @@ export function QuestionnaireForm() {
   };
 
   const handleUpload = async (category: UploadCategoryValue, fileList: FileList | null) => {
+    if (!state.acceptedIntakeData || !intakeReceipt) {
+      setErrorMessage("Сначала подтвердите согласие на обработку данных на первом шаге анкеты.");
+      setStep(1);
+      return;
+    }
     if (!fileList?.length) {
       return;
     }
@@ -385,7 +444,7 @@ export function QuestionnaireForm() {
         });
 
         if (!uploadResponse.ok) {
-          throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С„Р°Р№Р» РІ С…СЂР°РЅРёР»РёС‰Рµ. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·.");
+          throw new Error("Не удалось загрузить файл в хранилище. Попробуйте ещё раз.");
         }
 
         const completeResponse = await fetch("/api/uploads/complete", {
@@ -466,6 +525,7 @@ export function QuestionnaireForm() {
       isAdult: true,
       confirmsNonEmergency: true,
       requestedProductCode: state.requestedProductCode,
+      selectedServiceId: state.selectedServiceId,
       patient: {
         fullName: trimValue(state.patient.fullName),
         age: trimValue(state.patient.age) || undefined,
@@ -495,7 +555,7 @@ export function QuestionnaireForm() {
             ["Что уже делали", state.situation.alreadyDone],
             ["Принимаемые препараты", state.medicalContext.medications]
           ]) || undefined,
-        goalOfConsultation: `Предпочтительный формат: ${state.requestedProductCode}`,
+        goalOfConsultation: `Предпочтительный формат: ${selectedService?.title ?? state.selectedServiceId}`,
         reviewNoteForDoctor:
           joinSections([
             ["Возраст", state.patient.age],
@@ -546,6 +606,14 @@ export function QuestionnaireForm() {
       const json = await readJsonResponse<SubmitSuccessResponse | SubmitErrorResponse>(response);
 
       if (!response.ok || !json?.success) {
+        if (response.status === 403 && "code" in json && json.code === "INTAKE_CONSENT_REQUIRED") {
+          setIntakeReceipt(null);
+          setState((current) => ({ ...current, acceptedIntakeData: false, uploads: [] }));
+          setStep(1);
+          throw new Error(state.uploads.length > 0
+            ? "Подтвердите согласие заново. Уже загруженные файлы потребуется выбрать повторно."
+            : json.error ?? "Подтвердите согласие на обработку данных заново.");
+        }
         if ("redirectTo" in json && json.redirectTo) {
           router.push(json.redirectTo as Route);
           return;
@@ -564,7 +632,8 @@ export function QuestionnaireForm() {
         status: json.status,
         preferredContactLabel
       });
-      setState(createInitialFormState(requestedProductFromQuery));
+      setState(createInitialFormState(requestedProductFromQuery, initialServiceId));
+      setIntakeReceipt(null);
       setStep(1);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Не удалось отправить анкету.");
@@ -583,6 +652,40 @@ export function QuestionnaireForm() {
             <p className="questionnaire-field-note">Запись и оплата открываются после того, как врач подтвердит формат работы.</p>
           </div>
           <div className="questionnaire-panel__section checkbox-grid">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={state.acceptedIntakeData}
+                disabled={consentSaving || uploadingCategory !== null}
+                onChange={async (event) => {
+                  const checked = event.currentTarget.checked;
+                  updateState((current) => ({
+                    ...current,
+                    acceptedIntakeData: checked,
+                    uploads: checked ? current.uploads : []
+                  }));
+                  if (!checked) {
+                    setIntakeReceipt(null);
+                    if (state.uploads.length > 0) {
+                      setErrorMessage("Подтвердите согласие заново. Уже загруженные файлы потребуется выбрать повторно.");
+                    }
+                    setConsentSaving(true);
+                    try {
+                      const response = await fetch("/api/questionnaire/consent", { method: "DELETE" });
+                      if (!response.ok) throw new Error("Не удалось обновить согласие. Попробуйте ещё раз.");
+                    } catch (error) {
+                      setErrorMessage(error instanceof Error ? error.message : "Не удалось обновить согласие.");
+                    } finally {
+                      setConsentSaving(false);
+                    }
+                  }
+                }}
+              />
+              <span>
+                {INTAKE_DATA_CONSENT_LABEL}{" "}
+                (<Link href="/legal/privacy" target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>Политика обработки данных</Link>)
+              </span>
+            </label>
             <label className="checkbox-row">
               <input
                 type="checkbox"
@@ -629,30 +732,25 @@ export function QuestionnaireForm() {
               Это не окончательный выбор — врач уточнит после анализа анкеты.
             </p>
             <div className="questionnaire-option-grid">
-              {formatOptions.map((option) => {
-                const selection = normalizeRequestedProductForSelection({
-                  currentValue: state.requestedProductCode,
-                  optionValue: option.value,
-                  queryRequestedProduct: requestedProductFromQuery
-                });
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`questionnaire-option-card${selection.isSelected ? " is-selected" : ""}`}
-                    onClick={() =>
-                      updateState((current) => ({
-                        ...current,
-                        requestedProductCode: selection.nextValue
-                      }))
-                    }
-                  >
-                    <span>{option.label}</span>
-                  </button>
-                );
-              })}
+              {paidServicesV21.map((service) => (
+                <button
+                  key={service.id}
+                  type="button"
+                  className={`questionnaire-option-card${state.selectedServiceId === service.id ? " is-selected" : ""}`}
+                  onClick={() => updateState((current) => ({
+                    ...current,
+                    requestedProductCode: "NOT_SURE",
+                    selectedServiceId: service.id
+                  }))}
+                >
+                  <span>{service.title}</span>
+                  <strong>{formatServicePrice(service)}</strong>
+                </button>
+              ))}
             </div>
+            <Link href="/questionnaire?service=service-selection" className="questionnaire-field-note">
+              {organizationalSelection.title} — {formatServicePrice(organizationalSelection)}
+            </Link>
           </div>
         </>
       );
@@ -946,7 +1044,7 @@ export function QuestionnaireForm() {
           <div className="questionnaire-guide stack-sm">
             <strong>Как подготовить материалы</strong>
             <div className="questionnaire-guide-grid">
-              <div className="questionnaire-guide-card">Сделайте несколько чётких фото ключевых кадров исследования, если загружаете снимки вручную.</div>
+              <div className="questionnaire-guide-card">Для услуг с просмотром снимков подготовьте исходный комплект исследования. Отдельные фото ключевых кадров могут быть недостаточны для экспертного разбора.</div>
               <div className="questionnaire-guide-card">Если у вас диск, архив или облачная папка, добавьте короткую инструкцию по доступу.</div>
               <div className="questionnaire-guide-card">Если файлы не загружаются напрямую, можно оставить внешнюю ссылку и указать пароль при необходимости.</div>
             </div>
@@ -967,11 +1065,11 @@ export function QuestionnaireForm() {
               <input
                 type="checkbox"
                 style={confirmationCheckboxStyle}
-                checked={state.confirmsNonEmergency}
+                checked={state.confirmedNonEmergencyAtSubmission}
                 onChange={(e) =>
                   updateState((current) => ({
                     ...current,
-                    confirmsNonEmergency: e.target.checked
+                    confirmedNonEmergencyAtSubmission: e.target.checked
                   }))
                 }
               />
@@ -1047,39 +1145,38 @@ export function QuestionnaireForm() {
           <div className="card questionnaire-success-card stack">
             <h2>Анкета отправлена</h2>
             <p className="questionnaire-success-card__lead">
-              Благодарим Вас! Врач лично изучит вашу ситуацию и материалы.
+              Благодарим Вас! Анкета и материалы переданы врачу для предварительного рассмотрения.
             </p>
             <p>
-              Мы внимательно разберём вашу ситуацию, чтобы понять, что действительно
-              происходит и какой формат помощи будет для вас оптимален.
+              Сначала уточним задачу и наличие необходимых материалов, затем согласуем
+              время уточняющего созвона. Окончательные условия работы подтверждаются после созвона.
             </p>
             <p className="questionnaire-success-card__timing">
-              ⏱ Обычно это занимает от 12 до 24 часов.
+              Первый организационный ответ — до трёх рабочих дней.
             </p>
 
             <div className="questionnaire-success-card__section stack-sm">
-              <strong>После анализа вы получите:</strong>
+              <strong>Следующие шаги:</strong>
               <ul className="questionnaire-success-list">
-                <li>профессиональный ориентир по ситуации</li>
-                <li>понимание вашей ситуации</li>
-                <li>рекомендации по дальнейшим шагам</li>
-                <li>предложение подходящего формата работы</li>
+                <li>уточнение задачи и комплекта материалов</li>
+                <li>выбор времени созвона с подтверждением врача</li>
+                <li>согласование формата, объёма, стоимости и сроков после созвона</li>
+                <li>принятие персонального предложения и ручное согласование оплаты</li>
               </ul>
             </div>
 
             <div className="questionnaire-success-card__section stack-sm">
-              <strong>Вы получите не просто ответ,</strong>
+              <strong>Работа начинается отдельно, после согласования и оплаты.</strong>
               <p>
-                а понятный и честный профессиональный ориентир, на который можно
-                опереться.
+                Отправка анкеты сама по себе не означает оплату, начало работы или готовое медицинское заключение.
               </p>
             </div>
 
             <div className="questionnaire-success-card__section stack-sm">
               <p>Мы свяжемся с Вами по выбранному способу связи: {successState.preferredContactLabel}.</p>
               <p>
-                После рассмотрения анкеты на Вашу электронную почту поступит письмо для подтверждения записи и
-                выбора удобной даты и времени консультации.
+                После предварительного рассмотрения мы предоставим персональный вход для выбора времени уточняющего созвона.
+                Предложенное время подтверждает врач. Созвон проходит до окончательного предложения и оплаты.
               </p>
               <p>Пожалуйста, проверяйте выбранный канал связи и электронную почту.</p>
             </div>
@@ -1114,7 +1211,7 @@ export function QuestionnaireForm() {
                 <div className="stack-sm">
                   <strong>Маршрут анкеты</strong>
                   <p className="questionnaire-progress__note">
-                    Все 6 шагов кликабельны. Вы можете открыть любой раздел анкеты, а затем вернуться к текущему месту.
+                    Переход к следующему разделу доступен после согласия на обработку данных и заполнения обязательных полей предыдущих шагов.
                   </p>
                 </div>
                 <span className="questionnaire-field-note">Шаг {step} из 6</span>
@@ -1135,7 +1232,8 @@ export function QuestionnaireForm() {
                     key={item.step}
                     type="button"
                     className={`questionnaire-step-chip${item.step === step ? " is-current" : ""}`}
-                    onClick={() => goToStep(item.step)}
+                    disabled={consentSaving || !canNavigateToStep(item.step, state, { invalidExternalLinks, uploadingInProgress: uploadingCategory !== null })}
+                    onClick={() => void goToStep(item.step)}
                   >
                     <span>{item.number}</span>
                     <strong>{item.title}</strong>
@@ -1145,7 +1243,19 @@ export function QuestionnaireForm() {
               </div>
             </div>
 
-            {errorMessage ? <div className="notice notice--danger">{errorMessage}</div> : null}
+            {selectedService?.kind === "paid_service" ? (
+              <div className="card stack-sm questionnaire-selected-service" aria-live="polite">
+                <strong>{selectedService.title}</strong>
+                <span>{formatServicePrice(selectedService)}</span>
+                <p>{selectedService.turnaround}</p>
+              </div>
+            ) : (
+              <div className="notice">Выберите подходящий формат на первом шаге анкеты. Если нужна помощь с выбором, доступен бесплатный организационный подбор услуги.</div>
+            )}
+            {(searchParams.get("service") && !getServiceV21(searchParams.get("service")!)) ? (
+              <div className="notice notice--danger">Услуга по этой ссылке не найдена. Выберите формат из списка.</div>
+            ) : null}
+            {errorMessage ? <div className="notice notice--danger" role="alert">{errorMessage}</div> : null}
 
             <div ref={panelRef} className="card questionnaire-panel stack">
               {renderCurrentStep()}
@@ -1179,11 +1289,11 @@ export function QuestionnaireForm() {
                   ) : (
                     <button
                       type="button"
-                      className={`button${stepCanContinue ? "" : " button--disabled"}`}
-                      disabled={!stepCanContinue}
+                      className={`button${stepCanContinue && !consentSaving ? "" : " button--disabled"}`}
+                      disabled={!stepCanContinue || consentSaving}
                       onClick={handleNext}
                     >
-                      Продолжить заполнение
+                      {consentSaving ? "Сохраняем согласие…" : "Продолжить заполнение"}
                     </button>
                   )
                 ) : (
@@ -1203,4 +1313,3 @@ export function QuestionnaireForm() {
     </form>
   );
 }
-

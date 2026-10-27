@@ -1,5 +1,4 @@
-﻿// Fallback styles for cases where the generated global CSS asset is missing
-// or not attached by the runtime. Keep this in sync with src/app/globals.css.
+// Fallback mirrors globals.css.
 export const inlineGlobalStyles = `:root {
   color-scheme: light;
   font-family: "Aptos", "Segoe UI", "Helvetica Neue", "Noto Sans", sans-serif;
@@ -814,7 +813,7 @@ button {
 }
 
 .questionnaire-form > .section:first-child {
-  padding-top: 1.3rem;
+  padding-top: 0.15rem;
 }
 
 .questionnaire-form > .section:last-child {
@@ -4586,14 +4585,6 @@ button {
   line-height: 1.62;
 }
 
-.questionnaire-page-intro__title {
-  display: block;
-  font-size: 0.82rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(36, 33, 29, 0.56);
-}
-
 .questionnaire-hero__line {
   display: block;
 }
@@ -4605,6 +4596,14 @@ button {
 .questionnaire-hero__line--meta {
   color: rgba(36, 33, 29, 0.72);
   margin-top: 0.06rem;
+}
+
+.questionnaire-page-intro__title {
+  display: block;
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(36, 33, 29, 0.56);
 }
 
 .questionnaire-page-intro__grid {
@@ -5599,5 +5598,63 @@ button {
     border-radius: 22px;
   }
 }
-`;
 
+
+/* Medical Clarity v2.1: shared accessible controls and service selection. */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-content: center;
+  flex: 0 0 21px;
+  width: 21px;
+  min-width: 21px;
+  height: 21px;
+  margin: 0.25em 0 0;
+  padding: 0;
+  border: 1.5px solid var(--brass);
+  border-radius: 5px;
+  background: var(--panel-strong);
+  cursor: pointer;
+  vertical-align: middle;
+  box-shadow: none;
+}
+input[type="checkbox"]::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  clip-path: polygon(12% 44%, 38% 70%, 86% 16%, 100% 30%, 40% 96%, 0 57%);
+  background: white;
+  transform: scale(0);
+}
+input[type="checkbox"]:checked { background: var(--graphite); border-color: var(--graphite); }
+input[type="checkbox"]:checked::before { transform: scale(1); }
+input[type="checkbox"]:focus-visible { outline: 3px solid var(--brass); outline-offset: 4px; }
+input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
+.checkbox-row { line-height: 1.6; cursor: pointer; }
+.checkbox-row > span, .checkbox-row > div { min-width: 0; }
+.home-entry-grid, .services-orientation-grid--three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem; }
+.home-entry-grid > *, .services-orientation-grid--three > * { min-width: 0; }
+.services-format-card { overflow-wrap: anywhere; }
+.services-format-card .hero-actions { margin-top: auto; }
+.service-detail-price-aside__value { font-variant-numeric: tabular-nums; line-height: 1.25; }
+.service-detail-price-aside .product-card__price { font-size: clamp(1.8rem, 3vw, 2.4rem); }
+.organizational-inquiry { max-width: 900px; margin-inline: auto; }
+.organizational-inquiry .field { display: flex; flex-direction: column; gap: .45rem; font-weight: 500; }
+.form-error { color: #8b332a; }
+.form-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.questionnaire-service-summary { padding: 1.3rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--accent-soft); }
+@media (max-width: 900px) {
+  .home-entry-grid, .services-orientation-grid--three { grid-template-columns: 1fr; }
+  .service-detail-process-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .service-detail-process-grid { grid-template-columns: 1fr; }
+  .organizational-inquiry .two-column { grid-template-columns: 1fr; }
+  .hero-actions > .button { text-align: center; }
+}
+@media (forced-colors: active) {
+  input[type="checkbox"] { appearance: auto; -webkit-appearance: auto; }
+  input[type="checkbox"]::before { display: none; }
+}
+`;

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { AdminShell, StatCard } from "@/components/admin/shell";
 import { applicationStatusLabel, formatDateTime, productLabel } from "@/features/admin/presentation";
 import { getDashboardSnapshot } from "@/features/admin/service";
+import { describeServiceSelection } from "@/features/questionnaire/service-selection";
+import { manualPhaseLabels } from "@/features/manual-v21/presentation";
 import { requireStaffSession } from "@/lib/auth/session";
 
 export default async function AdminDashboardPage() {
@@ -15,28 +17,31 @@ export default async function AdminDashboardPage() {
       description={`Вы вошли как ${session.name}. Здесь видно, какие кейсы требуют первичного просмотра, дозапроса материалов или следующего решения.`}
     >
       <div className="card-grid">
-        <StatCard label="Новые анкеты" value={snapshot.counters.newCount} href="/admin/applications?status=NEW" />
+        <StatCard label="Открытые обращения v2.1" value={snapshot.counters.manualOpenCount} href="/admin/applications?manualPhase=OPEN" />
+        <StatCard label="Новые анкеты" value={snapshot.counters.newCount} href="/admin/applications?status=NEW&manualPhase=NOT_STARTED" />
         <StatCard
           label="На просмотре врачом"
           value={snapshot.counters.underReviewCount}
-          href="/admin/applications?status=UNDER_REVIEW"
+          href="/admin/applications?status=UNDER_REVIEW&manualPhase=NOT_STARTED"
         />
         <StatCard
           label="Ждут файлы"
           value={snapshot.counters.needsUploadCount}
-          href="/admin/applications?status=NEEDS_UPLOAD"
+          href="/admin/applications?status=NEEDS_UPLOAD&manualPhase=NOT_STARTED"
         />
         <StatCard
           label="Ждут доступ к исследованиям"
           value={snapshot.counters.needsImagingCount}
-          href="/admin/applications?status=NEEDS_IMAGING_ACCESS"
+          href="/admin/applications?status=NEEDS_IMAGING_ACCESS&manualPhase=NOT_STARTED"
         />
         <StatCard
           label="Ссылка отправлена"
           value={snapshot.counters.bookingSentCount}
-          href="/admin/applications?status=BOOKING_SENT"
+          href="/admin/applications?status=BOOKING_SENT&manualPhase=NOT_STARTED"
         />
       </div>
+      <p className="muted">Открытые обращения v2.1 учитываются отдельно. Остальные счётчики показывают анкеты,
+        для которых ручной маршрут v2.1 ещё не создан; условия прежних обращений сохраняются.</p>
 
       <section className="card stack">
         <div className="card-meta">
@@ -53,13 +58,18 @@ export default async function AdminDashboardPage() {
                   <strong>{application.patient.fullName}</strong>
                   <p className="muted">{application.patient.email}</p>
                 </div>
-                <span className="status">{applicationStatusLabel(application.status)}</span>
+                <span className="status">{application.manualCase
+                  ? `v2.1 · ${manualPhaseLabels[application.manualCase.phase] ?? application.manualCase.phase}`
+                  : applicationStatusLabel(application.status)}</span>
               </div>
               <p className="muted">
-                {productLabel(application.assignedProductCode ?? application.requestedProductCode)} ·{" "}
+                {application.serviceSelection ? describeServiceSelection(application.serviceSelection) : productLabel(application.assignedProductCode ?? application.requestedProductCode)} ·{" "}
                 {formatDateTime(application.submittedAt)}
               </p>
-              <div>
+              <div className="stack-sm">
+                {application.manualCase ? <Link className="text-link" href={`/admin/manual/${application.manualCase.id}`}>
+                  Открыть ручную запись и кабинет v2.1
+                </Link> : null}
                 <Link className="text-link" href={`/admin/applications/${application.id}`}>
                   Открыть карточку
                 </Link>

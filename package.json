@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "node preview-safety/preflight.cjs build && next build && node fix-next-server-runtime.cjs",
+    "build": "node preview-safety/preflight.cjs build && prisma generate && next build && node fix-next-server-runtime.cjs",
     "start": "node fix-next-server-runtime.cjs && next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

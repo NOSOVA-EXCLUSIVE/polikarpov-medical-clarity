@@ -123,7 +123,7 @@ export default function DoctorPage() {
               <img
                 alt="Евгений Сергеевич Поликарпов"
                 className="home-hero__portrait-image doctor-home-reference__portrait-image-home"
-                src="/images/doctor/hero-portrait-transparent-20260410.png"
+                src="/images/doctor/hero-portrait-no-badge-20261027.png"
               />
             </div>
           </div>

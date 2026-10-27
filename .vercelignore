@@ -1,0 +1,11 @@
+# Local QA exports, audit material and source snapshots do not belong in a deployment.
+/.qa_*
+/runtime-test-assets/
+/project-docs/
+/prompts/
+/Настройки_ проги/
+/.git/
+/tests/
+/*.log
+/*.zip
+/.env*

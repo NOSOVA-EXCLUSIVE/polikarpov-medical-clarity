@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { getServiceV21 } from "@/features/products/services-v21";
+
 import { VIDEO_UPLOAD_POLICY } from "@/features/uploads/policies";
 
 const trimToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
@@ -76,6 +78,11 @@ export const questionnaireSubmitSchema = z.object({
   isAdult: z.literal(true),
   confirmsNonEmergency: z.literal(true),
   requestedProductCode: z.enum(requestedProductValues),
+  selectedServiceId: trimToUndefined(
+    z.string().max(100).refine((id) => Boolean(getServiceV21(id)), {
+      message: "Выбранный формат услуги не найден. Выберите услугу заново."
+    })
+  ),
   patient: z.object({
     fullName: z.string().trim().min(2).max(160),
     age: trimToUndefined(z.string().max(16)),

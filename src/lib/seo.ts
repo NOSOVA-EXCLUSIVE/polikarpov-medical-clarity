@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getPreviewAppUrl } from "@/lib/preview/guard";
+import { getServiceV21 } from "@/features/products/services-v21";
 
 export const SITE_NAME = "Polikarpov Medical Clarity";
 export const DEFAULT_SITE_URL = "http://localhost:3000";
@@ -134,7 +135,8 @@ export function buildPageMetadata({
 }
 
 export function buildServiceMetadata(slug: ServiceSeoSlug) {
-  const seo = serviceSeoBySlug[slug];
+  const canonical = getServiceV21(slug);
+  const seo = canonical ? { title: canonical.title, description: canonical.shortDescription } : serviceSeoBySlug[slug];
 
   return buildPageMetadata({
     title: seo.title,

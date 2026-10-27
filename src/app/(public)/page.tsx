@@ -1,10 +1,11 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 
 import { PageHero, Section } from "../../components/public/shell";
 import type { Route } from "next";
 
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo";
+import { formatServicePrice, getServiceV21, organizationalSelection, serviceQuestionnaireHref } from "@/features/products/services-v21";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Экспертное второе мнение и клинический разбор",
@@ -15,40 +16,24 @@ export const metadata: Metadata = buildPageMetadata({
 
 const doctorDocumentsHref = "/doctor/documents" satisfies Route;
 
-const assistanceFormats = [
+const entryScenarios = [
   {
-    title: "Экспертное второе мнение",
-    detailHref: "/services/second-opinion",
-    situation: "Уже были у врачей, но ясности нет",
-    action:
-      "Разбор ситуации и обследований с объяснением, что происходит на самом деле и понятным планом действий",
-    accent: "👉 когда важно принять решение, а не собирать ещё мнения"
+    id: "initial-assessment",
+    situation: "Болит сустав, обследований ещё нет",
+    note: "Самостоятельный первый шаг; продолжение не обязательно."
   },
   {
-    title: "Клинический разбор ситуации",
-    detailHref: "/services/clinical-review",
-    situation: "Ситуация требует глубокого анализа",
-    action:
-      "Системный разбор всех данных с сопоставлением уже имеющихся заключений и определением дальнейшего маршрута",
-    accent: "👉 когда нужно не мнение, а профессиональное решение"
+    id: "second-opinion",
+    situation: "Исследование уже есть, нужен независимый взгляд",
+    note: "Можно обратиться сразу, без обязательной первичной оценки."
   },
   {
-    title: "Контроль восстановления",
-    detailHref: "/services/recovery-control",
-    situation: "Восстановление уже идёт, но есть сомнения",
-    action:
-      "Последовательное профессиональное сопровождение на этапе восстановления — 4 недели",
-    accent: "👉 когда важно пройти восстановление без ошибок"
-  },
-  {
-    title: "Индивидуальное сопровождение",
-    detailHref: "/services/personal-support",
-    situation: "Сложный или чувствительный случай",
-    action:
-      "Последовательное профессиональное сопровождение — 4 недели",
-    accent: "👉 когда требуется внимание и последовательное сопровождение"
+    id: "complex-review",
+    situation: "После операции накопились выписки и исследования",
+    note: "Для одной связанной истории и сопоставления данных разных дат."
   }
-];
+] as const;
+
 const clinicalExperience = [
   ["Группа компаний «Мать и дитя»"],
   ["Научно-исследовательский институт скорой помощи", "им. Н. В. Склифосовского"],
@@ -60,39 +45,27 @@ const clinicalExperience = [
 const workSteps = [
   {
     number: "Этап I",
-    title: "Разбор ситуации",
-    lines: [
-      "Вы отправляете анкету и материалы",
-      "для предварительного анализа"
-    ],
-    accent: "👉 чтобы начать с понятной исходной картины"
+    title: "Опишите задачу",
+    lines: ["Сообщите, что беспокоит, какие материалы уже есть и какой вопрос вы хотите обсудить."],
+    accent: "Если формат пока неясен, организационный подбор бесплатен."
   },
   {
     number: "Этап II",
-    title: "Подтверждение формата",
-    lines: [
-      "После анализа врач уточняет,",
-      "уместен ли дистанционный формат в вашем случае"
-    ],
-    accent: "👉 чтобы двигаться дальше только в подходящем формате"
+    title: "Согласуем формат",
+    lines: ["Уточняем возможность работы, объём материалов, стоимость и срок до оплаты."],
+    accent: "Первичная оценка за €20 не обязательна, если исследования уже готовы."
   },
   {
     number: "Этап III",
-    title: "Согласование работы",
-    lines: [
-      "Если формат подходит, согласуются условия",
-      "и следующий этап взаимодействия"
-    ],
-    accent: "👉 чтобы дальше было спокойно и предсказуемо"
+    title: "Передайте материалы",
+    lines: ["После оформления необходимых документов сведения передаются по согласованному защищённому каналу."],
+    accent: "Если комплект неполный, сообщим, чего не хватает."
   },
   {
     number: "Этап IV",
-    title: "Профессиональный ориентир",
-    lines: [
-      "По итогам вы получаете более ясное понимание",
-      "ситуации и дальнейших шагов"
-    ],
-    accent: "👉 чтобы принять более спокойное и обоснованное решение"
+    title: "Получите результат",
+    lines: ["Врач изучает материалы в согласованном объёме и готовит персональный письменный результат."],
+    accent: "С перечнем изученных материалов и ограничениями оценки."
   }
 ];
 
@@ -169,8 +142,8 @@ export default function HomePage() {
         }
         actions={
           <>
-            <Link className="button" href="/questionnaire">
-              Разобрать мою ситуацию
+            <Link className="button" href="/services">
+              Выбрать формат
             </Link>
             <Link className="button button--secondary" href="/#how-it-works">
               Как проходит разбор ситуации
@@ -189,7 +162,7 @@ export default function HomePage() {
               <img
                 alt="Евгений Сергеевич Поликарпов"
                 className="home-hero__portrait-image"
-                src="/images/doctor/hero-portrait-transparent-20260410.png"
+                src="/images/doctor/hero-portrait-no-badge-20261027.png"
               />
             </div>
           </div>
@@ -211,7 +184,7 @@ export default function HomePage() {
                 <p>
                   Профессиональный профиль — разбор сложных ситуаций, когда важно не
                   просто получить ещё одно мнение, а спокойнее и точнее понять
-                    более ясную логику происходящего.
+                  логику происходящего.
                 </p>
                 <p>
                   Работает с обследованиями, жалобами и уже полученными
@@ -261,58 +234,58 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Section title="Форматы помощи">
+      <Section title="С чего начать?">
         <div className="home-formats-shell stack">
           <p className="home-formats-shell__lead">
-            <span className="home-formats-shell__lead-line">
-              Выберите формат в зависимости от вашей ситуации:
-            </span>
-            <span className="home-formats-shell__lead-line">
-              если уже есть врачебные мнения — можно начать со второго мнения;
-            </span>
-            <span className="home-formats-shell__lead-line">
-              если важно глубже разобраться в ситуации — подойдёт клинический разбор;
-            </span>
-            <span className="home-formats-shell__lead-line">
-              если восстановление уже идёт — формат контроля восстановления;
-            </span>
-            <span className="home-formats-shell__lead-line">
-              если нужен более внимательный и длительный формат взаимодействия —
-              индивидуальное сопровождение.
-            </span>
+            Выберите ближайшую к вашей ситуации задачу. Объём, стоимость и срок
+            работы подтверждаются до оплаты.
           </p>
-          <div className="home-formats-grid">
-            {assistanceFormats.map((item) => (
-              <article key={item.title} className="home-format-card">
-                <Link
-                  aria-label={`Подробнее о формате: ${item.title}`}
-                  className="home-format-card__overlay"
-                  href={item.detailHref as Route}
-                >
-                  Подробнее о формате: {item.title}
-                </Link>
-                <h3 className="home-format-card__title">{item.title}</h3>
-                <div className="home-format-card__body">
-                  <div className="home-format-card__block">
-                    <p className="home-format-card__label">Ситуация</p>
-                    <p className="home-format-card__situation">{item.situation}</p>
+          <div className="home-formats-grid home-entry-grid">
+            {entryScenarios.map((scenario) => {
+              const service = getServiceV21(scenario.id);
+              if (!service) return null;
+              return (
+                <article key={service.id} className="home-format-card">
+                  <p className="home-format-card__label">{scenario.situation}</p>
+                  <h3 className="home-format-card__title">{service.title}</h3>
+                  <p className="services-format-card__price-new">{formatServicePrice(service)}</p>
+                  <div className="home-format-card__body">
+                    <p className="home-format-card__action">{service.shortDescription}</p>
+                    <p className="home-format-card__accent">{scenario.note}</p>
                   </div>
-                  <div className="home-format-card__block">
-                    <p className="home-format-card__label">Что делает врач</p>
-                    <p className="home-format-card__action">{item.action}</p>
+                  <div className="hero-actions">
+                    <Link className="button" href={serviceQuestionnaireHref(service.id) as Route}>
+                      Выбрать формат
+                    </Link>
+                    <Link className="button button--secondary" href={`/services/${service.slug}` as Route}>
+                      Подробнее
+                    </Link>
                   </div>
-                  <div className="home-format-card__block">
-                    <p className="home-format-card__label">Когда это нужно</p>
-                    <p className="home-format-card__accent">{item.accent}</p>
-                  </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
-          <p className="home-formats-shell__note">
-            Если вы не уверены, с чего начать, оптимальный формат уточняется после
-            анализа анкеты и материалов.
-          </p>
+          <div className="hero-actions">
+            <Link className="button button--secondary" href="/services">
+              Все 10 форматов и стоимость
+            </Link>
+          </div>
+          <article className="home-hero-panel stack-sm" id="format-selection">
+            <p className="home-hero-panel__label">Организационный подбор — бесплатно</p>
+            <h3>Не знаете, какой формат подойдёт?</h3>
+            <p>
+              {organizationalSelection.shortDescription} {organizationalSelection.description}
+              {" "}{organizationalSelection.turnaround}
+            </p>
+            <p className="muted">
+              Медицинская оценка и просмотр снимков в бесплатный подбор не входят.
+            </p>
+            <div className="hero-actions">
+              <Link className="button button--secondary" href={serviceQuestionnaireHref("service-selection") as Route}>
+                Подобрать услугу бесплатно
+              </Link>
+            </div>
+          </article>
         </div>
       </Section>
       <Section id="how-it-works" title="Как проходит работа">
@@ -344,17 +317,20 @@ export default function HomePage() {
               </h2>
               <div className="home-final-cta__copy">
                 <p>
-                  Начать можно с анкеты пациента — это первый шаг, после которого
-                  становится понятнее, возможен ли дистанционный формат и каким может
-                  быть дальнейший маршрут.
+                  Выберите подходящий формат или начните с бесплатного организационного
+                  подбора. Первичная оценка за €20 — самостоятельная услуга; если
+                  исследования уже готовы, можно сразу обратиться за экспертным разбором.
                 </p>
               </div>
             </div>
 
             <div className="stack-sm home-final-cta__actions">
               <div className="hero-actions">
-                <Link className="button" href="/questionnaire">
-                  Разобрать мою ситуацию
+                <Link className="button" href="/services">
+                  Выбрать формат
+                </Link>
+                <Link className="button button--secondary" href={serviceQuestionnaireHref("service-selection") as Route}>
+                  Подобрать услугу бесплатно
                 </Link>
               </div>
               <p className="home-hero__micro-note">Конфиденциально. Спокойно. По существу.</p>
@@ -365,4 +341,3 @@ export default function HomePage() {
     </main>
   );
 }
-

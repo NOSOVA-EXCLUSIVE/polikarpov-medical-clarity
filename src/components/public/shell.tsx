@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { PRACTICE_LEGAL_LINES } from "@/features/legal/practice";
 
 type SectionProps = {
   children: ReactNode;
@@ -90,8 +91,7 @@ export function PublicFooter() {
               </Link>
             </p>
             <div className="site-footer__business">
-              <p>Исполнитель: Поликарпов Евгений Сергеевич</p>
-              <p>ИНН: 771873883546</p>
+              {PRACTICE_LEGAL_LINES.map((line) => <p key={line}>{line}</p>)}
               <nav className="site-footer__contacts" aria-label="Контакты">
                 <a
                   className="site-footer__contact"

@@ -82,9 +82,12 @@ export type LegalState = {
 };
 
 export type QuestionnaireWizardState = {
+  selectedServiceId: string;
   requestedProductCode: RequestedProductValue;
   isAdult: boolean;
   confirmsNonEmergency: boolean;
+  acceptedIntakeData: boolean;
+  confirmedNonEmergencyAtSubmission: boolean;
   redFlags: RedFlagsState;
   patient: PatientState;
   situation: SituationState;
@@ -143,9 +146,12 @@ export function createInitialWizardState(
   requestedProductCode: RequestedProductValue
 ): QuestionnaireWizardState {
   return {
+    selectedServiceId: "",
     requestedProductCode,
     isAdult: false,
     confirmsNonEmergency: false,
+    acceptedIntakeData: false,
+    confirmedNonEmergencyAtSubmission: false,
     redFlags: {
       hasFever: false,
       hasAcuteSwelling: false,
@@ -265,7 +271,8 @@ export function canContinueFromStep(
 ) {
   switch (step) {
     case 1:
-      return state.isAdult && state.confirmsNonEmergency && !hasBlockingRedFlags(state.redFlags);
+      return state.isAdult && state.confirmsNonEmergency && state.acceptedIntakeData &&
+        hasText(state.selectedServiceId) && !hasBlockingRedFlags(state.redFlags);
     case 2:
       return (
         isValidFullName(state.patient.fullName) &&
@@ -277,16 +284,27 @@ export function canContinueFromStep(
         hasText(state.patient.timezone)
       );
     case 3:
-      return hasAnySituationContent(state.situation);
+      return isValidChiefComplaint(state.situation.chiefComplaint);
     case 4:
       return true;
     case 5:
       return !options?.uploadingInProgress && (options?.invalidExternalLinks ?? 0) === 0;
     case 6:
-      return Object.values(state.legal).every(Boolean);
+      return state.confirmedNonEmergencyAtSubmission && Object.values(state.legal).every(Boolean);
     default:
       return false;
   }
+}
+
+/** The step-number navigation follows the same prerequisites as Continue. */
+export function canNavigateToStep(
+  target: WizardStep,
+  state: QuestionnaireWizardState,
+  options?: { invalidExternalLinks?: number; uploadingInProgress?: boolean }
+) {
+  return target === 1 || wizardSteps
+    .filter((item) => item.step < target)
+    .every((item) => canContinueFromStep(item.step, state, options));
 }
 
 export function nextStep(step: WizardStep): WizardStep {

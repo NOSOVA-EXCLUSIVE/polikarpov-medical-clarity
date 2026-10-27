@@ -1,112 +1,56 @@
 import Link from "next/link";
+import type { Metadata, Route } from "next";
 
 import { Section } from "../../../components/public/shell";
-import type { Route } from "next";
-
-import type { Metadata } from "next";
+import {
+  formatServicePrice,
+  getServiceV21,
+  organizationalSelection,
+  primaryAssessmentDiscountV21,
+  serviceQuestionnaireHref
+} from "@/features/products/services-v21";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Форматы помощи",
+  title: "Форматы помощи и стоимость",
   description:
-    "Форматы помощи Polikarpov Medical Clarity: экспертное второе мнение, клинический разбор ситуации, контроль восстановления и индивидуальное сопровождение.",
+    "Десять форматов Polikarpov Medical Clarity: первичная оценка, разъяснение протокола, второе мнение, разбор истории и письменное сопровождение. Стоимость в евро и бесплатный организационный подбор.",
   path: "/services"
 });
 
-const primaryFormats = [
+const entryScenarios = [
   {
-    title: "Экспертное второе мнение",
-    href: "/questionnaire?product=second-opinion",
-    detailHref: "/services/second-opinion",
-    situation: "Когда уже были у врачей, но нет ясности.",
-    action:
-      "Врач анализирует заключения, обследования и уже полученные мнения, сравнивает их между собой и помогает выстроить понятную логику дальнейших шагов.",
-    accent: "👉 Когда есть несколько мнений, но нет уверенного решения",
-    priceLead: "Оптимальный формат для решения задачи",
-    standardPrice: "5 900 ₽",
-    currentPrice: "3 900 ₽",
-    euroPrice: "≈ 40 €",
-    result: "Вы понимаете, что происходит и что делать дальше."
+    id: "initial-assessment",
+    situation: "Обследований ещё нет",
+    description: "Начните с первичной оценки обращения и следующего обоснованного шага."
   },
   {
-    title: "Клинический разбор ситуации",
-    href: "/questionnaire?product=medical-route",
-    detailHref: "/services/clinical-review",
-    situation: "Когда важно понять, какой следующий шаг действительно уместен.",
-    action:
-      "Врач анализирует жалобы, симптомы и обследования, сопоставляет данные МРТ / КТ / рентгена с жалобами и текущей ситуацией и помогает выстроить понятную логику дальнейших шагов.",
-    accent: "👉 Когда нужен не просто ответ, а профессионально выстроенный следующий шаг",
-    priceLead: "Оптимальный формат для решения задачи",
-    standardPrice: "9 000 ₽",
-    currentPrice: "5 900 ₽",
-    euroPrice: "≈ 60 €",
-    result: "Вы получаете понятный ориентир по дальнейшим шагам."
+    id: "second-opinion",
+    situation: "Исследование уже выполнено",
+    description: "Независимый взгляд на один исходный комплект изображений, описание и жалобы."
+  },
+  {
+    id: "complex-review",
+    situation: "Сложная история или операция",
+    description: "Хронология одной связанной проблемы и сравнение до двух исследований разных дат."
   }
 ] as const;
 
-const premiumFormats = [
+const serviceGroups = [
   {
-    status: "Расширенный формат работы",
-    title: "Контроль восстановления",
-    href: "/questionnaire?product=recovery-4-weeks",
-    detailHref: "/services/recovery-control",
-    situation: "Когда восстановление уже идёт и важно понимать динамику и дальнейшие шаги.",
-    action:
-      "Врач помогает интерпретировать динамику восстановления, сопоставляет жалобы, этап восстановления и текущие изменения и даёт рекомендации по дальнейшим шагам.",
-    accent: "👉 Когда важно не упустить детали в процессе восстановления и реабилитации",
-    priceLead: "Оптимальный формат для решения задачи",
-    standardPrice: "45 000 ₽",
-    currentPrice: "от 29 000 ₽",
-    euroPrice: "≈ 300 €",
-    result: "Восстановление становится более понятным и последовательным.",
-    premiumDepth:
-      "Формат предполагает более глубокую работу и регулярное взаимодействие с врачом",
-    extraPriceNote:
-      "Точная стоимость определяется после первичного разбора и зависит от сложности ситуации",
-    premiumNote:
-      "Формат предполагает активное участие пациента и соблюдение рекомендаций врача. Врач оставляет за собой право не рекомендовать данный формат в отдельных случаях."
+    id: "first-step",
+    title: "Первый шаг и понятное объяснение",
+    ids: ["initial-assessment", "report-explanation"]
   },
   {
-    status: "Расширенный формат работы",
-    title: "Индивидуальное сопровождение",
-    href: "/questionnaire?product=personal-support",
-    detailHref: "/services/personal-support",
-    situation: "Когда случай требует более глубокого и длительного внимания.",
-    action:
-      "Врач помогает разбирать изменения в состоянии, анализирует динамику и даёт рекомендации по дальнейшим шагам в рамках согласованного формата.",
-    accent:
-      "👉 Когда нужна не разовая консультация, а более внимательное сопровождение в рамках согласованного формата",
-    priceLead: "Оптимальный формат для решения задачи",
-    standardPrice: "75 000 ₽",
-    currentPrice: "от 50 000 ₽",
-    euroPrice: "≈ 520 €",
-    result:
-      "Ситуация пациента находится в поле последовательного профессионального сопровождения.",
-    premiumDepth:
-      "Формат предполагает более глубокую работу и регулярное взаимодействие с врачом",
-    extraPriceNote:
-      "Стоимость определяется индивидуально после оценки состояния пациента",
-    premiumNote:
-      "Формат предполагает активное участие пациента и соблюдение рекомендаций врача. Врач оставляет за собой право не рекомендовать данный формат в отдельных случаях."
-  }
-] as const;
-
-const orientationScenarios = [
-  {
-    title: "Если важно понять, что происходит",
-    answer: "→ клинический разбор"
+    id: "expert-review",
+    title: "Исследования и клиническая история",
+    ids: ["second-opinion", "clinical-review", "complex-review", "complex-case"]
   },
   {
-    title: "Если уже есть мнения, но нет ясности",
-    answer: "→ второе мнение"
-  },
-  {
-    title: "Если важно обсудить динамику восстановления",
-    answer: "→ сопровождение"
-  },
-  {
-    title: "Если не уверены",
-    answer: "→ начните с анкеты"
+    id: "continued-support",
+    title: "Повторная работа и сопровождение",
+    ids: ["follow-up", "recovery-control", "personal-support", "personal-video"]
   }
 ] as const;
 
@@ -116,234 +60,214 @@ export default function ServicesPage() {
       <section className="section services-page__simple-intro">
         <div className="container stack">
           <div className="section-heading stack-sm">
-            <h1 className="services-page__title">Форматы помощи</h1>
-          </div>
-
-          <div className="stack-sm">
-            <div className="services-page__intro-copy">
-              <p>
-                Вам не нужно угадывать, какой формат выбрать. Каждый из них решает
-                конкретную задачу.
-              </p>
-            </div>
-            <p className="services-page__orientation-label">Как выбрать формат</p>
-            <h2 className="services-page__orientation-title">
-              Как выбрать формат и с чего начать
-            </h2>
-            <div className="services-orientation-grid">
-              {orientationScenarios.map((item) => (
-                <article key={item.title} className="services-orientation-card">
-                  <h3>{item.title}</h3>
-                  <p>{item.answer}</p>
-                </article>
-              ))}
-            </div>
-            <p className="services-orientation-note">
-              Анкета — обязательный этап, который позволяет точно понять вашу ситуацию и
-              выбрать корректный формат помощи.
-              <br />
-              Без анкеты работа не начинается.
+            <h1 className="services-page__title">Форматы помощи и стоимость</h1>
+            <p className="lead">
+              От первого вопроса до сложной истории: выберите задачу, которую хотите
+              разобрать. Все цены указаны в евро.
             </p>
           </div>
 
-          <div className="services-groups stack">
-            <section
-              className="services-group services-group--primary"
-              aria-label="Базовые форматы помощи"
-            >
-              <div className="services-formats-grid">
-                {primaryFormats.map((format) => (
-                  <article key={format.title} className="services-format-card">
-                    <Link
-                      aria-label={`Подробнее о формате: ${format.title}`}
-                      className="services-format-card__overlay"
-                      href={format.detailHref as Route}
-                    >
-                      Подробнее о формате: {format.title}
+          <div className="stack-sm">
+            <h2 className="services-page__orientation-title">С чего начать?</h2>
+            <div className="services-orientation-grid services-orientation-grid--three">
+              {entryScenarios.map((scenario) => {
+                const service = getServiceV21(scenario.id);
+                if (!service) return null;
+                return (
+                  <article key={service.id} className="services-orientation-card stack-sm">
+                    <h3>{scenario.situation}</h3>
+                    <p>{scenario.description}</p>
+                    <p><strong>{formatServicePrice(service)} · {service.title}</strong></p>
+                    <Link className="inline-link" href={`#${service.id}` as Route}>
+                      Посмотреть состав формата →
                     </Link>
-                    <h2 className="services-format-card__title">{format.title}</h2>
-
-                    <div className="services-format-card__body">
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__label">Ситуация пациента</p>
-                        <p className="services-format-card__situation">{format.situation}</p>
-                      </div>
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__label">Что делает врач</p>
-                        <p className="services-format-card__action">{format.action}</p>
-                      </div>
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__label">Когда это нужно</p>
-                        <p className="services-format-card__accent">{format.accent}</p>
-                      </div>
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__result">{format.result}</p>
-                      </div>
-                    </div>
-
-                    <div className="services-format-card__footer">
-                      <div className="services-format-card__price-block">
-                        <p className="services-format-card__price-lead">{format.priceLead}</p>
-                        <p className="services-format-card__price-copy">
-                          Стандартная стоимость:{" "}
-                          <span className="services-format-card__price-old">
-                            {format.standardPrice}
-                          </span>
-                        </p>
-                        <p className="services-format-card__price-copy">
-                          Стоимость:{" "}
-                          <span className="services-format-card__price-new">
-                            {format.currentPrice}
-                          </span>
-                        </p>
-                        <p className="services-format-card__price-rubles">{format.euroPrice}</p>
-                      </div>
-
-                      <div className="hero-actions services-format-card__actions">
-                        <Link className="button services-format-card__cta" href={format.href}>
-                          Разобрать мою ситуацию
-                        </Link>
-                        <Link
-                          className="button button--secondary services-format-card__secondary-cta"
-                          href={format.detailHref as Route}
-                        >
-                          Подробнее о формате
-                        </Link>
-                      </div>
-                      <p className="services-format-card__note">
-                        Анкета — обязательный этап перед началом работы
-                      </p>
-                      <p className="services-format-card__hint">
-                        Нажмите, чтобы подробнее понять формат
-                      </p>
-                    </div>
                   </article>
-                ))}
-              </div>
-            </section>
-
-            <section
-              className="services-group services-group--premium"
-              aria-label="Расширенные форматы помощи"
-            >
-              <div className="services-formats-grid">
-                {premiumFormats.map((format) => (
-                  <article key={format.title} className="services-format-card">
-                    <Link
-                      aria-label={`Подробнее о формате: ${format.title}`}
-                      className="services-format-card__overlay"
-                      href={format.detailHref as Route}
-                    >
-                      Подробнее о формате: {format.title}
-                    </Link>
-                    <p className="services-format-card__status">{format.status}</p>
-                    <h2 className="services-format-card__title">{format.title}</h2>
-
-                    <div className="services-format-card__body">
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__label">Ситуация пациента</p>
-                        <p className="services-format-card__situation">{format.situation}</p>
-                      </div>
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__label">Что делает врач</p>
-                        <p className="services-format-card__action">{format.action}</p>
-                      </div>
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__label">Когда это нужно</p>
-                        <p className="services-format-card__accent">{format.accent}</p>
-                      </div>
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__result">{format.result}</p>
-                      </div>
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__result-note">{format.premiumDepth}</p>
-                      </div>
-                      <div className="services-format-card__block">
-                        <p className="services-format-card__text">{format.extraPriceNote}</p>
-                        <p className="services-format-card__text">{format.premiumNote}</p>
-                      </div>
-                    </div>
-
-                    <div className="services-format-card__footer">
-                      <div className="services-format-card__price-block">
-                        <p className="services-format-card__price-lead">{format.priceLead}</p>
-                        <p className="services-format-card__price-copy">
-                          Стандартная стоимость:{" "}
-                          <span className="services-format-card__price-old">
-                            {format.standardPrice}
-                          </span>
-                        </p>
-                        <p className="services-format-card__price-copy">
-                          Стоимость:{" "}
-                          <span className="services-format-card__price-new">
-                            {format.currentPrice}
-                          </span>
-                        </p>
-                        <p className="services-format-card__price-rubles">{format.euroPrice}</p>
-                      </div>
-
-                      <div className="hero-actions services-format-card__actions">
-                        <Link className="button services-format-card__cta" href={format.href}>
-                          Разобрать мою ситуацию
-                        </Link>
-                        <Link
-                          className="button button--secondary services-format-card__secondary-cta"
-                          href={format.detailHref as Route}
-                        >
-                          Подробнее о формате
-                        </Link>
-                      </div>
-                      <p className="services-format-card__note">
-                        Анкета — обязательный этап перед началом работы
-                      </p>
-                      <p className="services-format-card__hint">
-                        Нажмите, чтобы подробнее понять формат
-                      </p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
+                );
+              })}
+            </div>
+            <p className="services-orientation-note">
+              Первичная оценка за €20 — самостоятельная услуга. Если подходящие
+              исследования уже готовы, можно сразу заказать экспертный разбор.
+              Объём материалов, стоимость и срок подтверждаем до оплаты.
+            </p>
           </div>
 
-          <p className="services-formats-shell__note">
-            Формат работы определяется после первичного разбора ситуации. Дистанционный формат взаимодействия не
-            заменяет очный приём врача при необходимости.
-          </p>
+          <article className="home-hero-panel stack-sm" id="format-selection">
+            <p className="home-hero-panel__label">Бесплатный организационный подбор</p>
+            <h2>Не уверены, какой формат выбрать?</h2>
+            <p>
+              {organizationalSelection.shortDescription} {organizationalSelection.description}
+              {" "}{organizationalSelection.turnaround}
+            </p>
+            <p className="muted">
+              Медицинская оценка и просмотр снимков в бесплатный подбор не входят.
+            </p>
+            <div className="hero-actions">
+              <Link className="button button--secondary" href={serviceQuestionnaireHref("service-selection") as Route}>
+                Подобрать услугу бесплатно
+              </Link>
+            </div>
+          </article>
+
+          <div className="services-groups stack">
+            {serviceGroups.map((group) => (
+              <section key={group.id} id={group.id} className="services-group stack" aria-labelledby={`${group.id}-title`}>
+                <h2 id={`${group.id}-title`}>{group.title}</h2>
+                <div className="services-formats-grid">
+                  {group.ids.map((id) => {
+                    const service = getServiceV21(id);
+                    if (!service) return null;
+                    return (
+                      <article key={service.id} id={service.id} className="services-format-card">
+                        <h3 className="services-format-card__title">{service.title}</h3>
+                        <p className="services-format-card__price-new">{formatServicePrice(service)}</p>
+                        <div className="services-format-card__body">
+                          <p className="services-format-card__situation">{service.shortDescription}</p>
+                          <div className="services-format-card__block">
+                            <p className="services-format-card__label">Объём работы</p>
+                            <ul className="list">
+                              {service.scope.map((item) => <li key={item}>{item}</li>)}
+                            </ul>
+                          </div>
+                          <div className="services-format-card__block">
+                            <p className="services-format-card__label">Результат</p>
+                            <p className="services-format-card__result">{service.result}</p>
+                          </div>
+                          <div className="services-format-card__block">
+                            <p className="services-format-card__label">Срок и общение</p>
+                            <p className="services-format-card__text">{service.turnaround}</p>
+                            <p className="services-format-card__text">{service.clarifications}</p>
+                          </div>
+                        </div>
+                        <div className="services-format-card__footer">
+                          <div className="hero-actions services-format-card__actions">
+                            <Link className="button services-format-card__cta" href={serviceQuestionnaireHref(service.id) as Route}>
+                              Выбрать формат
+                            </Link>
+                            <Link className="button button--secondary services-format-card__secondary-cta" href={`/services/${service.slug}` as Route}>
+                              Подробнее о формате
+                            </Link>
+                          </div>
+                          <p className="services-format-card__note">
+                            Состав, возможность работы и стоимость согласуются до оплаты.
+                          </p>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
       </section>
+
+      <Section title="Чем отличаются три основных разбора">
+        <div className="services-orientation-grid services-orientation-grid--three">
+          <article className="services-orientation-card stack-sm">
+            <h3>€80 · Экспертное второе мнение</h3>
+            <p>Самостоятельно изучить одно исследование и сопоставить его с жалобами и описанием.</p>
+          </article>
+          <article className="services-orientation-card stack-sm">
+            <h3>€100 · Расширенный клинический разбор</h3>
+            <p>Дополнительно рассмотреть историю лечения, сохраняющиеся ограничения и возможные объяснения симптомов по одной взаимосвязанной проблеме.</p>
+          </article>
+          <article className="services-orientation-card stack-sm">
+            <h3>€160 · Комплексный разбор</h3>
+            <p>Собрать сложную историю в хронологию и сопоставить до двух исследований разных дат.</p>
+          </article>
+        </div>
+        <p className="muted">
+          Число страниц помогает определить формат до оплаты и не служит основанием
+          пропускать клинически важные сведения.
+        </p>
+      </Section>
+
+      <Section title="Два этапа — когда они нужны">
+        <div className="home-hero-panel stack">
+          <p>
+            {primaryAssessmentDiscountV21.description}
+          </p>
+          <div className="services-orientation-grid services-orientation-grid--three">
+            <article className="services-orientation-card stack-sm">
+              <h3>€20 + €70 = €90</h3>
+              <p>Первичная оценка и экспертное второе мнение.</p>
+            </article>
+            <article className="services-orientation-card stack-sm">
+              <h3>€20 + €90 = €110</h3>
+              <p>Первичная оценка и расширенный клинический разбор.</p>
+            </article>
+            <article className="services-orientation-card stack-sm">
+              <h3>€20 + €150 = €170</h3>
+              <p>Первичная оценка и комплексный разбор.</p>
+            </article>
+          </div>
+          <p>
+            Снижение €10 применяется к экспертным разборам стоимостью от €80,
+            включая согласованный особо сложный случай. Оно не распространяется
+            на разъяснение протокола за €40, краткий повторный разбор за €50,
+            сопровождение и видео.
+          </p>
+          <p className="muted">
+            Исследования в сторонних организациях оплачиваются отдельно.
+            Автоматических списаний и подписки нет.
+          </p>
+        </div>
+      </Section>
+
+      <Section title="Сроки и порядок работы">
+        <div className="stack">
+          <p>
+            Первый организационный ответ — до трёх рабочих дней. Это
+            подтверждение обращения и следующего шага; готовый врачебный разбор
+            предоставляется в срок выбранной услуги.
+          </p>
+          <p>
+            Для всех форматов предусмотрен уточняющий созвон до окончательного
+            предложения и оплаты. Выбранное время подтверждает врач. При бесплатном
+            подборе созвон остаётся организационным: медицинская оценка и просмотр
+            снимков в него не входят.
+          </p>
+          <p>
+            После созвона согласуются формат, объём, стоимость и срок. Оплата
+            оформляется вручную вне сайта. Отсчёт срока начинается после отдельного
+            подтверждения врачом начала работы при достаточности материалов и
+            получении оплаты. Рабочие дни — с понедельника по пятницу;
+            дату начала и готовности подтверждаем с учётом графика врача и
+            нерабочих праздничных дней.
+          </p>
+          <p>
+            Персональные результаты доступны через собственный кабинет; номер обращения
+            отображается при просмотре материалов. После завершения работы доступ пациента к истории
+            сохраняется ещё 30 календарных дней; этот срок заранее указывается в
+            персональном предложении. Закрытие доступа не означает удаления истории
+            врача. Маркировка при просмотре не встроена в исходный файл и не исключает
+            копирования, в том числе записи экрана.
+          </p>
+          <p className="muted">
+            Дистанционная работа не заменяет очный осмотр, когда он необходим,
+            и не предназначена для экстренной помощи. Возможность оказания услуги
+            в конкретной стране и условия работы подтверждаются до начала.
+          </p>
+        </div>
+      </Section>
 
       <section className="section services-final-cta">
         <div className="container">
           <div className="services-final-cta__card stack">
             <div className="services-final-cta__copy stack-sm">
-              <h2>
-                <span className="services-final-cta__line">
-                  Если важно не просто получить мнение,
-                </span>
-                <span className="services-final-cta__line">
-                  а выбрать действительно уместный формат помощи
-                </span>
-              </h2>
-              <p className="services-final-cta__lead">Работа начинается с анкеты пациента</p>
+              <h2>Найдём подходящий первый шаг</h2>
               <p className="services-final-cta__lead">
-                Вы получите понимание ситуации и дальнейших шагов после анализа анкеты
+                Если сомневаетесь в выборе, начните с бесплатного организационного
+                подбора по краткому описанию задачи и перечню материалов.
               </p>
             </div>
-
-            <div className="services-final-cta__actions stack-sm">
-              <p className="services-final-cta__subnote">
-                Заполнение анкеты занимает 5–7 минут
-              </p>
-              <div className="hero-actions">
-                <Link className="button" href="/questionnaire">
-                  Разобрать мою ситуацию
-                </Link>
-              </div>
-              <p className="services-final-cta__micro-note">
-                Конфиденциально. Спокойно. По существу.
-              </p>
+            <div className="hero-actions">
+              <Link className="button" href={serviceQuestionnaireHref("service-selection") as Route}>
+                Подобрать услугу бесплатно
+              </Link>
             </div>
+            <p className="services-final-cta__micro-note">Конфиденциально. Спокойно. По существу.</p>
           </div>
         </div>
       </section>

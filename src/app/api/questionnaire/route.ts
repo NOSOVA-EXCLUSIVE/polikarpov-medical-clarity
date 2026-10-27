@@ -1,4 +1,12 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+
+import {
+  assertIntakeUploadOwnership,
+  INTAKE_CONSENT_COOKIE_NAME,
+  IntakeConsentRequiredError,
+  requireIntakeConsent
+} from "@/features/questionnaire/intake-consent";
 
 import { questionnaireSubmitSchema } from "@/features/questionnaire/schemas";
 import { hasBlockingRedFlags } from "@/features/questionnaire/status";
@@ -28,7 +36,11 @@ async function parseQuestionnaireRequest(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const intakeConsent = await requireIntakeConsent(request);
     const input = await parseQuestionnaireRequest(request);
+    for (const upload of input.uploads) {
+      assertIntakeUploadOwnership(upload.storageKey, intakeConsent.receiptId);
+    }
 
     if (hasBlockingRedFlags(input.redFlags)) {
       return NextResponse.json(
@@ -44,26 +56,31 @@ export async function POST(request: Request) {
     const { submitQuestionnaire } = await import("@/features/questionnaire/service");
     const result = await submitQuestionnaire(input, {
       ip: request.headers.get("x-forwarded-for"),
-      userAgent: request.headers.get("user-agent")
+      userAgent: request.headers.get("user-agent"),
+      intakeConsent
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       submissionId: result.submissionId,
       displayNumber: result.displayNumber,
       status: result.status
     });
+    response.cookies.delete(INTAKE_CONSENT_COOKIE_NAME);
+    return response;
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Не удалось отправить анкету.";
-
+    if (error instanceof IntakeConsentRequiredError) return NextResponse.json({ success: false, error: error.message, code: error.code }, { status: 403 });
+    const invalidInput = error instanceof z.ZodError || error instanceof SyntaxError;
     return NextResponse.json(
       {
         success: false,
-        error: message
+        code: invalidInput ? "QUESTIONNAIRE_INPUT_INVALID" : "QUESTIONNAIRE_SAVE_UNAVAILABLE",
+        error: invalidInput
+          ? "Проверьте обязательные поля и выбранный формат анкеты."
+          : "Не удалось сохранить анкету. Повторите попытку позже: подтверждение сохранения не получено."
       },
       {
-        status: 400
+        status: invalidInput ? 400 : 503
       }
     );
   }

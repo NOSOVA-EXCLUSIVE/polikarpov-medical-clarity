@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { OfferCreateForm } from "@/components/admin/offer-create-form";
+import { ManualAdminActions } from "@/components/admin/manual-actions";
 import { AdminShell, DefinitionList } from "@/components/admin/shell";
 import { SensitiveAccessPanel } from "@/components/admin/sensitive-access";
 import {
@@ -26,10 +27,13 @@ import {
   uploadStatusLabel
 } from "@/features/admin/presentation";
 import { getApplicationDetail } from "@/features/admin/service";
+import { describeServiceSelection } from "@/features/questionnaire/service-selection";
 import { canStaffReplyToThread } from "@/features/messages/service";
 import { defaultOfferByProductCode } from "@/features/products/catalog";
 import { requireStaffSession } from "@/lib/auth/session";
 import { createPrivateDownloadUrl } from "@/lib/storage/s3";
+import { getManualCase } from "@/features/manual-v21/service";
+import { manualPhaseLabels } from "@/features/manual-v21/presentation";
 
 const redFlagLabels: Record<string, string> = {
   hasFever: "Температура или признаки воспаления",
@@ -75,6 +79,8 @@ export default async function ApplicationDetailPage({
   if (!application) {
     notFound();
   }
+  const isOrganizationalInquiry = application.serviceSelection?.kind === "organizational_selection";
+  const manualCase = application.serviceSelection ? await getManualCase(application.id) : null;
 
   const noticeMessage =
     flash.notice === "upload_request_email_sent"
@@ -206,8 +212,10 @@ export default async function ApplicationDetailPage({
               { label: "Номер анкеты", value: application.displayNumber },
               { label: "Статус", value: applicationStatusLabel(application.status) },
               {
-                label: "Запрошенный продукт",
-                value: productLabel(application.requestedProductCode)
+                label: "Выбранная услуга",
+                value: application.serviceSelection
+                  ? describeServiceSelection(application.serviceSelection)
+                  : productLabel(application.requestedProductCode)
               },
               {
                 label: "Назначенный продукт",
@@ -231,10 +239,10 @@ export default async function ApplicationDetailPage({
         </article>
 
         <article className="card stack">
-          <h2 className="admin-section-title">Клиническая сводка</h2>
+          <h2 className="admin-section-title">{isOrganizationalInquiry ? "Организационный запрос" : "Клиническая сводка"}</h2>
           <div className="stack-sm">
             <p>
-              <strong>Основная жалоба:</strong> {application.chiefComplaint}
+              <strong>{isOrganizationalInquiry ? "Обращение:" : "Основная жалоба:"}</strong> {application.chiefComplaint}
             </p>
             {application.bodyArea ? (
               <p>
@@ -253,7 +261,7 @@ export default async function ApplicationDetailPage({
             ) : null}
             {application.reviewNoteForDoctor ? (
               <p>
-                <strong>Что важно посмотреть:</strong> {application.reviewNoteForDoctor}
+                <strong>{isOrganizationalInquiry ? "Имеющиеся материалы:" : "Что важно посмотреть:"}</strong> {application.reviewNoteForDoctor}
               </p>
             ) : null}
           </div>
@@ -276,7 +284,7 @@ export default async function ApplicationDetailPage({
               })}
             </div>
           ) : (
-            <p className="muted">Пациент не отметил тревожные признаки.</p>
+            <p className="muted">{isOrganizationalInquiry ? "Медицинские сведения и скрининг тревожных признаков для организационного подбора не запрашивались." : "Данные скрининга тревожных признаков не сохранены."}</p>
           )}
         </article>
 
@@ -384,7 +392,7 @@ export default async function ApplicationDetailPage({
         ))}
       </section>
 
-      <section className="two-column">
+      {!application.serviceSelection ? <section className="two-column">
         <article className="card stack">
           <h2 className="admin-section-title">Следующий этап кейса</h2>
           <p className="muted">
@@ -467,6 +475,8 @@ export default async function ApplicationDetailPage({
           )}
         </article>
       </section>
+
+      : null}
 
       {thread ? (
         <section className="two-column">
@@ -601,6 +611,11 @@ export default async function ApplicationDetailPage({
           <p className="muted">
             Используйте это действие, когда материалов достаточно и пациента можно перевести к записи и оплате.
           </p>
+          {application.serviceSelection ? (
+            manualCase ? <div className="stack"><p>{manualPhaseLabels[manualCase.phase] ?? manualCase.phase}</p>
+              <Link className="button" href={`/admin/manual/${manualCase.id}`}>Открыть ручную запись и кабинет v2.1</Link></div>
+              : <ManualAdminActions applicationId={application.id}/>
+          ) : (
           <OfferCreateForm
             action={`/api/admin/applications/${application.id}/create-offer`}
             defaultDurationMinutes={45}
@@ -609,6 +624,7 @@ export default async function ApplicationDetailPage({
               application.assignedProductCode ?? application.requestedProductCode ?? "SECOND_OPINION"
             }
           />
+          )}
         </article>
       </section>
 

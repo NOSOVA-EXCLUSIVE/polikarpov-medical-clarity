@@ -14,6 +14,8 @@ import {
   getApplicationDisplayNumber
 } from "@/features/applications/display-number";
 import { prisma } from "@/lib/db/prisma";
+import { readServiceSelectionSnapshot } from "@/features/questionnaire/service-selection";
+import { manualPhaseLabels } from "@/features/manual-v21/presentation";
 import { env } from "@/lib/env/server";
 import {
   sendMaterialsRequestEmail,
@@ -35,6 +37,8 @@ type StaffActor = {
 type ApplicationFilters = {
   status?: ApplicationStatus | "ALL";
   productCode?: ProductCode | "ALL";
+  selectedServiceId?: string;
+  manualPhase?: string;
   query?: string;
 };
 
@@ -133,6 +137,28 @@ function appendManualBookingState<
   };
 }
 
+async function attachServiceSelections<T extends { id: string }>(applications: T[]) {
+  if (applications.length === 0) return [] as Array<T & { serviceSelection: ReturnType<typeof readServiceSelectionSnapshot> }>;
+  const events = await prisma.auditEvent.findMany({
+    where: {
+      applicationId: { in: applications.map((application) => application.id) },
+      action: "service_selection_recorded"
+    },
+    orderBy: { createdAt: "desc" },
+    select: { applicationId: true, metadataJson: true }
+  });
+  const selections = new Map<string, ReturnType<typeof readServiceSelectionSnapshot>>();
+  for (const event of events) {
+    if (event.applicationId && !selections.has(event.applicationId)) {
+      selections.set(event.applicationId, readServiceSelectionSnapshot(event.metadataJson));
+    }
+  }
+  return applications.map((application) => ({
+    ...application,
+    serviceSelection: selections.get(application.id) ?? null
+  }));
+}
+
 function buildApplicationWhere(filters: ApplicationFilters) {
   const where: Prisma.ApplicationWhereInput = {};
 
@@ -145,6 +171,24 @@ function buildApplicationWhere(filters: ApplicationFilters) {
       { requestedProductCode: filters.productCode },
       { assignedProductCode: filters.productCode }
     ];
+  }
+
+  if (filters.selectedServiceId && filters.selectedServiceId !== "ALL") {
+    where.auditEvents = {
+      some: {
+        action: "service_selection_recorded",
+        metadataJson: { path: ["id"], equals: filters.selectedServiceId }
+      }
+    };
+  }
+
+  if (filters.manualPhase === "NOT_STARTED") {
+    where.manualCase = { is: null };
+  } else if (filters.manualPhase === "OPEN") {
+    where.manualCase = { is: { phase: { not: "COMPLETED" } } };
+    where.AND = [{ status: { notIn: ["ARCHIVED", "REJECTED"] } }];
+  } else if (filters.manualPhase && Object.prototype.hasOwnProperty.call(manualPhaseLabels, filters.manualPhase)) {
+    where.manualCase = { is: { phase: filters.manualPhase } };
   }
 
   if (filters.query?.trim()) {
@@ -195,13 +239,14 @@ async function createAuditLog(input: {
 }
 
 export async function getDashboardSnapshot() {
-  const [newCount, underReviewCount, needsUploadCount, needsImagingCount, bookingSentCount] =
+  const [newCount, underReviewCount, needsUploadCount, needsImagingCount, bookingSentCount, manualOpenCount] =
     await Promise.all([
-      prisma.application.count({ where: { status: "NEW" } }),
-      prisma.application.count({ where: { status: "UNDER_REVIEW" } }),
-      prisma.application.count({ where: { status: "NEEDS_UPLOAD" } }),
-      prisma.application.count({ where: { status: "NEEDS_IMAGING_ACCESS" } }),
-      prisma.application.count({ where: { status: "BOOKING_SENT" } })
+      prisma.application.count({ where: { status: "NEW", manualCase: { is: null } } }),
+      prisma.application.count({ where: { status: "UNDER_REVIEW", manualCase: { is: null } } }),
+      prisma.application.count({ where: { status: "NEEDS_UPLOAD", manualCase: { is: null } } }),
+      prisma.application.count({ where: { status: "NEEDS_IMAGING_ACCESS", manualCase: { is: null } } }),
+      prisma.application.count({ where: { status: "BOOKING_SENT", manualCase: { is: null } } }),
+      prisma.manualCase.count({ where: { phase: { not: "COMPLETED" }, application: { status: { notIn: ["ARCHIVED", "REJECTED"] } } } })
     ]);
 
   const latestApplications = await prisma.application.findMany({
@@ -213,6 +258,7 @@ export async function getDashboardSnapshot() {
       requestedProductCode: true,
       assignedProductCode: true,
       submittedAt: true,
+      manualCase: { select: { id: true, phase: true } },
       patient: {
         select: {
           fullName: true,
@@ -228,9 +274,10 @@ export async function getDashboardSnapshot() {
       underReviewCount,
       needsUploadCount,
       needsImagingCount,
-      bookingSentCount
+      bookingSentCount,
+      manualOpenCount
     },
-    latestApplications
+    latestApplications: await attachServiceSelections(latestApplications)
   };
 }
 
@@ -246,6 +293,7 @@ export async function listApplications(filters: ApplicationFilters) {
       submittedAt: true,
       imagingSourceType: true,
       chiefComplaint: true,
+      manualCase: { select: { id: true, phase: true } },
       patient: {
         select: {
           fullName: true,
@@ -281,7 +329,7 @@ export async function listApplications(filters: ApplicationFilters) {
 
   const applicationsWithDisplayNumbers = await attachApplicationDisplayNumbers(applications);
 
-  return applicationsWithDisplayNumbers.map(appendManualBookingFlag);
+  return (await attachServiceSelections(applicationsWithDisplayNumbers)).map(appendManualBookingFlag);
 }
 
 export async function getApplicationDetail(applicationId: string) {
@@ -396,6 +444,13 @@ export async function getApplicationDetail(applicationId: string) {
     return null;
   }
 
+  const serviceSelectionEvent = await prisma.auditEvent.findFirst({
+    where: { applicationId: application.id, action: "service_selection_recorded" },
+    orderBy: { createdAt: "desc" },
+    select: { metadataJson: true }
+  });
+  const serviceSelection = readServiceSelectionSnapshot(serviceSelectionEvent?.metadataJson);
+
   const displayNumber =
     (await getApplicationDisplayNumber({
       applicationId: application.id,
@@ -405,6 +460,7 @@ export async function getApplicationDetail(applicationId: string) {
   if (!application.messageThread) {
     return {
       ...appendManualBookingState(application),
+      serviceSelection,
       displayNumber
     };
   }
@@ -531,6 +587,7 @@ export async function getApplicationDetail(applicationId: string) {
 
   return {
     ...appendManualBookingState(refreshedApplication),
+    serviceSelection,
     displayNumber
   };
 }
@@ -823,6 +880,14 @@ export async function createOfferForApplication(input: {
 
     if (!application) {
       throw new Error("Заявка не найдена.");
+    }
+
+    const selectedService = await tx.auditEvent.findFirst({
+      where: { applicationId: application.id, action: "service_selection_recorded" },
+      select: { id: true }
+    });
+    if (selectedService) {
+      throw new Error("Для каталога v2.1 автоматическая запись и оплата пока не включены. Согласуйте выбранную услугу вручную; старые четыре продукта не заменяют её.");
     }
 
     if (application.status === "REJECTED" || application.status === "ARCHIVED") {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertIntakeUploadOwnership, intakeConsentErrorResponse, requireIntakeConsent } from "@/features/questionnaire/intake-consent";
 
 import { completeUploadSchema } from "@/features/questionnaire/schemas";
 import { validateCompletedUpload } from "@/features/questionnaire/upload-validation";
@@ -9,9 +10,11 @@ import {
 
 export async function POST(request: Request) {
   try {
+    const consent = await requireIntakeConsent(request);
     const json = await request.json();
     const input = completeUploadSchema.parse(json);
 
+    assertIntakeUploadOwnership(input.storageKey, consent.receiptId);
     validateCompletedUpload(input);
     assertPrivateObjectStorageIsConfigured();
 
@@ -40,6 +43,8 @@ export async function POST(request: Request) {
       }
     });
   } catch (error) {
+    const consentError = intakeConsentErrorResponse(error);
+    if (consentError) return consentError;
     const message =
       error instanceof Error ? error.message : "Не удалось завершить загрузку файла.";
 

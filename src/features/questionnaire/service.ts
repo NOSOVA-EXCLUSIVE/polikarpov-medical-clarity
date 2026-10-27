@@ -4,10 +4,15 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { LEGAL_DOCUMENT_VERSIONS } from "@/features/legal/versions";
 import {
-  getApplicationDisplayNumber,
-  getFallbackApplicationDisplayNumber
+  getApplicationDisplayNumber
 } from "@/features/applications/display-number";
-import { saveQuestionnaireSubmissionFallback } from "@/features/questionnaire/fallback-store";
+import {
+  assertIntakeUploadOwnership,
+  IntakeConsentRequiredError,
+  type IntakeConsentReceipt
+} from "@/features/questionnaire/intake-consent";
+import { buildServiceSelectionSnapshot, resolveRequestedProductCode } from "@/features/questionnaire/service-selection";
+import { isPreviewIsolationRequired } from "@/lib/preview/guard";
 import {
   QUESTIONNAIRE_LEAD_STATUS,
   QUESTIONNAIRE_MESSAGE_TEMPLATES,
@@ -70,22 +75,26 @@ type SubmissionResult = {
 };
 
 function canUseLocalQuestionnaireFilesystem() {
-  return process.env.NODE_ENV !== "production";
+  return process.env.NODE_ENV !== "production" && !isPreviewIsolationRequired();
 }
 
 export async function submitQuestionnaire(
   input: QuestionnaireSubmitInput,
-  requestMeta: { ip?: string | null; userAgent?: string | null }
+  requestMeta: { ip?: string | null; userAgent?: string | null; intakeConsent: IntakeConsentReceipt }
 ) {
   validateQuestionnaireUploads(input.uploads);
+  if (!requestMeta.intakeConsent) throw new IntakeConsentRequiredError();
+  for (const upload of input.uploads) {
+    assertIntakeUploadOwnership(upload.storageKey, requestMeta.intakeConsent.receiptId);
+  }
 
   const submittedAt = new Date();
   const imagingSourceType = classifyImagingSourceType({
     uploads: input.uploads,
     externalLinks: input.externalLinks
   });
-  const requestedProductCode =
-    input.requestedProductCode === "NOT_SURE" ? null : input.requestedProductCode;
+  const requestedProductCode = resolveRequestedProductCode(input);
+  const serviceSelection = buildServiceSelectionSnapshot(input.selectedServiceId);
   const questionnaireSnapshot = buildQuestionnaireSnapshot(input);
   const reviewRequirements = {
     hasMaterials: input.uploads.length > 0 || input.externalLinks.length > 0,
@@ -196,11 +205,27 @@ export async function submitQuestionnaire(
         }
       });
 
+      // Consume the durable receipt in the SAME transaction as the application.
+      // A replay or concurrent submit rolls the whole application back.
+      const linkedConsent = await tx.auditEvent.updateMany({
+        where: {
+          id: requestMeta.intakeConsent.receiptId,
+          entityId: requestMeta.intakeConsent.receiptId,
+          actorType: "PATIENT",
+          entityType: "TOKEN",
+          action: "intake_data_consent_accepted",
+          applicationId: null
+        },
+        data: { applicationId: application.id }
+      });
+      if (linkedConsent.count !== 1) throw new IntakeConsentRequiredError();
+
       const workflowHooks = buildQuestionnaireWorkflowHooks({
         submissionId: application.id,
         submittedAt,
         preferredContact: input.patient.preferredContact,
-        requestedProductCode: input.requestedProductCode
+        requestedProductCode: input.requestedProductCode,
+        selectedServiceId: input.selectedServiceId
       });
 
       await tx.auditEvent.createMany({
@@ -210,9 +235,30 @@ export async function submitQuestionnaire(
             applicationId: application.id,
             entityType: "APPLICATION",
             entityId: application.id,
+            action: "intake_data_consent_linked",
+            metadataJson: {
+              receiptId: requestMeta.intakeConsent.receiptId,
+              acceptedAt: requestMeta.intakeConsent.acceptedAt,
+              textVersion: requestMeta.intakeConsent.textVersion
+            }
+          },
+          ...(serviceSelection ? [{
+            actorType: "SYSTEM" as const,
+            applicationId: application.id,
+            entityType: "APPLICATION" as const,
+            entityId: application.id,
+            action: "service_selection_recorded",
+            metadataJson: serviceSelection
+          }] : []),
+          {
+            actorType: "PATIENT",
+            applicationId: application.id,
+            entityType: "APPLICATION",
+            entityId: application.id,
             action: "application_submitted",
             metadataJson: {
               requestedProductCode,
+              selectedServiceId: serviceSelection?.id ?? null,
               imagingSourceType,
               uploadCount: input.uploads.length,
               externalLinkCount: input.externalLinks.length,
@@ -330,11 +376,9 @@ export async function submitQuestionnaire(
       };
     });
   } catch (error) {
-    if (!canUseLocalQuestionnaireFilesystem()) {
-      throw error;
-    }
-
-    result = await saveQuestionnaireSubmissionFallback(input, requestMeta);
+    // An accepted consent receipt and its application must stay durable and atomic.
+    // Never return a filesystem "success" after a DB failure (including receipt replay).
+    throw error;
   }
 
   const workflowHooks =
@@ -343,7 +387,8 @@ export async function submitQuestionnaire(
       submissionId: result.applicationId,
       submittedAt,
       preferredContact: input.patient.preferredContact,
-      requestedProductCode: input.requestedProductCode
+      requestedProductCode: input.requestedProductCode,
+      selectedServiceId: input.selectedServiceId
     });
 
   let operationalArtifacts: Awaited<
@@ -363,25 +408,44 @@ export async function submitQuestionnaire(
     }
   }
 
-  const displayNumber =
-    (await getApplicationDisplayNumber({
+  // The transaction already committed. Auxiliary lookups and notifications must
+  // never turn a durable application into an apparent failed submission.
+  // The saved application ID is a stable, unique support reference if numbering
+  // is temporarily unavailable; do not invent the same daily fallback for everyone.
+  let displayNumber = `PMC-${result.applicationId}`;
+  try {
+    displayNumber = (await getApplicationDisplayNumber({
       applicationId: result.applicationId,
       submittedAt
-    })) ?? getFallbackApplicationDisplayNumber(submittedAt);
+    })) ?? displayNumber;
+  } catch {
+    // The application is already available to staff through its saved ID.
+  }
 
-  const staffNotification = await sendQuestionnaireSubmittedStaffEmail({
-    applicationId: result.applicationId,
-    applicationDisplayNumber: displayNumber,
-    patientName: input.patient.fullName,
-    patientEmail: input.patient.email,
-    patientPhone: input.patient.phone,
-    preferredContact: input.patient.preferredContact,
-    city: input.patient.city,
-    country: input.patient.country,
-    timezone: input.patient.timezone,
-    requestedProductCode,
-    useQueueLink: Boolean(result.storagePath)
-  });
+  let staffNotification: Awaited<ReturnType<typeof sendQuestionnaireSubmittedStaffEmail>>;
+  try {
+    staffNotification = await sendQuestionnaireSubmittedStaffEmail({
+      applicationId: result.applicationId,
+      applicationDisplayNumber: displayNumber,
+      patientName: input.patient.fullName,
+      patientEmail: input.patient.email,
+      patientPhone: input.patient.phone,
+      preferredContact: input.patient.preferredContact,
+      city: input.patient.city,
+      country: input.patient.country,
+      timezone: input.patient.timezone,
+      requestedProductCode,
+      serviceSelection,
+      useQueueLink: Boolean(result.storagePath)
+    });
+  } catch {
+    staffNotification = {
+      status: "failed",
+      manualFallbackRequired: true,
+      provider: isPreviewIsolationRequired() ? "capture" : "postmark",
+      errorMessage: "Notification delivery could not be confirmed."
+    };
+  }
 
   if (!result.storagePath) {
     await prisma.auditEvent.create({
@@ -406,6 +470,9 @@ export async function submitQuestionnaire(
               : null
         }
       }
+    }).catch(() => {
+      // Do not ask the patient to resubmit an application already committed.
+      console.warn("Questionnaire saved; notification audit temporarily unavailable.");
     });
   }
 

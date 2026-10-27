@@ -1,16 +1,14 @@
 import type { MetadataRoute } from "next";
 
 import { buildAbsoluteUrl } from "@/lib/seo";
+import { paidServicesV21 } from "@/features/products/services-v21";
 
 const publicRoutes = [
   { path: "/", priority: 1, changeFrequency: "weekly" as const },
   { path: "/doctor", priority: 0.9, changeFrequency: "monthly" as const },
   { path: "/doctor/documents", priority: 0.75, changeFrequency: "monthly" as const },
   { path: "/services", priority: 0.9, changeFrequency: "weekly" as const },
-  { path: "/services/second-opinion", priority: 0.8, changeFrequency: "weekly" as const },
-  { path: "/services/clinical-review", priority: 0.8, changeFrequency: "weekly" as const },
-  { path: "/services/recovery-control", priority: 0.7, changeFrequency: "weekly" as const },
-  { path: "/services/personal-support", priority: 0.7, changeFrequency: "weekly" as const },
+  ...paidServicesV21.map((service) => ({ path: `/services/${service.slug}`, priority: 0.8, changeFrequency: "weekly" as const })),
   { path: "/questionnaire", priority: 0.8, changeFrequency: "weekly" as const },
   { path: "/documents", priority: 0.7, changeFrequency: "monthly" as const },
   { path: "/documents/offer", priority: 0.6, changeFrequency: "monthly" as const },

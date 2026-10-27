@@ -20,3 +20,4 @@ devserver.out.log
 
 # Runtime JSON exports can contain contact details, sessions and booking tokens.
 /runtime-test-assets/**/*.json
+/.qa_*

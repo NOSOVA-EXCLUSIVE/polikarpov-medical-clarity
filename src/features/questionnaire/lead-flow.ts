@@ -1,3 +1,5 @@
+import { buildServiceSelectionSnapshot, resolveRequestedProductCode } from "@/features/questionnaire/service-selection";
+
 import type { QuestionnaireSubmitInput } from "@/features/questionnaire/schemas";
 
 export const QUESTIONNAIRE_LEAD_STATUSES = {
@@ -132,7 +134,8 @@ function addHours(date: Date, hours: number) {
 export function buildQuestionnaireSnapshot(input: QuestionnaireSubmitInput) {
   return {
     statusLabel: QUESTIONNAIRE_LEAD_STATUS.label,
-    requestedProductCode: input.requestedProductCode,
+    requestedProductCode: resolveRequestedProductCode(input),
+    serviceSelection: buildServiceSelectionSnapshot(input.selectedServiceId),
     patient: trimObject({
       fullName: input.patient.fullName,
       age: input.patient.age ?? "",
@@ -180,6 +183,7 @@ export function buildQuestionnaireWorkflowHooks(input: {
   submittedAt: Date;
   preferredContact: QuestionnaireSubmitInput["patient"]["preferredContact"];
   requestedProductCode: QuestionnaireSubmitInput["requestedProductCode"];
+  selectedServiceId?: string;
 }) {
   const firstTouchEarliest = addHours(
     input.submittedAt,
@@ -254,8 +258,8 @@ export function buildQuestionnaireWorkflowHooks(input: {
       }
     },
     paymentPreparation: {
-      requestedProductCode:
-        input.requestedProductCode === "NOT_SURE" ? null : input.requestedProductCode,
+      requestedProductCode: resolveRequestedProductCode(input),
+      serviceSelection: buildServiceSelectionSnapshot(input.selectedServiceId),
       requestTemplateKey: "paymentRequest",
       confirmationTemplateKey: "paymentConfirmed",
       pendingStatus: "payment_pending" as QuestionnaireLeadStatusCode,
