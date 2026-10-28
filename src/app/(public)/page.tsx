@@ -168,7 +168,7 @@ export default function HomePage() {
             </div>
             <div className="home-hero__portrait-caption">
               <p><strong>Более 20 лет клинической практики</strong></p>
-              <Link className="text-link" href={doctorDocumentsHref}>
+              <Link className="button button--secondary" href={doctorDocumentsHref}>
                 Документы и квалификация
               </Link>
             </div>
