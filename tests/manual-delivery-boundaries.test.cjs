@@ -10,13 +10,13 @@ const crypto = require("node:crypto");
 const ts = require("typescript");
 const base = path.resolve(__dirname, "..");
 
-function fixture() {
-  const bytes = Buffer.from("%PDF-1.7\nsynthetic\n");
+function fixture({ mimeType = "application/pdf", contents = Buffer.from("%PDF-1.7\nsynthetic\n") } = {}) {
+  const bytes = Buffer.from(contents);
   const record = { id: "case-a", applicationId: "application-a", phase: "ACTIVE", version: 0 };
-  const files = [{ id: "file-a", caseId: "case-a", status: "PENDING", title: "Synthetic material", mimeType: "application/pdf",
+  const files = [{ id: "file-a", caseId: "case-a", status: "PENDING", title: "Synthetic material", mimeType,
     sizeBytes: BigInt(bytes.length), storageKey: "manual-deliverables/case-a/synthetic.pdf", verifiedEtag: null }];
   const calls = [];
-  const state = { actorActive: true, headSize: bytes.length, headType: "application/pdf", headEtag: '"synthetic-etag"',
+  const state = { actorActive: true, headSize: bytes.length, headType: mimeType, headEtag: '"synthetic-etag"',
     getHostname: "synthetic.private.blob.vercel-storage.com", getStatus: 206, prefix: bytes,
     putHost: "vercel.com", objectStatus: 200 };
   const tx = {
@@ -142,8 +142,44 @@ test("proxy uses verified ETag, streams exact content, and rejects changed objec
   const f = fixture(); Object.assign(f.files[0], { status: "READY", verifiedEtag: f.state.headEtag });
   const response = await f.service.getManualDeliverableResponse({ caseId: "case-a", id: "file-a", range: null });
   assert.deepEqual(Buffer.from(await response.arrayBuffer()), f.bytes);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "application/pdf");
+  assert.equal(response.headers.get("content-length"), String(f.bytes.length));
+  assert.equal(response.headers.get("content-disposition"), "inline");
+  assert.equal(response.headers.get("content-security-policy"), "frame-ancestors 'self'");
   assert.equal(response.headers.get("cache-control"), "private, no-store");
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+  assert.equal(response.headers.get("accept-ranges"), "bytes");
+  assert.equal(response.headers.get("location"), null);
   assert.equal(f.calls.find(c => c.fetch).options.headers["If-Match"], f.state.headEtag);
   f.state.objectStatus = 412;
   await assert.rejects(() => f.service.getManualDeliverableResponse({ caseId: "case-a", id: "file-a", range: null }), /Файл изменился/);
+});
+
+test("non-PDF media keep strict CSP while preserving their exact MIME and bytes", async () => {
+  const cases = [
+    { mimeType: "image/png", contents: Buffer.from([137,80,78,71,13,10,26,10,0]) },
+    { mimeType: "image/jpeg", contents: Buffer.from([255,216,255,0]) },
+    { mimeType: "video/mp4", contents: Buffer.from([0,0,0,20,102,116,121,112,105,115,111,109]) }
+  ];
+  for (const value of cases) {
+    const f = fixture(value); Object.assign(f.files[0], { status: "READY", verifiedEtag: f.state.headEtag });
+    const response = await f.service.getManualDeliverableResponse({ caseId: "case-a", id: "file-a", range: null });
+    assert.equal(response.headers.get("content-type"), value.mimeType);
+    assert.equal(response.headers.get("content-security-policy"), "sandbox; default-src 'none'; frame-ancestors 'self'");
+    assert.equal(response.headers.get("cache-control"), "private, no-store");
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), f.bytes);
+  }
+});
+
+test("native-PDF handling never accepts another case or an unexpected MIME", async () => {
+  const foreign = fixture(); Object.assign(foreign.files[0], { status: "READY", verifiedEtag: foreign.state.headEtag });
+  await assert.rejects(() => foreign.service.getManualDeliverableResponse({ caseId: "case-b", id: "file-a", range: null }), /не найден/);
+  assert.equal(foreign.calls.length, 0);
+  for (const mimeType of ["text/html", "image/svg+xml", "application/octet-stream", "application/pdf; charset=utf-8"]) {
+    const f = fixture({ mimeType }); Object.assign(f.files[0], { status: "READY", verifiedEtag: f.state.headEtag });
+    await assert.rejects(() => f.service.getManualDeliverableResponse({ caseId: "case-a", id: "file-a", range: null }), /не найден/);
+    assert.equal(f.calls.length, 0);
+  }
 });

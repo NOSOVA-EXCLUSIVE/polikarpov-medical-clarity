@@ -9,6 +9,8 @@ export function ManualDeliverableViewer({ file, reference }: { file: Deliverable
         controlsList="nodownload" style={{ display: "block", width: "100%", maxHeight: "60vh" }} /> :
         file.mimeType.startsWith("image/") ? <img src={url} alt={file.title}
           style={{ display: "block", width: "100%", maxHeight: "70vh", objectFit: "contain" }} /> :
+        file.mimeType === "application/pdf" ? <iframe title={file.title} src={url} referrerPolicy="no-referrer"
+          style={{ display: "block", width: "100%", minHeight: "55vh", border: 0 }} /> :
           <iframe title={file.title} src={url} referrerPolicy="no-referrer" sandbox=""
             style={{ display: "block", width: "100%", minHeight: "55vh", border: 0 }} />}
       <span style={{ position: "absolute", top: "0.75rem", right: "0.75rem", maxWidth: "calc(100% - 1.5rem)",

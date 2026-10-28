@@ -115,7 +115,7 @@ const redFlagOptions: Array<{
   { key: "hasNumbness", label: "онемение" },
   { key: "hasWeakness", label: "слабость" },
   { key: "hasBladderOrBowelSymptoms", label: "нарушение мочеиспускания или стула" },
-  { key: "hasChestPain", label: "боль в груди / одышка" },
+  { key: "hasChestPain", label: "боль в груди" },
   { key: "hasShortnessOfBreath", label: "одышка" },
   { key: "hasConfusion", label: "спутанность сознания" }
 ];
@@ -648,7 +648,7 @@ export function QuestionnaireForm({
         <>
           <div className="questionnaire-panel__header stack-sm">
             <h2>Перед началом</h2>
-            <p>Вы сейчас отправляете информацию для первичного профессионального разбора ситуации.</p>
+            <p>Вы передаёте сведения для согласования выбранной услуги.</p>
             <p className="questionnaire-field-note">Запись и оплата открываются после того, как врач подтвердит формат работы.</p>
           </div>
           <div className="questionnaire-panel__section checkbox-grid">

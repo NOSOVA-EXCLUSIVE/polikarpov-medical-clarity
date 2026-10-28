@@ -5,7 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { PageHero, Section } from "@/components/public/shell";
 import { QuestionnaireForm } from "@/components/questionnaire/form";
-import { getServiceV21, legacyServiceIds, legacyServiceSlugIds, organizationalSelection } from "@/features/products/services-v21";
+import { organizationalSelection } from "@/features/products/services-v21";
+import { resolveQuestionnaireEntry } from "@/features/questionnaire/entry-selection";
+import { ServiceOverview } from "@/components/public/service-overview";
 import { INTAKE_DATA_CONSENT_LABEL, INTAKE_DATA_CONSENT_VERSION } from "@/features/questionnaire/intake-consent-content";
 
 function responseMessage(body: any, fallback: string): string {
@@ -65,10 +67,10 @@ export function QuestionnaireEntry() {
   const params = useSearchParams();
   const raw = params.get("service");
   const legacy = params.get("product");
-  const legacyId = legacy ? (legacyServiceIds as Record<string, string>)[legacy] || (legacyServiceSlugIds as Record<string, string>)[legacy] : undefined;
-  const id = raw || legacyId || "initial-assessment";
-  const service = getServiceV21(id);
-  if (!service || (!raw && legacy && !legacyId)) return <main><Section title="Выберите формат заново"><article className="card stack"><p>Ссылка содержит неизвестный формат. Выберите услугу из актуального каталога — ваш запрос не будет автоматически подменён другой услугой.</p><Link className="button" href="/services">Открыть услуги и цены</Link></article></Section></main>;
-  if (service.kind === "organizational_selection") return <main><PageHero eyebrow="Бесплатный организационный подбор" title={organizationalSelection.title} description={<><p className="lead">{organizationalSelection.shortDescription}</p><p>{organizationalSelection.description}</p></>} /><Section><OrganizationalInquiryForm /></Section></main>;
+  const selection = resolveQuestionnaireEntry(raw, legacy);
+  if (selection.kind === "choose") return <main className="questionnaire-selection-page"><PageHero className="questionnaire-hero" eyebrow="Анкета пациента" title="С какой услугой вы хотите обратиться?" description={<p className="lead">Выберите услугу или попросите помочь с выбором. Ни одна платная услуга заранее не выбрана.</p>} /><Section><div className="card stack-sm"><h2>Помогите выбрать бесплатно</h2><p>{organizationalSelection.description}</p><Link className="button button--secondary" href="/questionnaire?service=service-selection">Подобрать услугу бесплатно</Link></div></Section><Section title="Выберите услугу"><ServiceOverview idPrefix="questionnaire" destination="questionnaire" /></Section></main>;
+  if (selection.kind === "invalid") return <main className="questionnaire-selection-page"><Section title="Выберите формат заново"><article className="card stack"><p>Ссылка содержит неизвестный формат. Выберите услугу из актуального каталога — ваш запрос не будет автоматически подменён другой услугой.</p><Link className="button" href="/services">Открыть услуги и цены</Link></article></Section></main>;
+  const service = selection.service;
+  if (service.kind === "organizational_selection") return <main className="organizational-inquiry-page"><PageHero eyebrow="Бесплатный организационный подбор" title={organizationalSelection.title} description={<><p className="lead">{organizationalSelection.shortDescription}</p><p>{organizationalSelection.description}</p></>} /><Section><OrganizationalInquiryForm /></Section></main>;
   return <main><PageHero className="questionnaire-hero" eyebrow="Анкета пациента" title="Сведения для выбранного формата" description={<><p className="lead">Последовательно опишите задачу и приложите необходимые материалы. Уточняющий созвон проходит до окончательного предложения и оплаты; выбранное время подтверждает врач. После созвона согласуются формат, объём, стоимость и срок.</p><p>Вы можете изменить формат на первом шаге. Если нужен только организационный подбор, воспользуйтесь <Link className="text-link" href="/questionnaire?service=service-selection">короткой бесплатной формой</Link>.</p></>} /><QuestionnaireForm initialSelectedServiceId={service.id} /></main>;
 }

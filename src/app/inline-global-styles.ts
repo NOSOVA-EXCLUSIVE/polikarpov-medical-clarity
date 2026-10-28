@@ -5657,4 +5657,478 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
   input[type="checkbox"] { appearance: auto; -webkit-appearance: auto; }
   input[type="checkbox"]::before { display: none; }
 }
+/* Medical Clarity: approved public UI adjustments, 2026-10-28. */
+.public-site {
+  --cta-min-height: 42px;
+  --sticky-header-offset: 8rem;
+  --control-chocolate: #5a3e32;
+  --control-chocolate-hover: #493027;
+}
+
+:where(.public-site) .button,
+:where(.public-site) .home-hero .button,
+:where(.public-site) .home-final-cta__actions .button,
+:where(.public-site) .home-mobile-documents-cta .button,
+:where(.public-site) .services-page .button,
+:where(.public-site) .service-detail-page .button,
+:where(.public-site) .service-detail-hero .button,
+:where(.public-site) .services-final-cta__actions .button,
+:where(.public-site) .doctor-experience-shell__button,
+:where(.public-site) .doctor-page--home-reference .doctor-hero--home-reference .button,
+:where(.public-site) .doctor-page--home-reference .doctor-final-cta__actions .button,
+:where(.public-site) .documents-page .button,
+:where(.public-site) .questionnaire-form .button,
+:where(.public-site) .questionnaire-footer__navigation .button:not(.button--secondary),
+:where(.public-site) .questionnaire-file-input::file-selector-button {
+  min-width: 0;
+  max-width: 100%;
+  min-height: var(--cta-min-height);
+  padding: 0.62rem 0.98rem;
+  border-radius: 999px;
+  font-size: 14.72px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.015em;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: none;
+}
+
+:where(.public-site) .home-format-card .hero-actions,
+:where(.public-site) .services-format-card__actions {
+  align-self: end;
+  gap: 0.55rem;
+}
+
+:where(.public-site) .button:hover,
+:where(.public-site) .questionnaire-file-input:hover::file-selector-button {
+  box-shadow: none;
+}
+
+:where(.public-site) .button:focus-visible {
+  outline: 3px solid var(--brass);
+  outline-offset: 3px;
+}
+
+:where(.public-site) .button:disabled,
+:where(.public-site) .button[aria-disabled="true"],
+:where(.public-site) .button.button--disabled,
+:where(.public-site) .questionnaire-file-input:disabled::file-selector-button {
+  border-color: #b8afa3;
+  background: #ded8cf;
+  color: #5e574f;
+  opacity: 1;
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+
+:where(.public-site) input[type="checkbox"] {
+  accent-color: var(--control-chocolate);
+  border-color: var(--control-chocolate);
+}
+
+:where(.public-site) input[type="checkbox"]:checked {
+  border-color: var(--control-chocolate);
+  background: var(--control-chocolate);
+}
+
+:where(.public-site) input[type="checkbox"]:enabled:hover {
+  border-color: var(--control-chocolate-hover);
+  box-shadow: 0 0 0 2px rgba(90, 62, 50, 0.12);
+}
+
+:where(.public-site) input[type="checkbox"]:checked:enabled:hover {
+  background: var(--control-chocolate-hover);
+}
+
+:where(.public-site) input[type="checkbox"]:focus-visible {
+  outline: 3px solid var(--control-chocolate);
+  outline-offset: 3px;
+}
+
+:where(.public-site) input[type="checkbox"][aria-invalid="true"],
+:where(.public-site) input[type="checkbox"]:user-invalid {
+  border-color: #8b332a;
+  box-shadow: 0 0 0 2px rgba(139, 51, 42, 0.2);
+}
+
+:where(.public-site) input[type="checkbox"]:disabled {
+  border-color: #a99b91;
+  background: #e6ded6;
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+:where(.public-site) input[type="checkbox"]:checked:disabled {
+  background: #8d776c;
+}
+
+:where(.public-site) main [id],
+:where(.public-site) #top {
+  scroll-margin-top: var(--sticky-header-offset);
+}
+
+/* Containers own the outer inset; service groups do not add another one. */
+:where(.public-site) .container,
+:where(.public-site) .documents-overview .container {
+  width: min(1200px, calc(100% - 2.8rem));
+}
+
+:where(.public-site) .services-group {
+  padding: 0;
+}
+
+:where(.public-site) .doctor-documents-hero {
+  padding-block: 2.5rem 1.5rem;
+}
+
+:where(.public-site) .doctor-documents-hero .page-hero__content {
+  gap: 1rem;
+}
+
+:where(.public-site) .doctor-documents-page .section {
+  padding-block: 2rem;
+}
+
+:where(.public-site) .doctor-documents-page .doctor-documents-disclaimer {
+  padding-top: 0;
+}
+
+:where(.public-site) .organizational-inquiry-page > .page-hero {
+  padding-block: 2.5rem 1.25rem;
+}
+
+:where(.public-site) .organizational-inquiry-page > .page-hero .page-hero__grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+:where(.public-site) .organizational-inquiry-page > .page-hero .page-hero__content {
+  padding-right: 0;
+  gap: 1rem;
+}
+
+:where(.public-site) .organizational-inquiry-page > .page-hero h1 {
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(1.75rem, 3vw, 2.55rem);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+:where(.public-site) .organizational-inquiry-page > .section {
+  padding-block: 1.5rem 2.5rem;
+}
+
+:where(.public-site) .organizational-inquiry,
+:where(.public-site) .organizational-inquiry > form,
+:where(.public-site) .organizational-inquiry .field {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:where(.public-site) .organizational-inquiry {
+  width: 100%;
+  gap: 1.15rem;
+}
+
+:where(.public-site) .organizational-inquiry h2 {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+:where(.public-site) .site-footer {
+  margin-top: 2.5rem;
+}
+
+:where(.public-site) .site-footer__frame {
+  padding-block: 1.4rem;
+}
+
+@media (max-width: 1100px) {
+  .public-site { --sticky-header-offset: 10rem; }
+}
+
+@media (max-width: 820px) {
+  .public-site {
+    --cta-min-height: 44px;
+    --sticky-header-offset: 11.5rem;
+  }
+
+  :where(.public-site) .container,
+  :where(.public-site) .documents-overview .container {
+    width: min(1200px, calc(100% - 2rem));
+  }
+
+  :where(.public-site) .site-header__inner {
+    min-height: 0;
+    gap: 0.35rem;
+    padding-block: 0.55rem;
+  }
+
+  :where(.public-site) .site-brand {
+    min-width: 0;
+    max-width: 100%;
+    gap: 0.12rem;
+  }
+
+  :where(.public-site) .site-brand__eyebrow {
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    letter-spacing: 0.04em;
+  }
+
+  :where(.public-site) .site-brand__title,
+  :where(.public-site) .site-brand__subtitle {
+    font-size: 0.7rem;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
+  }
+
+  :where(.public-site) .site-nav {
+    gap: 0 0.85rem;
+    min-width: 0;
+  }
+
+  :where(.public-site) .site-nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-block: 0.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+  }
+
+  :where(.public-site) .doctor-documents-page .section {
+    padding-block: 1.5rem;
+  }
+
+  :where(.public-site) .doctor-documents-hero,
+  :where(.public-site) .organizational-inquiry-page > .page-hero {
+    padding-block: 1.5rem 1rem;
+  }
+
+  :where(.public-site) .doctor-documents-hero__title,
+  :where(.public-site) .organizational-inquiry-page > .page-hero h1 {
+    max-width: 100%;
+    font-size: 1.625rem;
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  :where(.public-site) .organizational-inquiry-page > .section {
+    padding-block: 1rem 1.5rem;
+  }
+
+  :where(.public-site) .site-footer {
+    margin-top: 1.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  :where(.public-site) .home-format-card .hero-actions > .button,
+  :where(.public-site) .services-format-card__actions > .button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  :where(.public-site) .organizational-inquiry,
+  :where(.public-site) .doctor-documents-card {
+    padding: 1.25rem;
+  }
+
+  :where(.public-site) .site-footer__frame {
+    padding-block: 1.25rem;
+  }
+}
+/* Shared short catalog and preserved FAQ content. */
+:where(.public-site) .service-overview,
+:where(.public-site) .service-overview__group,
+:where(.public-site) .service-faq-list {
+  display: grid;
+  min-width: 0;
+}
+:where(.public-site) .service-overview { gap: 1.6rem; }
+:where(.public-site) .service-overview__group { gap: 0.8rem; }
+:where(.public-site) .service-overview__heading {
+  max-width: none;
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+:where(.public-site) .service-overview__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+:where(.public-site) .service-overview-card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 253, 249, 0.82);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+:where(.public-site) .service-overview-card:hover {
+  border-color: rgba(36, 55, 70, 0.3);
+  box-shadow: 0 8px 20px rgba(25, 22, 18, 0.04);
+}
+:where(.public-site) .service-overview-card:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+:where(.public-site) .service-overview-card__title {
+  max-width: none;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+:where(.public-site) .service-overview-card__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--radius-md);
+}
+:where(.public-site) .service-overview-card__link:focus-visible { outline: none; }
+:where(.public-site) .service-overview-card:hover .service-overview-card__link { text-decoration: underline; }
+:where(.public-site) .service-overview-card__price {
+  color: var(--accent);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+:where(.public-site) .service-overview-card__description {
+  color: var(--muted);
+  font-size: 0.96rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+:where(.public-site) .home-services-overview { padding-block: 2.75rem 1.5rem; }
+:where(.public-site) .home-entry-help { padding-block: 0 2.5rem; }
+:where(.public-site) .service-faq-list { gap: 0.85rem; }
+:where(.public-site) .service-faq {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(255, 253, 249, 0.62);
+}
+:where(.public-site) .service-faq > summary {
+  min-height: 44px;
+  padding: 1rem 1.25rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+:where(.public-site) .service-faq > summary::marker { color: var(--accent); }
+:where(.public-site) .service-faq > summary:focus-visible {
+  outline: 3px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: 20px;
+}
+:where(.public-site) .service-faq__content {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  padding: 0 1.25rem 1.25rem;
+}
+:where(.public-site) .service-faq__content > .home-hero-panel {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:where(.public-site) .service-detail-process-grid.manual-workflow {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+  :where(.public-site) .service-detail-process-grid.manual-workflow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  :where(.public-site) .service-overview__grid,
+  :where(.public-site) .service-detail-process-grid.manual-workflow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :where(.public-site) .service-overview-card { padding: 1.15rem; }
+  :where(.public-site) .service-overview__heading { font-size: 1.1rem; }
+  :where(.public-site) .home-services-overview { padding-block: 1.75rem 1.25rem; }
+  :where(.public-site) .home-entry-help { padding-bottom: 1.75rem; }
+  :where(.public-site) .service-faq > summary { padding: 0.9rem 1rem; }
+  :where(.public-site) .service-faq__content { padding: 0 1rem 1rem; }
+}
+/* Contact menu stays within the shared header axis. */
+:where(.public-site) .site-contact-menu { position: relative; }
+:where(.public-site) .site-contact-menu > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding-block: 0.35rem;
+  color: var(--accent);
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  cursor: pointer;
+}
+:where(.public-site) .site-contact-menu > summary::after {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+}
+:where(.public-site) .site-contact-menu[open] > summary::after { transform: rotate(225deg); }
+:where(.public-site) .site-contact-menu > summary:focus-visible,
+:where(.public-site) .site-contact-menu__links a:focus-visible {
+  outline: 3px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+:where(.public-site) .site-contact-menu__links {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 0.1rem;
+  width: min(20rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  padding: 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--panel-strong);
+  box-shadow: var(--shadow-soft);
+}
+:where(.public-site) .site-nav .site-contact-menu__links a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  transform: none;
+}
+:where(.public-site) .site-nav .site-contact-menu__links a::after { content: none; }
+:where(.public-site) .site-contact-menu__links a:hover { background: var(--accent-soft); }
+@media (max-width: 820px) {
+  :where(.public-site) .site-nav { position: relative; width: 100%; }
+  :where(.public-site) .site-contact-menu { position: static; }
+  :where(.public-site) .site-contact-menu > summary { font-size: 0.8125rem; }
+  :where(.public-site) .site-contact-menu__links { max-width: 100%; }
+}
 `;

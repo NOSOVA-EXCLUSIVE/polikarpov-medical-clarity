@@ -19,6 +19,7 @@ type PageHeroProps = {
   actions?: ReactNode;
   afterActions?: ReactNode;
   aside?: ReactNode;
+  actionsBeforeDescription?: boolean;
 };
 
 type BulletListProps = {
@@ -45,9 +46,17 @@ export function PublicHeader() {
         <nav className="site-nav" aria-label="Основная навигация">
           <Link href="/">Главная</Link>
           <Link href="/doctor">О враче</Link>
-          <Link href="/services">Форматы помощи</Link>
+          <Link href="/services">Услуги и стоимость</Link>
           <Link href="/questionnaire">Анкета пациента</Link>
           <Link href="/documents">Документы</Link>
+          <details className="site-contact-menu">
+            <summary>Связаться</summary>
+            <nav className="site-contact-menu__links" aria-label="Организационная связь">
+              <a href="https://t.me/EvgeniyPolikarpov">Telegram</a>
+              <a href="https://wa.me/79165821523">WhatsApp</a>
+              <a href="mailto:medicalclarity@proton.me">medicalclarity@proton.me</a>
+            </nav>
+          </details>
         </nav>
       </div>
       </header>
@@ -91,7 +100,8 @@ export function PublicFooter() {
               </Link>
             </p>
             <div className="site-footer__business">
-              {PRACTICE_LEGAL_LINES.map((line) => <p key={line}>{line}</p>)}
+              <p>{PRACTICE_LEGAL_LINES[0]}</p>
+              <p>Аккредитация 7723 030707278 / 7524 032299059</p>
               <nav className="site-footer__contacts" aria-label="Контакты">
                 <a
                   className="site-footer__contact"
@@ -138,9 +148,6 @@ export function PublicFooter() {
                     <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
                   </svg>
                 </a>
-                <p>
-                  Email: <a href="mailto:medicalclarity@proton.me">medicalclarity@proton.me</a>
-                </p>
               </nav>
             </div>
           </div>
@@ -190,7 +197,8 @@ export function PageHero({
   supportingContent,
   actions,
   afterActions,
-  aside
+  aside,
+  actionsBeforeDescription = false
 }: PageHeroProps) {
   const sectionClassName = className ? `page-hero ${className}` : "page-hero";
 
@@ -200,9 +208,10 @@ export function PageHero({
         <div className="page-hero__content stack">
           {eyebrow ? <div className="page-hero__eyebrow">{eyebrow}</div> : null}
           <h1>{title}</h1>
+          {actionsBeforeDescription && actions ? <div className="hero-actions page-hero__actions">{actions}</div> : null}
           {description ? <div className="page-hero__description">{description}</div> : null}
           {supportingContent ? <div className="page-hero__supporting">{supportingContent}</div> : null}
-          {actions ? <div className="hero-actions page-hero__actions">{actions}</div> : null}
+          {!actionsBeforeDescription && actions ? <div className="hero-actions page-hero__actions">{actions}</div> : null}
           {afterActions ? <div className="page-hero__after-actions">{afterActions}</div> : null}
         </div>
         {aside ? <aside className="page-hero__aside">{aside}</aside> : null}

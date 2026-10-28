@@ -68,21 +68,19 @@ export default function DoctorDocumentsPage() {
         }
       />
 
-      <Section title={<span className="doctor-documents-section-title">Профессиональный профиль</span>}>
-        <div className="doctor-documents-card stack-sm">
-          <p>Евгений Сергеевич Поликарпов — врач травматолог-ортопед и врач магнитно-резонансной томографии.</p>
-          <p>Более 20 лет клинической практики в травматологии, ортопедии и МРТ-диагностике.</p>
-          <p>
-            Практика сформирована в ведущих медицинских учреждениях, где ключевое значение имеют точность диагностики
-            и ответственность за клиническое решение.
-          </p>
+      <Section title={<span className="doctor-documents-section-title">Профессиональные ассоциации</span>}>
+        <div className="doctor-documents-card">
+          <ul className="doctor-documents-list">
+            <li>Член «Ассоциации травматологов-ортопедов России».</li>
+            <li>Член «Ассоциации врачей МРТ и КТ-диагностики».</li>
+          </ul>
         </div>
       </Section>
 
-      <Section title={<span className="doctor-documents-section-title">Основные направления практики</span>}>
+      <Section title={<span className="doctor-documents-section-title">Образование и профессиональная подготовка</span>}>
         <div className="doctor-documents-card">
           <ul className="doctor-documents-list">
-            {practiceDirections.map((item) => (
+            {educationItems.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
@@ -106,24 +104,37 @@ export default function DoctorDocumentsPage() {
         </div>
       </Section>
 
-      <Section title={<span className="doctor-documents-section-title">Образование и профессиональная подготовка</span>}>
+      <Section title={<span className="doctor-documents-section-title">Профессиональный профиль</span>}>
+        <div className="doctor-documents-card stack-sm">
+          <p>Евгений Сергеевич Поликарпов — врач травматолог-ортопед и врач магнитно-резонансной томографии.</p>
+          <p>Более 20 лет клинической практики в травматологии, ортопедии и МРТ-диагностике.</p>
+          <p>
+            Практика сформирована в ведущих медицинских учреждениях, где ключевое значение имеют точность диагностики
+            и ответственность за клиническое решение.
+          </p>
+        </div>
+      </Section>
+
+      <Section title={<span className="doctor-documents-section-title">Основные направления практики</span>}>
         <div className="doctor-documents-card">
           <ul className="doctor-documents-list">
-            {educationItems.map((item) => (
+            {practiceDirections.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
         </div>
       </Section>
 
-      <Section title={<span className="doctor-documents-section-title">Действующий профессиональный статус</span>}>
+      <Section title={<span className="doctor-documents-section-title">Текущий профессиональный статус</span>}>
         <div className="doctor-documents-accreditation">
           <article className="doctor-documents-card doctor-documents-card--compact stack-sm">
             <h3>Травматология и ортопедия</h3>
+            <p>Аккредитация № 7723 030707278</p>
             <p>Периодическая аккредитация, действительна до 31.01.2028.</p>
           </article>
           <article className="doctor-documents-card doctor-documents-card--compact stack-sm">
             <h3>Рентгенология</h3>
+            <p>Аккредитация № 7524 032299059</p>
             <p>Первичная специализированная аккредитация, действительна до 27.09.2029.</p>
           </article>
         </div>
@@ -131,15 +142,6 @@ export default function DoctorDocumentsPage() {
           Действующая профессиональная аккредитация подтверждена в единой государственной информационной системе в
           сфере здравоохранения Российской Федерации.
         </p>
-      </Section>
-
-      <Section title={<span className="doctor-documents-section-title">Профессиональные ассоциации</span>}>
-        <div className="doctor-documents-card">
-          <ul className="doctor-documents-list">
-            <li>Член «Ассоциации травматологов-ортопедов России».</li>
-            <li>Член «Ассоциации врачей МРТ и КТ-диагностики».</li>
-          </ul>
-        </div>
       </Section>
 
       <Section title={<span className="doctor-documents-section-title">PDF-пакет документов</span>}>

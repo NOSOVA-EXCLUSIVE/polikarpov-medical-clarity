@@ -228,7 +228,9 @@ export async function getManualDeliverableResponse(input: { caseId: string; id: 
   const headers = new Headers({ "Content-Type": file.mimeType, "Content-Length": String(expected),
     "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff",
     "Content-Disposition": "inline", "Accept-Ranges": "bytes",
-    "Content-Security-Policy": "sandbox; default-src 'none'; frame-ancestors 'self'" });
+    "Content-Security-Policy": file.mimeType === "application/pdf"
+      ? "frame-ancestors 'self'"
+      : "sandbox; default-src 'none'; frame-ancestors 'self'" });
   if (outputRange) headers.set("Content-Range", outputRange);
   return new Response(body, { status: outputRange ? 206 : 200, headers });
 }

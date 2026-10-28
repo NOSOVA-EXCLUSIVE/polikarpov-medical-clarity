@@ -8,10 +8,10 @@ type PublicLayoutProps = Readonly<{
 
 export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
-    <>
+    <div className="public-site">
       <PublicHeader />
       {children}
       <PublicFooter />
-    </>
+    </div>
   );
 }

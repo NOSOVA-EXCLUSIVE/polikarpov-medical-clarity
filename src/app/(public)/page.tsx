@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { PageHero, Section } from "../../components/public/shell";
+import { ManualWorkflow } from "@/components/public/manual-workflow";
+import { ServiceOverview } from "@/components/public/service-overview";
 import type { Route } from "next";
 
 import type { Metadata } from "next";
@@ -74,6 +76,7 @@ export default function HomePage() {
     <main>
       <PageHero
         className="home-hero"
+        actionsBeforeDescription
         eyebrow={
           <div className="hero-status-block" role="note" aria-label="Профессиональный статус">
             <p className="hero-status-block__item">
@@ -143,7 +146,7 @@ export default function HomePage() {
         actions={
           <>
             <Link className="button" href="/services">
-              Выбрать формат
+              Все услуги и цены
             </Link>
             <Link className="button button--secondary" href="/#how-it-works">
               Как проходит разбор ситуации
@@ -169,6 +172,61 @@ export default function HomePage() {
         }
       />
 
+      <Section id="services-overview" className="home-services-overview" title="Все услуги и цены">
+        <div className="stack">
+          <ServiceOverview idPrefix="home-services" />
+          <article className="home-hero-panel stack-sm" id="format-selection">
+            <p className="home-hero-panel__label">Организационный подбор — бесплатно</p>
+            <h3>Не знаете, какой формат подойдёт?</h3>
+            <p>
+              {organizationalSelection.shortDescription} {organizationalSelection.description}
+              {" "}{organizationalSelection.turnaround}
+            </p>
+            <p className="muted">
+              Медицинская оценка и просмотр снимков в бесплатный подбор не входят.
+            </p>
+            <div className="hero-actions">
+              <Link className="button button--secondary" href={serviceQuestionnaireHref("service-selection") as Route}>
+                Подобрать услугу бесплатно
+              </Link>
+            </div>
+          </article>
+        </div>
+      </Section>
+
+      <Section className="home-entry-help">
+        <details className="service-faq">
+          <summary>С чего начать?</summary>
+          <div className="service-faq__content home-formats-shell stack">
+            <p className="home-formats-shell__lead">
+              Выберите ближайшую к вашей ситуации задачу. Объём, стоимость и срок
+              работы подтверждаются до оплаты.
+            </p>
+            <div className="home-formats-grid home-entry-grid">
+              {entryScenarios.map((scenario) => {
+                const service = getServiceV21(scenario.id);
+                if (!service) return null;
+                return (
+                  <article key={service.id} className="service-overview-card service-entry-card">
+                    <p className="home-format-card__label">{scenario.situation}</p>
+                    <h3 className="service-overview-card__title"><Link className="service-overview-card__link" href={`/services/${service.slug}` as Route}>{service.title}</Link></h3>
+                    <p className="services-format-card__price-new">{formatServicePrice(service)}</p>
+                    <div className="home-format-card__body">
+                      <p className="home-format-card__action">{service.shortDescription}</p>
+                      <p className="home-format-card__accent">{scenario.note}</p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            <div className="hero-actions">
+              <Link className="button button--secondary" href="/services">
+                Все услуги и цены
+              </Link>
+            </div>
+          </div>
+        </details>
+      </Section>
       <section className="home-hero-followup">
         <div className="container home-hero-followup__grid home-hero-followup__grid--two">
           <article className="home-hero-panel home-hero-panel--about stack-sm">
@@ -234,77 +292,29 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Section title="С чего начать?">
-        <div className="home-formats-shell stack">
-          <p className="home-formats-shell__lead">
-            Выберите ближайшую к вашей ситуации задачу. Объём, стоимость и срок
-            работы подтверждаются до оплаты.
-          </p>
-          <div className="home-formats-grid home-entry-grid">
-            {entryScenarios.map((scenario) => {
-              const service = getServiceV21(scenario.id);
-              if (!service) return null;
-              return (
-                <article key={service.id} className="home-format-card">
-                  <p className="home-format-card__label">{scenario.situation}</p>
-                  <h3 className="home-format-card__title">{service.title}</h3>
-                  <p className="services-format-card__price-new">{formatServicePrice(service)}</p>
-                  <div className="home-format-card__body">
-                    <p className="home-format-card__action">{service.shortDescription}</p>
-                    <p className="home-format-card__accent">{scenario.note}</p>
-                  </div>
-                  <div className="hero-actions">
-                    <Link className="button" href={serviceQuestionnaireHref(service.id) as Route}>
-                      Выбрать формат
-                    </Link>
-                    <Link className="button button--secondary" href={`/services/${service.slug}` as Route}>
-                      Подробнее
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-          <div className="hero-actions">
-            <Link className="button button--secondary" href="/services">
-              Все 10 форматов и стоимость
-            </Link>
-          </div>
-          <article className="home-hero-panel stack-sm" id="format-selection">
-            <p className="home-hero-panel__label">Организационный подбор — бесплатно</p>
-            <h3>Не знаете, какой формат подойдёт?</h3>
-            <p>
-              {organizationalSelection.shortDescription} {organizationalSelection.description}
-              {" "}{organizationalSelection.turnaround}
-            </p>
-            <p className="muted">
-              Медицинская оценка и просмотр снимков в бесплатный подбор не входят.
-            </p>
-            <div className="hero-actions">
-              <Link className="button button--secondary" href={serviceQuestionnaireHref("service-selection") as Route}>
-                Подобрать услугу бесплатно
-              </Link>
-            </div>
-          </article>
-        </div>
-      </Section>
       <Section id="how-it-works" title="Как проходит работа">
-        <div className="home-work-grid">
-          {workSteps.map((step) => (
-            <article key={step.number} className="home-work-card">
-              <div className="home-work-card__header">
-                <span className="home-work-card__number">{step.number}</span>
-                <h3>{step.title}</h3>
-              </div>
-              <div className="home-work-card__copy">
-                {step.lines.map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
-              </div>
-              <p className="home-work-card__accent">{step.accent}</p>
-            </article>
-          ))}
-        </div>
+        <ManualWorkflow variant="general" />
+        <details className="service-faq">
+          <summary>Подробности: как проходит разбор ситуации</summary>
+          <div className="service-faq__content">
+            <div className="home-work-grid">
+              {workSteps.map((step) => (
+                <article key={step.number} className="home-work-card">
+                  <div className="home-work-card__header">
+                    <span className="home-work-card__number">{step.number}</span>
+                    <h3>{step.title}</h3>
+                  </div>
+                  <div className="home-work-card__copy">
+                    {step.lines.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </div>
+                  <p className="home-work-card__accent">{step.accent}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </details>
       </Section>
 
       <section className="home-final-cta">
@@ -327,7 +337,7 @@ export default function HomePage() {
             <div className="stack-sm home-final-cta__actions">
               <div className="hero-actions">
                 <Link className="button" href="/services">
-                  Выбрать формат
+                  Все услуги и цены
                 </Link>
                 <Link className="button button--secondary" href={serviceQuestionnaireHref("service-selection") as Route}>
                   Подобрать услугу бесплатно
