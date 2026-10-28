@@ -27,7 +27,7 @@ export function AdminShell({
   children
 }: AdminShellProps) {
   return (
-    <main className="section">
+    <main className="section functional-page">
       <div className="container stack">
         <section className="card stack-sm">
           <p className="eyebrow">Admin</p>

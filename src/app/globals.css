@@ -6149,3 +6149,242 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
     justify-content: flex-end;
   }
 }
+/* Approved typography roles, 2026-10-28. The homepage hero H1 remains its own composition. */
+.public-site,
+.functional-page,
+.admin-login,
+.portal-materials-page {
+  --mc-title-size: clamp(1.5rem, 2.25vw, 2.05rem);
+  --mc-heading-size: 1.2rem;
+  --mc-card-size: 1.05rem;
+  --mc-body-size: 1rem;
+  --mc-body-leading: 1.65;
+}
+
+/* One-column heroes keep their existing readable containers. */
+:where(.public-site) .page-hero.page-hero--single-column .page-hero__grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+:where(.public-site) .page-hero.page-hero--single-column .page-hero__content {
+  min-width: 0;
+  padding-right: 0;
+}
+
+/* Page titles and the main section/closing headings share the homepage section scale. */
+:where(.public-site) .page-hero:not(.home-hero) h1,
+:where(.public-site) .services-page__title,
+:where(.public-site) main.section h1,
+:where(.public-site) .section-heading h2,
+:where(.public-site) .services-page .section-heading h2,
+:where(.public-site) .doctor-page .section-heading h2,
+:where(.public-site) .doctor-page--home-reference .section-heading h2,
+:where(.public-site) .doctor-documents-page .section-heading h2,
+:where(.public-site) .documents-prepayment .section-heading h2,
+:where(.public-site) .section#how-it-works .section-heading h2,
+:where(.public-site) .section#service-process .section-heading h2,
+:where(.public-site) .home-final-cta__card h2,
+:where(.public-site) .services-final-cta__copy h2,
+:where(.public-site) .doctor-page--home-reference .doctor-final-cta__card--refined h2,
+:where(.public-site) .doctor-followup__title,
+:where(.public-site) .documents-legal-info__content h2,
+.functional-page h1,
+.admin-login h1,
+.admin-login .card > h1,
+.portal-materials-page h1,
+.portal-materials-page .card > h1 {
+  max-width: none;
+  font-size: var(--mc-title-size);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  white-space: normal;
+}
+
+/* Qualification title spans inherit the owning H1/H2 metrics. */
+:where(.public-site) .doctor-documents-hero__title,
+:where(.public-site) .doctor-documents-section-title {
+  max-width: none;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  white-space: normal;
+}
+
+/* Group headings, form steps and numbered document sections are compact H2 roles. */
+:where(.public-site) .service-overview__heading,
+:where(.public-site) .organizational-inquiry h2,
+:where(.public-site) .services-page .home-hero-panel h2,
+:where(.public-site) .card:not([role="status"]) > h2,
+:where(.public-site) .questionnaire-selection-page .card > h2,
+:where(.public-site) .questionnaire-panel__header h2,
+:where(.public-site) .questionnaire-success-card h2,
+:where(.public-site) .documents-detail__section h2,
+:where(.public-site) .booking-page__section-title,
+.functional-page h2,
+.admin-login h2,
+.portal-materials-page h2 {
+  max-width: none;
+  font-size: var(--mc-heading-size);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  white-space: normal;
+}
+
+/* Card titles retain a distinct weight without inheriting large generic H2/H3 styles. */
+:where(.public-site) .service-overview-card__title,
+:where(.public-site) .card h3,
+:where(.public-site) .home-hero-panel h3,
+:where(.public-site) .home-summary-about__name,
+:where(.public-site) .home-hero-experience-row__title,
+:where(.public-site) .home-work-card h3,
+:where(.public-site) .services-orientation-card h3,
+:where(.public-site) .service-detail-process-card h3,
+:where(.public-site) .doctor-page--home-reference .doctor-experience-row h3,
+:where(.public-site) .doctor-documents-card--compact h3,
+:where(.public-site) .documents-card .documents-card__copy h2,
+:where(.public-site) .documents-card .documents-card__copy h3,
+:where(.public-site) .questionnaire-panel__section-title,
+.functional-page h3,
+.admin-login h3,
+.portal-materials-page h3 {
+  max-width: none;
+  font-size: var(--mc-card-size);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: normal;
+  white-space: normal;
+}
+
+/* Ordinary prose only: price, navigation, status, meta, controls and labels keep their own roles. */
+:where(.public-site) .lead,
+:where(.public-site) .page-hero:not(.home-hero) .page-hero__description,
+:where(.public-site) .home-hero__description-copy,
+:where(.public-site) .home-hero__points-list p,
+:where(.public-site) .home-hero-about__roles p,
+:where(.public-site) .home-summary-copy p,
+:where(.public-site) .home-summary-experience__intro,
+:where(.public-site) .home-summary-experience__closing,
+:where(.public-site) .home-formats-shell__lead,
+:where(.public-site) .home-format-card__action,
+:where(.public-site) .home-format-card__accent,
+:where(.public-site) .home-work-card__copy p,
+:where(.public-site) .home-work-card__accent,
+:where(.public-site) .home-final-cta__copy p,
+:where(.public-site) .services-page .section-heading .lead,
+:where(.public-site) .services-orientation-note,
+:where(.public-site) .services-orientation-card p:not(:has(strong)),
+:where(.public-site) .service-overview-card__description,
+:where(.public-site) .services-final-cta__copy p,
+:where(.public-site) .service-detail-hero .page-hero__description .lead,
+:where(.public-site) .service-detail-hero .page-hero__description p:last-child,
+:where(.public-site) .service-detail-page .card p:not([class]),
+:where(.public-site) .service-detail-page .list li,
+:where(.public-site) .doctor-home-reference__roles p,
+:where(.public-site) .doctor-home-reference__statement,
+:where(.public-site) .doctor-home-reference__lead p,
+:where(.public-site) .doctor-followup__copy p,
+:where(.public-site) .doctor-followup__list-item,
+:where(.public-site) .doctor-page--home-reference .doctor-experience-shell__subtitle,
+:where(.public-site) .doctor-page--home-reference .doctor-experience-shell__intro,
+:where(.public-site) .doctor-page--home-reference .doctor-experience-shell__closing,
+:where(.public-site) .doctor-page--home-reference .doctor-experience-shell__accent,
+:where(.public-site) .doctor-page--home-reference .doctor-experience-row p,
+:where(.public-site) .doctor-page--home-reference .doctor-understand-card p,
+:where(.public-site) .doctor-page--home-reference .doctor-final-cta__copy p,
+:where(.public-site) .doctor-documents-hero__body p,
+:where(.public-site) .doctor-documents-card p,
+:where(.public-site) .doctor-documents-list li,
+:where(.public-site) .doctor-documents-disclaimer p,
+:where(.public-site) .documents-hero .lead,
+:where(.public-site) .documents-card__copy p,
+:where(.public-site) .documents-card--secondary .documents-card__copy p,
+:where(.public-site) .documents-prepayment .section-heading .lead,
+:where(.public-site) .documents-prepayment__card .lead,
+:where(.public-site) .documents-prepayment__card p,
+:where(.public-site) .documents-legal-info__content p,
+:where(.public-site) .documents-detail__section p,
+:where(.public-site) .documents-detail__list li,
+:where(.public-site) .questionnaire-hero .page-hero__description,
+:where(.public-site) .questionnaire-panel__intro,
+:where(.public-site) .questionnaire-success-card__lead,
+:where(.public-site) .questionnaire-success-card__section p,
+:where(.public-site) .questionnaire-success-list li,
+:where(.public-site) .organizational-inquiry > p,
+:where(.public-site) .organizational-inquiry form > p,
+:where(.public-site) .questionnaire-selection-page .card p:not(.eyebrow) {
+  font-size: var(--mc-body-size);
+  font-weight: 400;
+  line-height: var(--mc-body-leading);
+  letter-spacing: normal;
+}
+
+/* Remove nested heading/prose measures; the containing columns supply the readable width. */
+:where(.public-site) .section-heading,
+:where(.public-site) .section-heading .lead,
+:where(.public-site) .services-page .section-heading,
+:where(.public-site) .doctor-page .section-heading,
+:where(.public-site) .doctor-page--home-reference .section-heading,
+:where(.public-site) .doctor-documents-page .section-heading,
+:where(.public-site) .documents-prepayment .section-heading,
+:where(.public-site) .documents-detail-page__related .section-heading,
+:where(.public-site) .page-hero:not(.home-hero) .lead,
+:where(.public-site) .services-page .section-heading .lead,
+:where(.public-site) .service-detail-hero .page-hero__description,
+:where(.public-site) .service-detail-page--second-opinion .service-detail-hero .page-hero__description .lead,
+:where(.public-site) .doctor-home-reference__statement,
+:where(.public-site) .documents-hero .lead,
+:where(.public-site) .documents-prepayment .section-heading .lead,
+:where(.public-site) .documents-prepayment__card .lead {
+  max-width: none;
+  white-space: normal;
+}
+
+/* Keep the original paragraph/heading text, including doctor closing spans, without forced no-wrap. */
+:where(.public-site) .doctor-home-reference__title-line,
+:where(.public-site) .doctor-home-reference__lead-line,
+:where(.public-site) .doctor-final-cta__line,
+:where(.public-site) .doctor-final-cta__line--nowrap,
+:where(.public-site) .home-final-cta__line,
+:where(.public-site) .services-final-cta__line,
+:where(.public-site) .questionnaire-panel__intro--single-line,
+:where(.public-site) .questionnaire-panel__line--nowrap {
+  white-space: normal;
+}
+
+/* The form's eyebrow is a label; the question itself is the page H1. */
+:where(.public-site) .questionnaire-hero .page-hero__eyebrow {
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+}
+
+/* Organizational introductions can use the full available single-column width. */
+:where(.public-site) .organizational-inquiry-page > .page-hero .page-hero__grid,
+:where(.public-site) .organizational-inquiry-page > .page-hero .page-hero__content,
+:where(.public-site) .organizational-inquiry-page > .page-hero .page-hero__description,
+:where(.public-site) .organizational-inquiry-page > .page-hero .lead {
+  width: 100%;
+  max-width: none;
+  white-space: normal;
+}
+
+/* Functional pages inherit body text; helper/date/status/ID/pre-wrap styles remain untouched. */
+.functional-page,
+.admin-login,
+.portal-materials-page {
+  font-size: var(--mc-body-size);
+  line-height: var(--mc-body-leading);
+}
+
+@media (max-width: 820px) {
+  .public-site,
+  .functional-page,
+  .admin-login,
+  .portal-materials-page {
+    --mc-title-size: 1.625rem;
+    --mc-heading-size: 1.1rem;
+  }
+}

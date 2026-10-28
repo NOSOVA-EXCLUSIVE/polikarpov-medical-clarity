@@ -35,7 +35,7 @@ export default async function ManualCabinetPage({ searchParams }: {
     const session = await requireManualPatient();
     context = await getManualContext(session.caseId);
   } catch {
-    return <main className="section"><div className="container stack"><section className="card stack">
+    return <main className="section functional-page"><div className="container stack"><section className="card stack">
       <p className="eyebrow">Личный кабинет</p><h1>Доступ по персональной ссылке</h1>
       <p>Откройте актуальную персональную ссылку от врача. Если срок входа истёк, попросите новую ссылку.
         Доступ к истории сохраняется 30 календарных дней после фактического завершения работы.</p>
@@ -52,7 +52,7 @@ export default async function ManualCabinetPage({ searchParams }: {
     contactCount: context.contacts.length, hasOpenContact: Boolean(open), workEndsAt: context.workEndsAt,
     resultDeliveredAt: context.resultDeliveredAt }));
   const scope = Array.isArray(agreement?.scopeJson) ? agreement.scopeJson.filter((item): item is string => typeof item === "string") : [];
-  return <main className="section"><div className="container stack" style={{ overflowWrap: "anywhere" }}>
+  return <main className="section functional-page"><div className="container stack" style={{ overflowWrap: "anywhere" }}>
     <section className="card stack">
       <p className="eyebrow">Личный кабинет · обращение {context.reference}</p>
       <h1>{agreement?.title || "Уточнение формата помощи"}</h1>

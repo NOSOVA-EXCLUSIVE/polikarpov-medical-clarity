@@ -17,8 +17,7 @@ function renderDocumentCardTitle(slug: string, title: string) {
   if (slug === "data-policy") {
     return (
       <>
-        Политика обработки персональных данных и
-        <br />
+        Политика обработки персональных данных и{" "}
         медицинской информации
       </>
     );

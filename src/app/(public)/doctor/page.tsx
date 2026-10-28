@@ -85,24 +85,14 @@ export default function DoctorPage() {
 
             <div className="doctor-home-reference__lead">
               <p>
-                <span className="doctor-home-reference__lead-line">
-                  Когда уже есть диагнозы и обследования,
-                </span>
-                <span className="doctor-home-reference__lead-line">
-                  но нет понимания, что делать дальше
-                </span>
+                Когда уже есть диагнозы и обследования,
+                но нет понимания, что делать дальше
               </p>
 
               <p>
-                <span className="doctor-home-reference__lead-line">
-                  Задача — не просто дать мнение,
-                </span>
-                <span className="doctor-home-reference__lead-line">
-                  а разобраться в ситуации и выстроить
-                </span>
-                <span className="doctor-home-reference__lead-line">
-                  понятный профессиональный ориентир
-                </span>
+                Задача — не просто дать мнение,
+                а разобраться в ситуации и выстроить
+                понятный профессиональный ориентир
               </p>
             </div>
           </div>
@@ -272,7 +262,7 @@ export default function DoctorPage() {
                 </span>
               </h2>
               <div className="doctor-final-cta__copy stack-sm">
-                <p className="doctor-final-cta__line doctor-final-cta__line--nowrap">
+                <p className="doctor-final-cta__line">
                   Начать стоит с первичного профессионального разбора — именно на
                   этом этапе формируется ясность и определяется дальнейший маршрут.
                 </p>

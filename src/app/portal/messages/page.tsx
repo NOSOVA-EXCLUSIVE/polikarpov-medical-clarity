@@ -28,7 +28,7 @@ export default async function PortalMessagesPage({ searchParams }: PageProps) {
 
   if (!session) {
     return (
-      <main className="section">
+      <main className="section functional-page">
         <div className="container stack">
           <div className="card stack">
             <p className="eyebrow">Центр сообщений</p>
@@ -62,7 +62,7 @@ export default async function PortalMessagesPage({ searchParams }: PageProps) {
           : null;
 
     return (
-      <main className="section">
+      <main className="section functional-page">
         <div className="container stack">
           <div className="card stack">
             <p className="eyebrow">Центр сообщений</p>
@@ -180,7 +180,7 @@ export default async function PortalMessagesPage({ searchParams }: PageProps) {
     );
   } catch (error) {
     return (
-      <main className="section">
+      <main className="section functional-page">
         <div className="container stack">
           <div className="card stack">
             <p className="eyebrow">Центр сообщений</p>

@@ -200,7 +200,9 @@ export function PageHero({
   aside,
   actionsBeforeDescription = false
 }: PageHeroProps) {
-  const sectionClassName = className ? `page-hero ${className}` : "page-hero";
+  const sectionClassName = ["page-hero", className, !aside ? "page-hero--single-column" : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <section className={sectionClassName}>
