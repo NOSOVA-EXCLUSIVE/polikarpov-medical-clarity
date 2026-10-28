@@ -6592,3 +6592,48 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
 :where(.public-site) .site-footer__format-details[open] > p {
   margin-block: 0.4rem 0.1rem;
 }
+
+/* Use the desktop footer's available width instead of stacking its business details. */
+:where(.public-site) .site-footer__format-details[open] > p {
+  max-width: 72ch;
+}
+@media (min-width: 981px) {
+  :where(.public-site) .site-footer__bottom {
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+  :where(.public-site) .site-footer__legal-meta {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+  }
+  :where(.public-site) .site-footer__business {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 1rem;
+  }
+  :where(.public-site) .site-footer__business > p {
+    min-width: 0;
+  }
+  :where(.public-site) .site-footer__business > .site-footer__contacts {
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    padding-top: 0;
+  }
+  :where(.public-site) .site-footer__backtop {
+    flex: 0 0 auto;
+    margin-inline-start: 0;
+    white-space: nowrap;
+  }
+}
+@media (min-width: 1200px) {
+  :where(.public-site) .site-footer__identity {
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 1rem;
+  }
+  :where(.public-site) .site-footer__copy {
+    grid-column: 1 / -1;
+  }
+}
