@@ -79,7 +79,7 @@ function OrganizationalInquiryForm() {
       <label className="field">Какой формат или порядок работы хотите уточнить?<textarea name="task" defaultValue={draft.task || ""} required minLength={5} maxLength={1000} rows={3} placeholder="Например: хочу понять, какой формат подойдёт для независимого просмотра одного исследования." /></label>
       <label className="field">Какие материалы уже есть?<textarea name="materials" defaultValue={draft.materials || ""} maxLength={1000} rows={3} placeholder="Только перечень: одно МРТ, описание, две выписки. Файлы и ссылки сейчас не нужны." /></label>
       <input name="website" className="form-honeypot" tabIndex={-1} autoComplete="off" aria-hidden="true" />
-      <p className="muted">Бесплатно. Первый организационный ответ — до трёх рабочих дней. Выбранное время предварительной беседы подтверждает врач. Медицинская оценка и просмотр снимков в подбор не входят; платный формат и оплата согласуются отдельно.</p>
+      <p className="muted">Бесплатно. Первый организационный ответ — до трёх рабочих дней. После заявки время предварительной беседы согласуется с врачом. Медицинская оценка и просмотр снимков в подбор не входят; платный формат и оплата согласуются отдельно.</p>
       <div><button className="button" type="submit" disabled={busy}>{busy ? "Сохраняем обращение…" : "Отправить запрос на подбор"}</button></div>
     </form>}
     {error && <p className="form-error" role="alert">{error}</p>}

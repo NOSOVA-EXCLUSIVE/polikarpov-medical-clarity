@@ -53,10 +53,10 @@ export function ContactMenu() {
           }
         }}
       >
-        <a href="https://t.me/EvgeniyPolikarpov">Telegram</a>
-        <a href="https://wa.me/79165821523">WhatsApp</a>
+        <a href="https://t.me/EvgeniyPolikarpov" target="_blank" rel="noopener noreferrer">Telegram</a>
+        <a href="https://wa.me/79165821523" target="_blank" rel="noopener noreferrer">WhatsApp</a>
         <a href="mailto:medicalclarity@proton.me" aria-label="Написать на medicalclarity@proton.me">Email</a>
-        <a href="https://www.instagram.com/polikarpovclarity/">Instagram</a>
+        <a href="https://www.instagram.com/polikarpovclarity/" target="_blank" rel="noopener noreferrer">Instagram</a>
       </nav>
     </details>
   );

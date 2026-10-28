@@ -82,7 +82,7 @@ export function PublicFooter() {
             <nav className="site-footer__contacts" aria-label="Контакты">
               <a
                 className="site-footer__contact"
-                href="https://wa.me/79165821523"
+                href="https://wa.me/79165821523" target="_blank" rel="noopener noreferrer"
                 aria-label="Написать в WhatsApp"
                 title="WhatsApp"
               >
@@ -93,7 +93,7 @@ export function PublicFooter() {
               </a>
               <a
                 className="site-footer__contact"
-                href="https://t.me/EvgeniyPolikarpov"
+                href="https://t.me/EvgeniyPolikarpov" target="_blank" rel="noopener noreferrer"
                 aria-label="Написать в Telegram"
                 title="Telegram"
               >
@@ -115,7 +115,7 @@ export function PublicFooter() {
               </a>
               <a
                 className="site-footer__contact"
-                href="https://www.instagram.com/polikarpovclarity/"
+                href="https://www.instagram.com/polikarpovclarity/" target="_blank" rel="noopener noreferrer"
                 aria-label="Instagram Polikarpov Medical Clarity"
                 title="Instagram"
               >

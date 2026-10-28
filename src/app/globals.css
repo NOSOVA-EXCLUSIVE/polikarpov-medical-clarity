@@ -6663,6 +6663,12 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
   margin: 0;
   padding-top: 0;
 }
+:where(.public-site) .site-footer__frame {
+  grid-template-columns: minmax(0, 1fr);
+}
+:where(.public-site) .site-footer__top {
+  flex-wrap: wrap;
+}
 
 @media (min-width: 821px) {
   :where(.public-site) .home-hero .page-hero__aside {
@@ -6674,17 +6680,11 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
   :where(.public-site) .site-footer__business {
     min-height: 3rem;
   }
+  :where(.public-site) .site-footer__bottom {
+    align-items: flex-end;
+  }
 }
 @media (min-width: 1200px) {
-  :where(.public-site) .site-footer {
-    position: relative;
-  }
-  :where(.public-site) .site-footer__right {
-    position: absolute;
-    inset-block-start: 1.1rem;
-    inset-inline-end: max(1.4rem, calc((100% - 1200px) / 2));
-    max-width: calc(100% - 2.8rem);
-  }
   :where(.public-site) .site-footer__right > .footer-links--legal {
     flex-wrap: nowrap;
     max-width: none;
@@ -6692,7 +6692,24 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
   }
 }
 @media (min-width: 1440px) {
-  :where(.public-site) .site-footer__right {
-    inset-inline-end: max(1.4rem, calc((100% - 1200px) / 2 - 6rem));
+  :where(.public-site) .site-footer__frame {
+    width: auto;
+    margin-inline-start: max(1.4rem, calc((100% - 1200px) / 2));
+    margin-inline-end: max(1.4rem, calc((100% - 1200px) / 2 - 6rem));
   }
+  :where(.public-site) .site-footer__bottom {
+    width: min(1200px, 100%);
+  }
+}
+
+/* Match the solid caret of the timezone suggestions without changing native select behavior. */
+:where(.public-site) .field select[name="preferredContact"],
+:where(.public-site) #questionnaire-preferred-contact {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-inline-end: 3rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath d='M1 2h10L6 9z' fill='%2326211d'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.25rem center;
+  background-size: 0.65rem 0.55rem;
 }
