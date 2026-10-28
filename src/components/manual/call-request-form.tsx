@@ -24,7 +24,7 @@ export function ManualCallRequestForm() {
     <input type="hidden" name="startsAt" ref={starts} />
     <input type="hidden" name="endsAt" ref={ends} />
     <input type="hidden" name="timezone" ref={zone} />
-    <label className="field"><span>Удобное время уточняющего созвона</span>
+    <label className="field"><span>Удобное время предварительной беседы с врачом</span>
       <input type="datetime-local" name="localStart" required /></label>
     <p className="muted">Время указано по часовому поясу вашего устройства. Запрос на 30 минут — предложение времени;
       окончательную дату и длительность подтверждает врач. Это не оплата и не начало услуги.</p>

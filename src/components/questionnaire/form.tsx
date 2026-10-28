@@ -33,6 +33,10 @@ import {
   getInvalidExternalLinkCount,
   hasBlockingRedFlags,
   hasText,
+  isValidEmail,
+  isValidFullName,
+  isValidPhone,
+  isValidUrl,
   nextStep,
   previousStep,
   trimValue,
@@ -71,6 +75,45 @@ type ExtendedQuestionnaireState = QuestionnaireWizardState & {
     acceptedMedicalData: boolean;
   };
 };
+
+type StepIssue = { step: WizardStep; fieldId: string; message: string };
+
+function getStepIssue(step: WizardStep, state: ExtendedQuestionnaireState, uploading: boolean): StepIssue {
+  const issue = (fieldId: string, message: string) => ({ step, fieldId, message });
+  if (step === 1) {
+    if (hasBlockingRedFlags(state.redFlags)) return issue("questionnaire-red-flags", "При отмеченных экстренных симптомах анкету продолжать нельзя. Откройте раздел ограничений и обратитесь за очной медицинской помощью.");
+    if (!state.acceptedIntakeData) return issue("questionnaire-intake-consent", "Подтвердите согласие на обработку данных перед заполнением анкеты.");
+    if (!state.isAdult) return issue("questionnaire-is-adult", "Подтвердите, что вам исполнилось 18 лет.");
+    if (!state.confirmsNonEmergency) return issue("questionnaire-non-emergency", "Подтвердите, что обращение не относится к экстренным.");
+    if (!hasText(state.selectedServiceId)) return issue("questionnaire-service-options", "Выберите предварительный формат услуги.");
+  }
+  if (step === 2) {
+    if (!isValidFullName(state.patient.fullName)) return issue("questionnaire-full-name", "Укажите имя: не менее двух символов.");
+    if (!hasText(state.patient.country)) return issue("questionnaire-country", "Укажите страну проживания.");
+    if (!hasText(state.patient.city)) return issue("questionnaire-city", "Укажите город проживания.");
+    if (!isValidEmail(state.patient.email)) return issue("questionnaire-email", "Укажите корректный email для ответа.");
+    if (!isValidPhone(state.patient.phone)) return issue("questionnaire-phone", "Укажите телефон: не менее шести цифр.");
+    if (!hasText(state.patient.preferredContact)) return issue("questionnaire-preferred-contact", "Выберите предпочтительный способ связи.");
+    if (!hasText(state.patient.timezone)) return issue("questionnaire-timezone", "Укажите часовой пояс.");
+  }
+  if (step === 3 && !hasText(state.situation.chiefComplaint)) {
+    return issue("questionnaire-chief-complaint", "Кратко заполните поле «Что вас беспокоит?».");
+  }
+  if (step === 5) {
+    if (uploading) return issue("questionnaire-materials", "Дождитесь завершения загрузки материалов.");
+    const invalid = state.externalLinks.find((item) => hasText(item.url) && !isValidUrl(item.url));
+    if (invalid) return issue(`questionnaire-link-${invalid.id}`, "Проверьте адрес внешней ссылки: укажите полный корректный URL или удалите ненужную ссылку.");
+  }
+  if (step === 6) {
+    if (!state.confirmedNonEmergencyAtSubmission) return issue("questionnaire-final-non-emergency", "Подтвердите, что понимаете: это не экстренная помощь.");
+    if (!state.legal.acceptedOffer) return issue("questionnaire-accepted-offer", "Ознакомьтесь с условиями публичной оферты и подтвердите это.");
+    if (!state.legal.acceptedPrivacy) return issue("questionnaire-accepted-privacy", "Подтвердите согласие на обработку персональных данных.");
+    if (!state.legal.acceptedMedicalData) return issue("questionnaire-accepted-medical-data", "Подтвердите согласие на обработку медицинской информации.");
+    if (!state.legal.acceptedConsent) return issue("questionnaire-accepted-consent", "Подтвердите, что понимаете формат дистанционного взаимодействия.");
+    if (!state.legal.confirmedInformationAccuracy) return issue("questionnaire-information-accuracy", "Подтвердите корректность указанной информации.");
+  }
+  return issue("questionnaire-panel", "Проверьте обязательные поля этого раздела.");
+}
 
 const confirmationCheckboxStyle = {
   width: 18,
@@ -246,8 +289,29 @@ export function QuestionnaireForm({
   const consentRequestRef = useRef<Promise<void> | null>(null);
   const [uploadingCategory, setUploadingCategory] = useState<UploadCategoryValue | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [invalidFieldId, setInvalidFieldId] = useState<string | null>(null);
+  const [focusRequest, setFocusRequest] = useState<{ fieldId: string; sequence: number } | null>(null);
   const [successState, setSuccessState] = useState<SuccessState | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const frame = window.requestAnimationFrame(() => {
+      const candidate = document.getElementById(focusRequest.fieldId);
+      const target = candidate && panelRef.current?.contains(candidate) ? candidate : panelRef.current;
+      target?.scrollIntoView({ behavior: "smooth", block: focusRequest.fieldId === "questionnaire-panel" ? "start" : "center" });
+      target?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [step, focusRequest]);
+
+  const requestFocus = (fieldId: string) => setFocusRequest((current) => ({ fieldId, sequence: (current?.sequence ?? 0) + 1 }));
+  const fieldFeedbackProps = (id: string, required = false) => ({
+    id,
+    "aria-required": required || undefined,
+    "aria-invalid": invalidFieldId === id || undefined,
+    "aria-describedby": invalidFieldId === id && errorMessage ? "questionnaire-step-feedback" : undefined
+  });
 
   const invalidExternalLinks = getInvalidExternalLinkCount(state);
   const stepCanContinue = canContinueFromStep(step, state, {
@@ -300,27 +364,31 @@ export function QuestionnaireForm({
   };
 
   const goToStep = async (next: WizardStep) => {
-    if (!canNavigateToStep(next, state, { invalidExternalLinks, uploadingInProgress: uploadingCategory !== null })) {
-      setErrorMessage("Сначала подтвердите согласия и заполните обязательные поля предыдущих шагов.");
-      return;
-    }
+    const options = { invalidExternalLinks, uploadingInProgress: uploadingCategory !== null };
+    const firstIncomplete = !canNavigateToStep(next, state, options)
+      ? wizardSteps.find((item) => item.step < next && !canContinueFromStep(item.step, state, options))
+      : undefined;
+    const issue = firstIncomplete ? getStepIssue(firstIncomplete.step, state, uploadingCategory !== null) : null;
+    const destination = issue?.step ?? next;
     try {
-      if (next > 1) await ensureIntakeConsent();
-      setStep(next);
-      setErrorMessage(null);
-      if (typeof window !== "undefined") {
-        window.requestAnimationFrame(() => {
-          panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      }
+      // Even a jump to the first incomplete section keeps the existing server-consent prerequisite.
+      if (destination > 1) await ensureIntakeConsent();
+      setStep(destination);
+      setErrorMessage(issue ? `Для перехода к разделу «${wizardSteps.find((item) => item.step === next)?.title}» завершите шаг ${issue.step}. ${issue.message}` : null);
+      setInvalidFieldId(issue?.fieldId ?? null);
+      requestFocus(issue?.fieldId ?? "questionnaire-panel");
     } catch (error) {
+      setStep(1);
       setErrorMessage(error instanceof Error ? error.message : "Не удалось сохранить согласие.");
+      setInvalidFieldId("questionnaire-intake-consent");
+      requestFocus("questionnaire-intake-consent");
     }
   };
 
   const updateState = (updater: (current: ExtendedQuestionnaireState) => ExtendedQuestionnaireState) => {
     setState((current) => updater(current));
     setErrorMessage(null);
+    setInvalidFieldId(null);
   };
 
   const updateUpload = (id: string, updater: (current: UploadDraftState) => UploadDraftState) => {
@@ -361,11 +429,7 @@ export function QuestionnaireForm({
   };
 
   const handleNext = () => {
-    if (!stepCanContinue) {
-      return;
-    }
-
-    goToStep(nextStep(step));
+    void goToStep(nextStep(step));
   };
 
   const handleBack = () => {
@@ -406,12 +470,12 @@ export function QuestionnaireForm({
           }
 
           if (file.size > VIDEO_UPLOAD_POLICY.maxBytesPerVideo) {
-            throw new Error("Размер одного видео не должен превышать 250 MB.");
+            throw new Error(`Размер одного видео не должен превышать ${VIDEO_UPLOAD_POLICY.maxBytesPerVideo / (1024 * 1024)} МиБ.`);
           }
 
           durationSeconds = Math.round(await getVideoDurationSeconds(file));
           if (durationSeconds > VIDEO_UPLOAD_POLICY.maxDurationSeconds) {
-            throw new Error("Одно видео не должно быть длиннее 120 секунд.");
+            throw new Error(`Одно видео не должно быть длиннее ${VIDEO_UPLOAD_POLICY.maxDurationSeconds} секунд.`);
           }
         }
 
@@ -482,7 +546,7 @@ export function QuestionnaireForm({
         ].reduce((sum, item) => sum + item.sizeBytes, 0);
 
         if (totalVideoBytes > VIDEO_UPLOAD_POLICY.maxBytesTotal) {
-          throw new Error("Суммарный объём видео не должен превышать 600 MB.");
+          throw new Error(`Суммарный объём видео не должен превышать ${VIDEO_UPLOAD_POLICY.maxBytesTotal / (1024 * 1024)} МиБ.`);
         }
       }
 
@@ -502,7 +566,7 @@ export function QuestionnaireForm({
     setErrorMessage(null);
 
     if (!isReadyToSubmit) {
-      const firstInvalidStep =
+      const firstInvalidStep = !intakeReceipt ? 1 :
         wizardSteps.find(
           (item) =>
             !canContinueFromStep(item.step, state, {
@@ -511,8 +575,13 @@ export function QuestionnaireForm({
             })
         )?.step ?? 1;
 
-      goToStep(firstInvalidStep);
-      setErrorMessage("Пожалуйста, заполните обязательные поля текущего маршрута анкеты.");
+      const issue = !intakeReceipt && state.acceptedIntakeData
+        ? { step: 1 as const, fieldId: "questionnaire-intake-consent", message: "Сначала сохраните согласие на обработку данных: нажмите «Продолжить заполнение» на первом шаге." }
+        : getStepIssue(firstInvalidStep, state, uploadingCategory !== null);
+      setStep(firstInvalidStep);
+      setErrorMessage(issue.message);
+      setInvalidFieldId(issue.fieldId);
+      requestFocus(issue.fieldId);
       return;
     }
 
@@ -654,6 +723,7 @@ export function QuestionnaireForm({
           <div className="questionnaire-panel__section checkbox-grid">
             <label className="checkbox-row">
               <input
+                {...fieldFeedbackProps("questionnaire-intake-consent", true)}
                 type="checkbox"
                 checked={state.acceptedIntakeData}
                 disabled={consentSaving || uploadingCategory !== null}
@@ -688,6 +758,7 @@ export function QuestionnaireForm({
             </label>
             <label className="checkbox-row">
               <input
+                {...fieldFeedbackProps("questionnaire-is-adult", true)}
                 type="checkbox"
                 checked={state.isAdult}
                 onChange={(e) => updateStepOneCheckbox("isAdult", e.currentTarget.checked)}
@@ -698,6 +769,7 @@ export function QuestionnaireForm({
             </label>
             <label className="checkbox-row">
               <input
+                {...fieldFeedbackProps("questionnaire-non-emergency", true)}
                 type="checkbox"
                 checked={state.confirmsNonEmergency}
                 onChange={(e) => updateStepOneCheckbox("confirmsNonEmergency", e.currentTarget.checked)}
@@ -709,7 +781,7 @@ export function QuestionnaireForm({
               <span>Ситуация не относится к экстренным</span>
             </label>
           </div>
-          <div className="notice notice--danger stack-sm">
+          <div id="questionnaire-red-flags" className="notice notice--danger stack-sm" tabIndex={-1}>
             <strong>Если сейчас есть одно из состояний ниже — лучше не продолжать анкету и обратиться за очной медицинской помощью:</strong>
             <div className="checkbox-grid">
               {redFlagOptions.map((item) => (
@@ -731,7 +803,7 @@ export function QuestionnaireForm({
             <p className="questionnaire-field-note">
               Это не окончательный выбор — врач уточнит после анализа анкеты.
             </p>
-            <div className="questionnaire-option-grid">
+            <div id="questionnaire-service-options" className="questionnaire-option-grid" tabIndex={-1}>
               {paidServicesV21.map((service) => (
                 <button
                   key={service.id}
@@ -766,7 +838,7 @@ export function QuestionnaireForm({
           <div className="form-grid">
             <label className="field">
               <span>Имя</span>
-              <input value={state.patient.fullName} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, fullName: e.target.value } }))} />
+              <input {...fieldFeedbackProps("questionnaire-full-name", true)} value={state.patient.fullName} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, fullName: e.target.value } }))} />
             </label>
             <label className="field">
               <span>Возраст</span>
@@ -774,23 +846,23 @@ export function QuestionnaireForm({
             </label>
             <label className="field">
               <span>Страна</span>
-              <input value={state.patient.country} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, country: e.target.value } }))} />
+              <input {...fieldFeedbackProps("questionnaire-country", true)} value={state.patient.country} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, country: e.target.value } }))} />
             </label>
             <label className="field">
               <span>Город</span>
-              <input value={state.patient.city} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, city: e.target.value } }))} />
+              <input {...fieldFeedbackProps("questionnaire-city", true)} value={state.patient.city} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, city: e.target.value } }))} />
             </label>
             <label className="field">
               <span>Email</span>
-              <input type="email" value={state.patient.email} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, email: e.target.value } }))} />
+              <input {...fieldFeedbackProps("questionnaire-email", true)} type="email" value={state.patient.email} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, email: e.target.value } }))} />
             </label>
             <label className="field">
               <span>Телефон</span>
-              <input value={state.patient.phone} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, phone: e.target.value } }))} />
+              <input {...fieldFeedbackProps("questionnaire-phone", true)} value={state.patient.phone} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, phone: e.target.value } }))} />
             </label>
             <label className="field">
               <span>Предпочтительный способ связи</span>
-              <select value={state.patient.preferredContact} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, preferredContact: e.target.value as QuestionnaireWizardState["patient"]["preferredContact"] } }))}>
+              <select {...fieldFeedbackProps("questionnaire-preferred-contact", true)} value={state.patient.preferredContact} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, preferredContact: e.target.value as QuestionnaireWizardState["patient"]["preferredContact"] } }))}>
                 {preferredContactOptions.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
@@ -800,7 +872,7 @@ export function QuestionnaireForm({
             </label>
             <label className="field">
               <span>Часовой пояс</span>
-              <input value={state.patient.timezone} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, timezone: e.target.value } }))} />
+              <input {...fieldFeedbackProps("questionnaire-timezone", true)} value={state.patient.timezone} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, timezone: e.target.value } }))} />
             </label>
           </div>
         </>
@@ -818,6 +890,7 @@ export function QuestionnaireForm({
             <label className="field field--full">
               <span>Что вас беспокоит?</span>
               <textarea
+                {...fieldFeedbackProps("questionnaire-chief-complaint", true)}
                 placeholder="Например: где болит, как проявляется"
                 value={state.situation.chiefComplaint}
                 onChange={(e) => updateState((c) => ({ ...c, situation: { ...c.situation, chiefComplaint: e.target.value } }))}
@@ -895,7 +968,7 @@ export function QuestionnaireForm({
     if (step === 5) {
       return (
         <>
-          <div className="questionnaire-panel__header stack-sm">
+          <div id="questionnaire-materials" className="questionnaire-panel__header stack-sm" tabIndex={-1}>
             <h2>Материалы</h2>
             <p>Вы можете прикрепить всё, что есть. Даже если не уверены — лучше приложить.</p>
           </div>
@@ -905,7 +978,7 @@ export function QuestionnaireForm({
                 <strong>{category === "DOCUMENT" ? "Документы" : category === "IMAGE" ? "Изображения" : "Видео"}</strong>
                 <p className="questionnaire-field-note">
                   {category === "VIDEO"
-                    ? "До 3 видео. Если файл слишком большой, добавьте ссылку."
+                    ? `До ${VIDEO_UPLOAD_POLICY.maxVideosPerQuestionnaire} видео: каждое до ${VIDEO_UPLOAD_POLICY.maxDurationSeconds / 60} мин и ${VIDEO_UPLOAD_POLICY.maxBytesPerVideo / (1024 * 1024)} МиБ; всего до ${VIDEO_UPLOAD_POLICY.maxBytesTotal / (1024 * 1024)} МиБ. Если файл слишком большой, добавьте ссылку.`
                     : "Можно загружать несколько файлов."}
                 </p>
                 <input
@@ -973,7 +1046,7 @@ export function QuestionnaireForm({
                   </label>
                   <label className="field">
                     <span>URL</span>
-                    <input value={item.url} onChange={(e) => updateExternalLink(item.id, (current) => ({ ...current, url: e.target.value }))} />
+                    <input {...fieldFeedbackProps(`questionnaire-link-${item.id}`)} value={item.url} onChange={(e) => updateExternalLink(item.id, (current) => ({ ...current, url: e.target.value }))} />
                   </label>
                   <label className="field">
                     <span>Название</span>
@@ -1044,9 +1117,9 @@ export function QuestionnaireForm({
           <div className="questionnaire-guide stack-sm">
             <strong>Как подготовить материалы</strong>
             <div className="questionnaire-guide-grid">
-              <div className="questionnaire-guide-card">Для услуг с просмотром снимков подготовьте исходный комплект исследования. Отдельные фото ключевых кадров могут быть недостаточны для экспертного разбора.</div>
-              <div className="questionnaire-guide-card">Если у вас диск, архив или облачная папка, добавьте короткую инструкцию по доступу.</div>
-              <div className="questionnaire-guide-card">Если файлы не загружаются напрямую, можно оставить внешнюю ссылку и указать пароль при необходимости.</div>
+              <div className="questionnaire-guide-card">Для услуг с просмотром снимков подготовьте исходный комплект DICOM и описание исследования. Если материалы на диске, сохраните структуру папок при подготовке ZIP-архива. Отдельные фото ключевых кадров могут быть недостаточны для экспертного разбора.</div>
+              <div className="questionnaire-guide-card">Документы прикрепляйте в PDF или ZIP, изображения — в JPG, JPEG, PNG или HEIC. Сохраняйте исходные названия и структуру файлов исследования.</div>
+              <div className="questionnaire-guide-card">Если материалы в облаке, предоставьте доступ врачу в соответствии с инструкцией, без публикации. Добавьте внешнюю ссылку; пароль и пояснения при необходимости укажите в полях «Пароль архива» и «Инструкции по доступу».</div>
             </div>
           </div>
         </>
@@ -1063,6 +1136,7 @@ export function QuestionnaireForm({
           <div className="checkbox-grid">
             <label className="checkbox-row">
               <input
+                {...fieldFeedbackProps("questionnaire-final-non-emergency", true)}
                 type="checkbox"
                 style={confirmationCheckboxStyle}
                 checked={state.confirmedNonEmergencyAtSubmission}
@@ -1076,7 +1150,7 @@ export function QuestionnaireForm({
               <span>Я понимаю, что это не экстренная помощь</span>
             </label>
             <label className="checkbox-row">
-              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedOffer} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedOffer: e.target.checked } }))} />
+              <input {...fieldFeedbackProps("questionnaire-accepted-offer", true)} type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedOffer} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedOffer: e.target.checked } }))} />
               <span>
                 Я ознакомлен(а) с условиями (
                 <Link href="/legal/offer" onClick={(event) => event.stopPropagation()}>
@@ -1086,7 +1160,7 @@ export function QuestionnaireForm({
               </span>
             </label>
             <label className="checkbox-row">
-              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedPrivacy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedPrivacy: e.target.checked } }))} />
+              <input {...fieldFeedbackProps("questionnaire-accepted-privacy", true)} type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedPrivacy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedPrivacy: e.target.checked } }))} />
               <span>
                 Я согласен(на) на обработку персональных данных (
                 <Link href="/legal/privacy" onClick={(event) => event.stopPropagation()}>
@@ -1096,11 +1170,11 @@ export function QuestionnaireForm({
               </span>
             </label>
             <label className="checkbox-row">
-              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedMedicalData} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedMedicalData: e.target.checked } }))} />
+              <input {...fieldFeedbackProps("questionnaire-accepted-medical-data", true)} type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedMedicalData} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedMedicalData: e.target.checked } }))} />
               <span>Я даю согласие на обработку медицинской информации, включая сведения из анкеты, результаты анализов, лабораторных и инструментальных исследований, обследования, заключения и иные приложенные материалы.</span>
             </label>
             <label className="checkbox-row">
-              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedConsent} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedConsent: e.target.checked } }))} />
+              <input {...fieldFeedbackProps("questionnaire-accepted-consent", true)} type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.acceptedConsent} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, acceptedConsent: e.target.checked } }))} />
               <span>
                 Я понимаю формат дистанционного взаимодействия (
                 <Link href="/legal/consent" onClick={(event) => event.stopPropagation()}>
@@ -1118,7 +1192,7 @@ export function QuestionnaireForm({
               официальным радиологическим заключением медицинской организации.
             </p>
             <label className="checkbox-row">
-              <input type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.confirmedInformationAccuracy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, confirmedInformationAccuracy: e.target.checked } }))} />
+              <input {...fieldFeedbackProps("questionnaire-information-accuracy", true)} type="checkbox" style={confirmationCheckboxStyle} checked={state.legal.confirmedInformationAccuracy} onChange={(e) => updateState((current) => ({ ...current, legal: { ...current.legal, confirmedInformationAccuracy: e.target.checked } }))} />
               <span>Я подтверждаю, что указал(а) информацию корректно</span>
             </label>
           </div>
@@ -1149,7 +1223,7 @@ export function QuestionnaireForm({
             </p>
             <p>
               Сначала уточним задачу и наличие необходимых материалов, затем согласуем
-              время уточняющего созвона. Окончательные условия работы подтверждаются после созвона.
+              время предварительной беседы с врачом. Окончательные условия работы подтверждаются после беседы.
             </p>
             <p className="questionnaire-success-card__timing">
               Первый организационный ответ — до трёх рабочих дней.
@@ -1159,8 +1233,8 @@ export function QuestionnaireForm({
               <strong>Следующие шаги:</strong>
               <ul className="questionnaire-success-list">
                 <li>уточнение задачи и комплекта материалов</li>
-                <li>выбор времени созвона с подтверждением врача</li>
-                <li>согласование формата, объёма, стоимости и сроков после созвона</li>
+                <li>выбор времени предварительной беседы и его подтверждение врачом</li>
+                <li>согласование формата, объёма, стоимости и сроков после предварительной беседы с врачом</li>
                 <li>принятие персонального предложения и ручное согласование оплаты</li>
               </ul>
             </div>
@@ -1175,8 +1249,8 @@ export function QuestionnaireForm({
             <div className="questionnaire-success-card__section stack-sm">
               <p>Мы свяжемся с Вами по выбранному способу связи: {successState.preferredContactLabel}.</p>
               <p>
-                После предварительного рассмотрения мы предоставим персональный вход для выбора времени уточняющего созвона.
-                Предложенное время подтверждает врач. Созвон проходит до окончательного предложения и оплаты.
+                После предварительного рассмотрения мы предоставим персональный вход для выбора времени предварительной беседы с врачом.
+                Предложенное время подтверждает врач. Беседа проходит до окончательного предложения и оплаты.
               </p>
               <p>Пожалуйста, проверяйте выбранный канал связи и электронную почту.</p>
             </div>
@@ -1232,7 +1306,13 @@ export function QuestionnaireForm({
                     key={item.step}
                     type="button"
                     className={`questionnaire-step-chip${item.step === step ? " is-current" : ""}`}
-                    disabled={consentSaving || !canNavigateToStep(item.step, state, { invalidExternalLinks, uploadingInProgress: uploadingCategory !== null })}
+                    disabled={consentSaving || submitting || uploadingCategory !== null}
+                    aria-disabled={consentSaving || submitting || uploadingCategory !== null || !canNavigateToStep(item.step, state, { invalidExternalLinks, uploadingInProgress: uploadingCategory !== null })}
+                    aria-current={item.step === step ? "step" : undefined}
+                    aria-controls="questionnaire-panel"
+                    title={!canNavigateToStep(item.step, state, { invalidExternalLinks, uploadingInProgress: uploadingCategory !== null })
+                      ? "Сначала завершите обязательные поля предыдущих шагов. Нажмите, чтобы увидеть, что осталось заполнить."
+                      : undefined}
                     onClick={() => void goToStep(item.step)}
                   >
                     <span>{item.number}</span>
@@ -1255,9 +1335,8 @@ export function QuestionnaireForm({
             {(searchParams.get("service") && !getServiceV21(searchParams.get("service")!)) ? (
               <div className="notice notice--danger">Услуга по этой ссылке не найдена. Выберите формат из списка.</div>
             ) : null}
-            {errorMessage ? <div className="notice notice--danger" role="alert">{errorMessage}</div> : null}
-
-            <div ref={panelRef} className="card questionnaire-panel stack">
+            <div ref={panelRef} id="questionnaire-panel" className="card questionnaire-panel stack" tabIndex={-1}>
+              {errorMessage ? <div id="questionnaire-step-feedback" className="notice notice--danger" role="alert">{errorMessage}</div> : null}
               {renderCurrentStep()}
             </div>
 
@@ -1276,7 +1355,7 @@ export function QuestionnaireForm({
 
               <div className="hero-actions questionnaire-footer__navigation">
                 {step > 1 ? (
-                  <button type="button" className="button button--secondary" onClick={handleBack}>
+                  <button type="button" className="button button--secondary" disabled={consentSaving || submitting || uploadingCategory !== null} onClick={handleBack}>
                     Назад
                   </button>
                 ) : null}
@@ -1290,17 +1369,19 @@ export function QuestionnaireForm({
                     <button
                       type="button"
                       className={`button${stepCanContinue && !consentSaving ? "" : " button--disabled"}`}
-                      disabled={!stepCanContinue || consentSaving}
+                      disabled={consentSaving || submitting || uploadingCategory !== null}
+                      aria-disabled={!stepCanContinue || consentSaving || submitting || uploadingCategory !== null}
                       onClick={handleNext}
                     >
-                      {consentSaving ? "Сохраняем согласие…" : "Продолжить заполнение"}
+                      {consentSaving ? "Сохраняем согласие…" : uploadingCategory !== null ? "Загружаем материалы…" : "Продолжить заполнение"}
                     </button>
                   )
                 ) : (
                   <button
                     type="submit"
                     className={`button${isReadyToSubmit && !submitting ? "" : " button--disabled"}`}
-                    disabled={!isReadyToSubmit || submitting}
+                    disabled={submitting || consentSaving || uploadingCategory !== null}
+                    aria-disabled={!isReadyToSubmit || submitting || consentSaving || uploadingCategory !== null}
                   >
                     {submitting ? "Отправляем..." : "Отправить анкету"}
                   </button>

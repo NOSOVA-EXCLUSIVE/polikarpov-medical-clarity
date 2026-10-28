@@ -8,8 +8,8 @@ import { addCalendarDays, canOpenManualContact, parseManualPolicy } from "@/feat
 export const dynamic = "force-dynamic";
 
 const PHASES: Record<string, string> = {
-  REVIEW: "Предварительное рассмотрение", CALL_REQUESTED: "Время созвона предложено",
-  CALL_CONFIRMED: "Уточняющий созвон подтверждён", CALL_COMPLETED: "Уточняющий созвон состоялся",
+  REVIEW: "Предварительное рассмотрение", CALL_REQUESTED: "Время беседы предложено",
+  CALL_CONFIRMED: "Предварительная беседа с врачом подтверждена", CALL_COMPLETED: "Предварительная беседа с врачом состоялась",
   OFFERED: "Персональное предложение готово", ACCEPTED: "Условия приняты",
   PAID: "Оплата подтверждена, ожидается начало работы", ACTIVE: "Работа начата", COMPLETED: "Работа завершена"
 };
@@ -62,10 +62,10 @@ export default async function ManualCabinetPage({ searchParams }: {
       <p className="muted">Кабинет принадлежит только этому обращению. При экстренных симптомах обратитесь за очной помощью.</p>
       {flash.notice === "saved" ? <p className="notice" role="status">Изменения сохранены.</p> : null}
       <div className="two-column">
-        <article><strong>Уточняющий созвон</strong><p>{date(context.callStartsAt)}</p>
+        <article><strong>Предварительная беседа с врачом</strong><p>{date(context.callStartsAt)}</p>
           <p className="muted">{context.callConfirmedAt ? "Время подтверждено врачом." : "Время окончательно подтверждает врач."}</p></article>
         <article><strong>Начало работы</strong><p>{date(context.workStartedAt)}</p>
-          <p className="muted">Созвон, принятие условий и оплата сами по себе не запускают срок услуги.</p></article>
+          <p className="muted">Беседа, принятие условий и оплата сами по себе не запускают срок услуги.</p></article>
         <article><strong>Срок работы</strong><p>{date(context.workEndsAt)}</p></article>
         {policy?.clarificationDays && context.resultDeliveredAt ? <article><strong>Уточнения к результату до</strong>
           <p>{date(context.workEndsAt || addCalendarDays(context.resultDeliveredAt, policy.clarificationDays))}</p></article> : null}
@@ -75,8 +75,8 @@ export default async function ManualCabinetPage({ searchParams }: {
     </section>
 
     {["REVIEW", "CALL_REQUESTED"].includes(context.phase) ? <section className="card stack">
-      <h2>Предварительный уточняющий созвон</h2>
-      <p>Созвон проходит до окончательного предложения и оплаты. Бесплатный подбор формата носит организационный характер.</p>
+      <h2>Предварительная беседа с врачом</h2>
+      <p>Беседа проходит до окончательного предложения и оплаты. Бесплатный подбор формата носит организационный характер.</p>
       <ManualCallRequestForm />
     </section> : null}
 
@@ -86,7 +86,7 @@ export default async function ManualCabinetPage({ searchParams }: {
       {scope.length ? <ul>{scope.map((item, index) => <li key={index}>{item}</li>)}</ul> : null}
       <p>Срок подготовки: {agreement.turnaround}.</p>
       <p>Начало работы отдельно подтверждает врач после согласования условий, подтверждения оплаты и достаточности материалов.
-        Уточняющий созвон и принятие предложения сами по себе срок услуги не запускают.</p>
+        Беседа и принятие предложения сами по себе срок услуги не запускают.</p>
       {policy?.packageDays ? <p>Период сопровождения — {policy.packageDays} календарных дней с зафиксированного врачом начала работы.
         Точные дата и время начала и окончания будут видны в кабинете.</p> : null}
       {policy?.clarificationDays ? <p>Уточнения к готовому результату: один собранный блок вопросов в течение {policy.clarificationDays}

@@ -6390,4 +6390,207 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
     --mc-heading-size: 1.1rem;
   }
 }
+
+/* Approved spacing and alignment refinements, 2026-10-28. */
+:where(.public-site) .home-hero h1 {
+  gap: 1.1rem;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+:where(.public-site) .home-hero__title-intro,
+:where(.public-site) .home-hero__title-main {
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+:where(.public-site) .home-hero .page-hero__actions {
+  margin-bottom: 0.45rem;
+}
+
+/* Keep the outer 1200px container and its gutters; align narrower content inside it. */
+:where(.public-site) .questionnaire-hero .page-hero__grid {
+  max-width: none;
+}
+:where(.public-site) .questionnaire-hero .page-hero__content,
+:where(.public-site) .questionnaire-shell,
+:where(.public-site) .questionnaire-panel,
+:where(.public-site) .questionnaire-progress,
+:where(.public-site) .questionnaire-footer,
+:where(.public-site) .questionnaire-success-card,
+:where(.public-site) .documents-prepayment .section-heading,
+:where(.public-site) .documents-prepayment__card,
+:where(.public-site) .documents-legal-info__content,
+:where(.public-site) .documents-detail-page__stack,
+:where(.public-site) .organizational-inquiry {
+  margin-inline: 0;
+}
+:where(.public-site) .organizational-inquiry {
+  max-width: 900px;
+}
+:where(.public-site) .questionnaire-selection-page .card.stack-sm > .button[href="/questionnaire?service=service-selection"] {
+  justify-self: start;
+  width: auto;
+  max-width: 100%;
+}
+
+/* Qualification lists keep their own hierarchy; education retains its existing bullets. */
+:where(.public-site) .doctor-documents-associations {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+:where(.public-site) .doctor-documents-associations li {
+  color: #6b4a3b;
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+:where(.public-site) .doctor-documents-path-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding-inline-start: 1.2rem;
+}
+:where(.public-site) .doctor-documents-path-list li {
+  color: rgba(36, 33, 29, 0.8);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.65;
+}
+:where(.public-site) .doctor-documents-path-list li::marker {
+  color: #6b4a3b;
+}
+:where(.public-site) .doctor-practice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+:where(.public-site) .doctor-practice-card {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 1.3rem 1.4rem;
+  border: 1px solid rgba(90, 62, 50, 0.11);
+  border-radius: 20px;
+  background: rgba(255, 253, 249, 0.7);
+}
+:where(.public-site) .doctor-practice-card h3 {
+  margin: 0;
+  color: #5a3e32;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: normal;
+}
+:where(.public-site) .doctor-practice-card p {
+  margin: 0;
+  color: rgba(36, 33, 29, 0.78);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.65;
+}
+
+/* Compact footer spacing without reducing legal text or contact target sizes. */
+:where(.public-site) .site-footer__frame {
+  gap: 0.7rem;
+  padding-block: 1.1rem;
+}
+:where(.public-site) .site-footer__top {
+  gap: 1rem;
+  padding-bottom: 0.65rem;
+}
+:where(.public-site) .site-footer__identity {
+  gap: 0.2rem;
+  min-width: 0;
+}
+:where(.public-site) .site-footer__brand {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+:where(.public-site) .site-footer__copy {
+  white-space: normal;
+}
+:where(.public-site) .site-footer__legal-meta {
+  gap: 0.22rem;
+}
+:where(.public-site) .site-footer__business {
+  padding-top: 0.25rem;
+}
+:where(.public-site) .footer-links--legal {
+  flex-wrap: wrap;
+  gap: 0.25rem 0.55rem;
+  padding-right: 0;
+  white-space: normal;
+}
+
+@media (max-width: 820px) {
+  .functional-page > .container,
+  .portal-materials-page > .container,
+  .admin-login > .container {
+    width: min(1200px, calc(100% - 2rem));
+  }
+  :where(.public-site) .doctor-practice-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Locked steps remain clickable so the form can explain missing prerequisites. */
+:where(.public-site) .questionnaire-progress .questionnaire-step-chip[aria-disabled="true"] {
+  border-color: rgba(90, 62, 50, 0.18);
+  background: #f2eee8;
+  color: #6f6258;
+  transform: none;
+}
+:where(.public-site) .questionnaire-progress .questionnaire-step-chip[aria-disabled="true"]:not(:disabled) {
+  cursor: pointer;
+}
+:where(.public-site) .questionnaire-progress .questionnaire-step-chip[aria-disabled="true"]:not(:disabled):hover {
+  border-color: rgba(90, 62, 50, 0.4);
+  background: #ebe3d9;
+  color: #5a3e32;
+}
+:where(.public-site) .questionnaire-progress .questionnaire-step-chip[aria-disabled="true"]:focus-visible {
+  outline: 3px solid var(--control-chocolate);
+  outline-offset: 2px;
+}
+:where(.public-site) .questionnaire-progress .questionnaire-step-chip:disabled {
+  opacity: 0.65;
+  cursor: wait;
+  transform: none;
+}
+
+/* Validation uses the existing feedback notice and a warm, visible field boundary. */
+:where(.public-site) .questionnaire-form .field :is(input, select, textarea)[aria-invalid="true"],
+:where(.public-site) .questionnaire-form input[type="checkbox"][aria-invalid="true"] {
+  border-color: #89624e;
+  box-shadow: 0 0 0 2px rgba(137, 98, 78, 0.16);
+}
+:where(.public-site) .questionnaire-form .field :is(input, select, textarea)[aria-invalid="true"]:focus {
+  border-color: var(--control-chocolate);
+  box-shadow: 0 0 0 4px rgba(90, 62, 50, 0.16);
+}
+:where(.public-site) .questionnaire-form #questionnaire-step-feedback {
+  border-color: rgba(137, 98, 78, 0.25);
+  border-left-color: #89624e;
+  background: rgba(137, 98, 78, 0.08);
+  color: #5a3e32;
+}
+
+:where(.public-site) .site-footer__format-details > summary {
+  padding-block: 0.2rem;
+  color: #5a3e32;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.5;
+  cursor: pointer;
+}
+:where(.public-site) .site-footer__format-details > summary:focus-visible {
+  outline: 3px solid var(--control-chocolate);
+  outline-offset: 3px;
+}
+:where(.public-site) .site-footer__format-details[open] > p {
+  margin-block: 0.4rem 0.1rem;
+}
 `;

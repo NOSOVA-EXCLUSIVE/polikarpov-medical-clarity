@@ -12,7 +12,7 @@ type Props = { applicationId: string; caseId?: string; phase?: string; doctor?: 
 const errors: Record<string, string> = {
   DOCTOR_ACTION_REQUIRED: "Это действие подтверждает врач. Войдите в учётную запись врача.",
   FULL_QUESTIONNAIRE_REQUIRED: "Для платной услуги нужна полная анкета с согласиями. Организационного запроса недостаточно.",
-  CALL_SLOT_CONFLICT: "На это время уже подтверждён другой созвон или консультация.",
+  CALL_SLOT_CONFLICT: "На это время уже подтверждена другая беседа или консультация.",
   CATALOG_AMOUNT_MISMATCH: "Стоимость не соответствует каталогу и подтверждённому снижению цены.",
   DISCOUNT_SOURCE_INVALID: "Не подтверждены условия снижения цены после первичной оценки.",
   DISCOUNT_ALREADY_USED: "Снижение цены по этой первичной оценке уже использовано.",
@@ -101,22 +101,22 @@ export function ManualAdminActions(props: Props) {
       <input aria-label="Персональная ссылка пациента" value={accessUrl} readOnly onFocus={e => e.currentTarget.select()}/>
       <small>Ссылка доступа конфиденциальна. Она не добавляется в адрес страницы администратора.</small></div> : null}
     {["REVIEW", "CALL_REQUESTED", "CALL_CONFIRMED"].includes(props.phase ?? "") ? <>
-      <Form action="request-call" title="Предложить или перенести уточняющий созвон">
+      <Form action="request-call" title="Предложить или перенести предварительную беседу с врачом">
         <p>Время на вашем устройстве: {zone}. После изменения времени требуется новое подтверждение врача.</p>
         <label className="field"><span>Начало</span><input name="startsAt" type="datetime-local" required/></label>
         <label className="field"><span>Окончание</span><input name="endsAt" type="datetime-local" required/></label>
       </Form>
-      {props.phase === "CALL_REQUESTED" ? <Form action="confirm-call" title="Подтвердить время созвона" doctorOnly/> : null}
-      {props.phase === "CALL_CONFIRMED" ? <Form action="complete-call" title="Подтвердить, что созвон проведён" doctorOnly/> : null}
+      {props.phase === "CALL_REQUESTED" ? <Form action="confirm-call" title="Подтвердить время беседы" doctorOnly/> : null}
+      {props.phase === "CALL_CONFIRMED" ? <Form action="complete-call" title="Подтвердить, что беседа проведена" doctorOnly/> : null}
     </> : null}
-    {!props.organizational && ["REVIEW", "CALL_REQUESTED"].includes(props.phase ?? "") ? <Form action="link-organizational-call" title="Учесть уже проведённый организационный созвон" doctorOnly>
-      <p>Используйте только после полной новой анкеты пациента, если тот же вопрос уже уточнён на организационном созвоне. Исходное обращение сохраняется.</p>
+    {!props.organizational && ["REVIEW", "CALL_REQUESTED"].includes(props.phase ?? "") ? <Form action="link-organizational-call" title="Учесть уже проведённую организационную беседу" doctorOnly>
+      <p>Используйте только после полной новой анкеты пациента, если тот же вопрос уже уточнён на организационной беседе. Исходное обращение сохраняется.</p>
       <label className="field"><span>ID обращения организационного подбора</span><input name="sourceCaseId" maxLength={160} required/></label>
-      <label><input type="checkbox" name="sameTask" required/> Подтверждаю, что созвон проведён по той же задаче и повторять его не требуется</label>
+      <label><input type="checkbox" name="sameTask" required/> Подтверждаю, что беседа проведена по той же задаче и повторять её не требуется</label>
     </Form> : null}
     {props.organizational && props.phase === "CALL_COMPLETED" ? <div className="notice stack-sm">
       <p>Организационный подбор завершён. Для платной услуги пациент сначала заполняет полную анкету с согласиями.</p>
-      <p>Врач сможет учесть этот созвон в новой анкете. ID исходного обращения: {props.caseId}.</p>
+      <p>Врач сможет учесть эту беседу в новой анкете. ID исходного обращения: {props.caseId}.</p>
       <a className="text-link" href="/questionnaire">Открыть полную анкету</a>
     </div> : null}
     {!props.organizational && ["CALL_COMPLETED", "OFFERED", "ACCEPTED"].includes(props.phase ?? "") ? <Form action="create-agreement" title="Подготовить окончательное предложение" doctorOnly>
@@ -160,7 +160,7 @@ export function ManualAdminActions(props: Props) {
     </Form> : null}
     {contacts.filter(c => c.status === "OPEN").map(c => <Form action="complete-contact" title={`Завершить контакт ${c.ordinal} после ответа и необходимых уточнений`} doctorOnly key={c.id}><input type="hidden" name="contactId" value={c.id}/></Form>)}
     {["ACTIVE", "CALL_COMPLETED"].includes(props.phase ?? "") ? <Form action="complete" title="Завершить работу и открыть 30 дней истории" doctorOnly>
-      <p>Завершение возможно после результата, окончания согласованного периода и ответов на своевременные обращения. Для бесплатного подбора — после организационного созвона.</p>
+      <p>Завершение возможно после результата, окончания согласованного периода и ответов на своевременные обращения. Для бесплатного подбора — после организационной беседы.</p>
     </Form> : null}
   </section></ActionContext.Provider>;
 }

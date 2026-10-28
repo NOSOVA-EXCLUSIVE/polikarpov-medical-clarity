@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { PRACTICE_LEGAL_LINES } from "@/features/legal/practice";
+import { ContactMenu } from "@/components/public/contact-menu";
 
 type SectionProps = {
   children: ReactNode;
@@ -49,14 +50,7 @@ export function PublicHeader() {
           <Link href="/services">Услуги и стоимость</Link>
           <Link href="/questionnaire">Анкета пациента</Link>
           <Link href="/documents">Документы</Link>
-          <details className="site-contact-menu">
-            <summary>Связаться</summary>
-            <nav className="site-contact-menu__links" aria-label="Организационная связь">
-              <a href="https://t.me/EvgeniyPolikarpov">Telegram</a>
-              <a href="https://wa.me/79165821523">WhatsApp</a>
-              <a href="mailto:medicalclarity@proton.me">medicalclarity@proton.me</a>
-            </nav>
-          </details>
+          <ContactMenu />
         </nav>
       </div>
       </header>
@@ -89,16 +83,20 @@ export function PublicFooter() {
         <div className="site-footer__bottom">
           <div className="site-footer__legal-meta">
             <p className="site-footer__copyright">© Polikarpov Medical Clarity. Все права защищены</p>
-            <p className="site-footer__legal-note">
+            <p className="site-footer__legal-note">Дистанционный формат не предназначен для экстренной помощи и не заменяет необходимый очный приём.</p>
+            <details className="site-footer__format-details">
+              <summary>Подробнее о формате и ограничениях</summary>
+              <p className="site-footer__legal-note">
               Дистанционный формат взаимодействия носит информационно-консультационный характер,
               не является экстренной медицинской помощью и не заменяет очный приём врача, когда
               он необходим. Polikarpov Medical Clarity не проводит судебно-медицинские экспертизы и
               не оформляет процессуальные экспертные заключения; материалы сервиса носят
-              дистанционный информационно-аналитический характер.{" "}
+              дистанционный информационно-аналитический характер.
+              </p>
+            </details>
               <Link href="/documents#legal-info" className="site-footer__legal-link">
                 Юридическая информация и формат работы
               </Link>
-            </p>
             <div className="site-footer__business">
               <p>{PRACTICE_LEGAL_LINES[0]}</p>
               <p>Аккредитация 7723 030707278 / 7524 032299059</p>

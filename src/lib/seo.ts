@@ -108,7 +108,7 @@ export function buildPageMetadata({
     alternates: {
       canonical
     },
-    robots: indexing,
+    robots: getPreviewAppUrl() ? { index: false, follow: false } : indexing,
     openGraph: {
       title: socialTitle,
       description,

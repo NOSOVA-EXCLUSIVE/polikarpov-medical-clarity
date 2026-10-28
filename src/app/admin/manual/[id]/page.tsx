@@ -24,11 +24,11 @@ export default async function ManualAdminPage({ params }: { params: Promise<{ id
     <Link className="text-link" href={`/admin/applications/${context.applicationId}`}>← Анкета и исходные материалы</Link>
     <section className="card stack">
       <h2>Порядок работы</h2>
-      <p>Уточняющий созвон → окончательное предложение → принятие пациентом → фиксация фактической оплаты → отдельное начало работы врачом.</p>
+      <p>Предварительная беседа с врачом → окончательное предложение → принятие пациентом → фиксация фактической оплаты → отдельное начало работы врачом.</p>
       <DefinitionList items={[
         { label: "Пациент", value: context.application.patient.fullName },
         { label: "Этап", value: manualPhaseLabels[context.phase] ?? context.phase },
-        { label: "Созвон", value: context.callStartsAt ? `${date(context.callStartsAt)} — ${date(context.callEndsAt)} (${context.callTimezone})` : "Время ещё не предложено" },
+        { label: "Предварительная беседа с врачом", value: context.callStartsAt ? `${date(context.callStartsAt)} — ${date(context.callEndsAt)} (${context.callTimezone})` : "Время ещё не предложено" },
         { label: "Начало работы", value: date(context.workStartedAt) },
         { label: "Конец периода работы", value: date(context.workEndsAt) },
         { label: "Результат выдан", value: date(context.resultDeliveredAt) },
