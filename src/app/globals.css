@@ -6639,6 +6639,11 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
 }
 
 /* Footer links and contacts share the header navigation's right edge. */
+@media (max-width: 820px) {
+  :where(.public-site) .site-footer__top {
+    justify-content: stretch;
+  }
+}
 :where(.public-site) .site-footer__right {
   display: grid;
   justify-items: end;
