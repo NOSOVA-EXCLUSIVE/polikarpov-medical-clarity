@@ -6714,4 +6714,52 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
   background-position: right 1.25rem center;
   background-size: 0.65rem 0.55rem;
 }
+
+/* Homepage portrait and credentials stay together; other portrait layouts are unchanged. */
+:where(.public-site) .home-hero .home-hero__portrait-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 0.85rem;
+  padding-block: 3.35rem 0;
+}
+:where(.public-site) .home-hero__portrait-caption {
+  display: grid;
+  justify-items: start;
+  gap: 0.25rem;
+  min-width: 0;
+  text-align: left;
+}
+:where(.public-site) .home-hero__portrait-caption > p {
+  margin: 0;
+}
+:where(.public-site) .home-hero__portrait-caption strong {
+  font-weight: 600;
+}
+@media (min-width: 821px) {
+  :where(.public-site) .home-hero .page-hero__content {
+    align-self: start;
+    justify-content: flex-start;
+    height: auto;
+  }
+}
+@media (min-width: 1440px) {
+  :where(.public-site) .home-hero .page-hero__grid {
+    width: auto;
+    margin-inline-start: max(1.4rem, calc((100% - 1200px) / 2));
+    margin-inline-end: max(1.4rem, calc((100% - 1200px) / 2 - 6rem));
+    /* Retain the original left track when extending only the portrait side. */
+    grid-template-columns: calc((1200px - 1.75rem) * 45 / 91) minmax(0, 1fr);
+  }
+}
+@media (max-width: 820px) {
+  :where(.public-site) .home-hero .home-hero__portrait-wrap {
+    grid-template-columns: minmax(0, 28.75rem);
+    justify-content: center;
+    padding-block: 0.3rem 0;
+  }
+  :where(.public-site) .home-hero .home-hero__portrait-square {
+    width: 100%;
+  }
+}
 `;

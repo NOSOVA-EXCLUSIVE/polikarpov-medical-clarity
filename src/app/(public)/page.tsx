@@ -166,6 +166,12 @@ export default function HomePage() {
                 src="/images/doctor/hero-portrait-no-badge-20261027.png"
               />
             </div>
+            <div className="home-hero__portrait-caption">
+              <p><strong>Более 20 лет клинической практики</strong></p>
+              <Link className="text-link" href={doctorDocumentsHref}>
+                Документы и квалификация
+              </Link>
+            </div>
           </div>
         }
       />
