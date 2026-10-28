@@ -227,6 +227,7 @@ export default async function ApplicationDetailPage({
               },
               { label: "Email", value: application.patient.email },
               { label: "Телефон", value: application.patient.phone },
+              ...(application.organizationalContact ? [{ label: "Telegram", value: application.organizationalContact.telegramUsername }] : []),
               { label: "Страна / город", value: `${application.patient.country}, ${application.patient.city}` },
               { label: "Часовой пояс", value: application.patient.timezone },
               {

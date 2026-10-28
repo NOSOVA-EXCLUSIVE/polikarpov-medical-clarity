@@ -5,10 +5,20 @@ import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { PageHero, Section } from "@/components/public/shell";
 import { QuestionnaireForm } from "@/components/questionnaire/form";
+import { TimezoneInput } from "@/components/questionnaire/timezone-input";
 import { organizationalSelection } from "@/features/products/services-v21";
 import { resolveQuestionnaireEntry } from "@/features/questionnaire/entry-selection";
 import { ServiceOverview } from "@/components/public/service-overview";
 import { INTAKE_DATA_CONSENT_LABEL, INTAKE_DATA_CONSENT_VERSION } from "@/features/questionnaire/intake-consent-content";
+import type { OrganizationalInquiryInput } from "@/features/questionnaire/organizational-inquiry";
+
+const inquiryFieldNames = ["name", "email", "phone", "preferredContact", "telegramUsername", "country", "timezone", "task", "materials", "website"] as const;
+const contactOptions = [
+  { value: "EMAIL", label: "Email" },
+  { value: "PHONE", label: "Телефон" },
+  { value: "WHATSAPP", label: "WhatsApp" },
+  { value: "TELEGRAM", label: "Telegram" }
+] as const;
 
 function responseMessage(body: any, fallback: string): string {
   return typeof body?.error === "string" ? body.error : body?.error?.message || fallback;
@@ -21,6 +31,9 @@ function OrganizationalInquiryForm() {
   const [error, setError] = useState("");
   const [number, setNumber] = useState("");
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [preferredContact, setPreferredContact] = useState<OrganizationalInquiryInput["preferredContact"]>("EMAIL");
+  const [telegramUsername, setTelegramUsername] = useState("");
+  const requiresPhone = preferredContact === "PHONE" || preferredContact === "WHATSAPP";
   async function acceptConsent() {
     if (!accepted || busy) return;
     setBusy(true); setError("");
@@ -34,8 +47,9 @@ function OrganizationalInquiryForm() {
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!ready || busy) return;
     const data = new FormData(event.currentTarget);
-    const values = Object.fromEntries(Array.from(data.entries()).map(([key, value]) => [key, String(value)]));
+    const values = Object.fromEntries(inquiryFieldNames.map((key) => [key, String(data.get(key) ?? "")]));
     setDraft(values);
     setBusy(true); setError("");
     try {
@@ -47,12 +61,21 @@ function OrganizationalInquiryForm() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Попробуйте ещё раз."); }
     finally { setBusy(false); }
   }
-  if (number) return <article className="card stack" role="status"><p className="eyebrow">Обращение сохранено</p><h2>{number}</h2><p>Вы отправили запрос на бесплатный организационный подбор. Ответ о формате и порядке передачи материалов придёт на указанный email.</p><p className="muted">Медицинская оценка, просмотр снимков и платная услуга этим обращением не заказываются.</p><Link className="button button--secondary" href="/services">Вернуться к услугам</Link></article>;
+  if (number) return <article className="card stack" role="status"><p className="eyebrow">Обращение сохранено</p><h2>{number}</h2><p>Вы отправили запрос на бесплатный организационный подбор. Для организационной связи выбран способ: {contactOptions.find((option) => option.value === preferredContact)?.label}. Email остаётся каналом для персонального входа и уведомлений.</p><p className="muted">Медицинская оценка, просмотр снимков и платная услуга этим обращением не заказываются.</p><Link className="button button--secondary" href="/services">Вернуться к услугам</Link></article>;
   return <article className="card stack organizational-inquiry">
-    {!ready ? <><h2>Перед началом</h2><p>Для подбора нужны только имя, email, страна, краткая задача и перечень имеющихся материалов. Полная медицинская анкета и файлы не требуются.</p><label className="checkbox-row"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /><span>{INTAKE_DATA_CONSENT_LABEL} (<Link href="/legal/privacy" target="_blank" rel="noopener noreferrer">Политика обработки данных</Link>)</span></label><div><button className="button" type="button" disabled={!accepted || busy} onClick={acceptConsent}>{busy ? "Сохраняем согласие…" : "Продолжить"}</button></div></> : <form className="stack" onSubmit={submit}>
+    {!ready ? <><h2>Перед началом</h2><p>Для подбора нужны только имя, email, страна, краткая задача и перечень имеющихся материалов. При желании добавьте удобный способ связи и часовой пояс. Полная медицинская анкета и файлы не требуются.</p><label className="checkbox-row"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /><span>{INTAKE_DATA_CONSENT_LABEL} (<Link href="/legal/privacy" target="_blank" rel="noopener noreferrer">Политика обработки данных</Link>)</span></label><div><button className="button" type="button" disabled={!accepted || busy} onClick={acceptConsent}>{busy ? "Сохраняем согласие…" : "Продолжить"}</button></div></> : <form className="stack" onSubmit={submit}>
       <h2>Подобрать подходящий формат</h2><p>Опишите организационную задачу: например, выбрать формат для одного МРТ или узнать порядок передачи материалов. Диагнозы, подробный анамнез и результаты исследований здесь не нужны.</p>
       <div className="two-column"><label className="field">Как к вам обращаться<input name="name" defaultValue={draft.name || ""} autoComplete="name" required minLength={2} maxLength={160} /></label><label className="field">Email для ответа<input name="email" defaultValue={draft.email || ""} type="email" autoComplete="email" required maxLength={254} /></label></div>
-      <label className="field">Страна проживания<input name="country" defaultValue={draft.country || ""} autoComplete="country-name" required minLength={2} maxLength={80} /></label>
+      <p className="muted">Email обязателен для персонального входа и уведомлений. Дополнительно можно выбрать удобный способ организационной связи.</p>
+      <div className="two-column">
+        <label className="field">{requiresPhone ? "Телефон с кодом страны" : "Телефон с кодом страны (необязательно)"}<input name="phone" defaultValue={draft.phone || ""} type="tel" autoComplete="tel" required={requiresPhone} maxLength={40} /></label>
+        <label className="field">Удобный способ связи<select name="preferredContact" value={preferredContact} disabled={busy} onChange={(event) => setPreferredContact(event.target.value as OrganizationalInquiryInput["preferredContact"])}>{contactOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+      </div>
+      {preferredContact === "TELEGRAM" && <label className="field">Имя пользователя Telegram<input name="telegramUsername" value={telegramUsername} onChange={(event) => setTelegramUsername(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} required maxLength={65} placeholder="@username" /><span className="muted">Укажите имя пользователя без ссылки. Телефон для этого способа связи необязателен.</span></label>}
+      <div className="two-column">
+        <label className="field">Страна проживания<input name="country" defaultValue={draft.country || ""} autoComplete="country-name" required minLength={2} maxLength={80} /></label>
+        <label className="field">Часовой пояс (необязательно)<TimezoneInput name="timezone" defaultValue={draft.timezone || ""} maxLength={80} /></label>
+      </div>
       <label className="field">Какой формат или порядок работы хотите уточнить?<textarea name="task" defaultValue={draft.task || ""} required minLength={5} maxLength={1000} rows={3} placeholder="Например: хочу понять, какой формат подойдёт для независимого просмотра одного исследования." /></label>
       <label className="field">Какие материалы уже есть?<textarea name="materials" defaultValue={draft.materials || ""} maxLength={1000} rows={3} placeholder="Только перечень: одно МРТ, описание, две выписки. Файлы и ссылки сейчас не нужны." /></label>
       <input name="website" className="form-honeypot" tabIndex={-1} autoComplete="off" aria-hidden="true" />

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { TimezoneInput } from "@/components/questionnaire/timezone-input";
 
 import type {
   ExternalImagingLinkInput,
@@ -872,7 +873,7 @@ export function QuestionnaireForm({
             </label>
             <label className="field">
               <span>Часовой пояс</span>
-              <input {...fieldFeedbackProps("questionnaire-timezone", true)} value={state.patient.timezone} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, timezone: e.target.value } }))} />
+              <TimezoneInput {...fieldFeedbackProps("questionnaire-timezone", true)} value={state.patient.timezone} onChange={(e) => updateState((c) => ({ ...c, patient: { ...c.patient, timezone: e.target.value } }))} />
             </label>
           </div>
         </>

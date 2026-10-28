@@ -15,6 +15,7 @@ import {
 } from "@/features/applications/display-number";
 import { prisma } from "@/lib/db/prisma";
 import { readServiceSelectionSnapshot } from "@/features/questionnaire/service-selection";
+import { readOrganizationalContactMetadata } from "@/features/questionnaire/organizational-inquiry";
 import { manualPhaseLabels } from "@/features/manual-v21/presentation";
 import { env } from "@/lib/env/server";
 import {
@@ -450,6 +451,14 @@ export async function getApplicationDetail(applicationId: string) {
     select: { metadataJson: true }
   });
   const serviceSelection = readServiceSelectionSnapshot(serviceSelectionEvent?.metadataJson);
+  const organizationalContactEvent = serviceSelection?.kind === "organizational_selection"
+    ? await prisma.auditEvent.findFirst({
+        where: { applicationId: application.id, entityType: "APPLICATION", entityId: application.id, actorType: "PATIENT", action: "organizational_inquiry_submitted" },
+        orderBy: { createdAt: "desc" },
+        select: { metadataJson: true }
+      })
+    : null;
+  const organizationalContact = readOrganizationalContactMetadata(organizationalContactEvent?.metadataJson);
 
   const displayNumber =
     (await getApplicationDisplayNumber({
@@ -461,6 +470,7 @@ export async function getApplicationDetail(applicationId: string) {
     return {
       ...appendManualBookingState(application),
       serviceSelection,
+      organizationalContact,
       displayNumber
     };
   }
@@ -588,6 +598,7 @@ export async function getApplicationDetail(applicationId: string) {
   return {
     ...appendManualBookingState(refreshedApplication),
     serviceSelection,
+    organizationalContact,
     displayNumber
   };
 }

@@ -6638,4 +6638,57 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
     grid-column: 1 / -1;
   }
 }
+
+/* Footer links and contacts share the header navigation's right edge. */
+:where(.public-site) .site-footer__right {
+  display: grid;
+  justify-items: end;
+  gap: 0.4rem;
+  min-width: 0;
+  max-width: 100%;
+}
+:where(.public-site) .site-footer__right > .footer-links--legal {
+  justify-content: flex-end;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+:where(.public-site) .site-footer__right > .site-footer__contacts {
+  justify-content: flex-end;
+  margin: 0;
+  padding-top: 0;
+}
+
+@media (min-width: 821px) {
+  :where(.public-site) .home-hero .page-hero__aside {
+    align-self: start;
+  }
+}
+@media (min-width: 981px) {
+  /* Preserve the existing 44px contact row plus its 4px top inset after moving the icons. */
+  :where(.public-site) .site-footer__business {
+    min-height: 3rem;
+  }
+}
+@media (min-width: 1200px) {
+  :where(.public-site) .site-footer {
+    position: relative;
+  }
+  :where(.public-site) .site-footer__right {
+    position: absolute;
+    inset-block-start: 1.1rem;
+    inset-inline-end: max(1.4rem, calc((100% - 1200px) / 2));
+    max-width: calc(100% - 2.8rem);
+  }
+  :where(.public-site) .site-footer__right > .footer-links--legal {
+    flex-wrap: nowrap;
+    max-width: none;
+    white-space: nowrap;
+  }
+}
+@media (min-width: 1440px) {
+  :where(.public-site) .site-footer__right {
+    inset-inline-end: max(1.4rem, calc((100% - 1200px) / 2 - 6rem));
+  }
+}
 `;

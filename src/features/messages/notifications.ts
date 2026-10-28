@@ -106,6 +106,7 @@ export async function sendQuestionnaireSubmittedStaffEmail(input: {
   patientName: string;
   patientEmail: string;
   patientPhone: string;
+  telegramUsername?: string;
   preferredContact: PreferredContact;
   city: string;
   country: string;
@@ -144,6 +145,7 @@ export async function sendQuestionnaireSubmittedStaffEmail(input: {
       `Номер анкеты: ${input.applicationDisplayNumber}`,
       `Email: ${input.patientEmail}`,
       `Телефон: ${input.patientPhone}`,
+      ...(input.telegramUsername ? [`Telegram: ${input.telegramUsername}`] : []),
       `Предпочтительный контакт: ${preferredContactLabel(input.preferredContact)}`,
       `Город / страна: ${input.city}, ${input.country}`,
       `Часовой пояс: ${input.timezone}`,
@@ -157,6 +159,7 @@ export async function sendQuestionnaireSubmittedStaffEmail(input: {
       `<p><strong>Номер анкеты:</strong> ${escapeEmailHtml(input.applicationDisplayNumber)}</p>`,
       `<p><strong>Email:</strong> ${escapeEmailHtml(input.patientEmail)}<br />`,
       `<strong>Телефон:</strong> ${escapeEmailHtml(input.patientPhone)}<br />`,
+      ...(input.telegramUsername ? [`<strong>Telegram:</strong> ${escapeEmailHtml(input.telegramUsername)}<br />`] : []),
       `<strong>Предпочтительный контакт:</strong> ${preferredContactLabel(input.preferredContact)}<br />`,
       `<strong>Город / страна:</strong> ${escapeEmailHtml(input.city)}, ${escapeEmailHtml(input.country)}<br />`,
       `<strong>Часовой пояс:</strong> ${escapeEmailHtml(input.timezone)}<br />`,
