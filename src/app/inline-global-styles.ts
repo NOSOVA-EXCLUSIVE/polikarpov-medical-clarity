@@ -6643,6 +6643,7 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
 :where(.public-site) .site-footer__right {
   display: grid;
   justify-items: end;
+  margin-inline-start: auto;
   gap: 0.4rem;
   min-width: 0;
   max-width: 100%;
