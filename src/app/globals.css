@@ -5973,11 +5973,18 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: rgba(255, 253, 249, 0.82);
-  transition: border-color 180ms ease, box-shadow 180ms ease;
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
 }
-:where(.public-site) .service-overview-card:hover {
-  border-color: rgba(36, 55, 70, 0.3);
-  box-shadow: 0 8px 20px rgba(25, 22, 18, 0.04);
+@media (hover: hover) and (pointer: fine) {
+  :where(.public-site) .service-overview-card:hover {
+    border-color: rgba(36, 55, 70, 0.3);
+    box-shadow: 0 12px 26px rgba(25, 22, 18, 0.07);
+    transform: translateY(-2px) scale(1.01);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.public-site) .service-overview-card { transition: none; }
+  :where(.public-site) .service-overview-card:hover { transform: none; }
 }
 :where(.public-site) .service-overview-card:focus-within {
   outline: 3px solid var(--accent);
@@ -5998,7 +6005,6 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
   border-radius: var(--radius-md);
 }
 :where(.public-site) .service-overview-card__link:focus-visible { outline: none; }
-:where(.public-site) .service-overview-card:hover .service-overview-card__link { text-decoration: underline; }
 :where(.public-site) .service-overview-card__price {
   color: var(--accent);
   font-size: 1.15rem;
@@ -6129,4 +6135,17 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
   :where(.public-site) .site-contact-menu { position: static; }
   :where(.public-site) .site-contact-menu > summary { font-size: 0.8125rem; }
   :where(.public-site) .site-contact-menu__links { max-width: 100%; }
+}
+
+/* Keep the brand on the 1200px content axis; extend only the header's right edge. */
+@media (min-width: 1440px) {
+  :where(.public-site) .site-header__inner.container {
+    width: min(calc(1200px + 6rem), calc(50% + 600px - 1.4rem));
+    margin-inline-start: calc((100% - 1200px) / 2);
+    margin-inline-end: 0;
+  }
+  :where(.public-site) .site-header__inner > .site-nav {
+    margin-inline-start: auto;
+    justify-content: flex-end;
+  }
 }
