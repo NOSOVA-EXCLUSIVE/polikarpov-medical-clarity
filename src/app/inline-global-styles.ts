@@ -6363,7 +6363,6 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
 }
 
 /* Organizational introductions can use the full available single-column width. */
-:where(.public-site) .organizational-inquiry-page > .page-hero .page-hero__grid,
 :where(.public-site) .organizational-inquiry-page > .page-hero .page-hero__content,
 :where(.public-site) .organizational-inquiry-page > .page-hero .page-hero__description,
 :where(.public-site) .organizational-inquiry-page > .page-hero .lead {
