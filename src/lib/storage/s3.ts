@@ -1,6 +1,6 @@
 import "server-only";
 
-import { access, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -295,6 +295,49 @@ export async function getPrivateBlobMetadata(key: string) {
     throw new Error("Private object metadata does not match the requested key.");
   }
   return { sizeBytes: blob.size, contentType: blob.contentType, etag: blob.etag };
+}
+
+// Use only after authorizing a server-prepared key. Local files have no persisted MIME metadata.
+export async function getPrivateObjectMetadata(key: string): Promise<{
+  sizeBytes: number;
+  contentType: string | null;
+  etag: string | null;
+}> {
+  assertPreviewStorageKey(key);
+  const provider = getPrivateStorageProvider();
+  if (provider === "blob") {
+    const metadata = await getPrivateBlobMetadata(key);
+    if (typeof metadata.contentType !== "string" || !metadata.contentType ||
+        metadata.contentType.length > 255 || /[\r\n]/.test(metadata.contentType)) {
+      throw new Error("Private object metadata is invalid.");
+    }
+    return metadata;
+  }
+  if (provider === "local") {
+    const metadata = await stat(buildPrivateStoragePath(key));
+    if (!metadata.isFile() || !Number.isSafeInteger(metadata.size) || metadata.size <= 0) {
+      throw new Error("Private object metadata is invalid.");
+    }
+    return { sizeBytes: metadata.size, contentType: null, etag: null };
+  }
+  if (provider === "s3") {
+    const metadata = await getS3Client().send(new HeadObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: key
+    }));
+    if (
+      typeof metadata.ContentLength !== "number" ||
+      !Number.isSafeInteger(metadata.ContentLength) || metadata.ContentLength <= 0 ||
+      typeof metadata.ContentType !== "string" || !metadata.ContentType ||
+      metadata.ContentType.length > 255 || /[\r\n]/.test(metadata.ContentType)
+    ) {
+      throw new Error("Private object metadata is invalid.");
+    }
+    const etag = typeof metadata.ETag === "string" && metadata.ETag.length > 0 &&
+      metadata.ETag.length <= 200 && !/[\r\n]/.test(metadata.ETag) ? metadata.ETag : null;
+    return { sizeBytes: metadata.ContentLength, contentType: metadata.ContentType, etag };
+  }
+  throw new Error(PRODUCTION_STORAGE_ERROR);
 }
 
 export async function createPrivateUploadUrl(input: {

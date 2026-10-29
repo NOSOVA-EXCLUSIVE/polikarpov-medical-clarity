@@ -5,7 +5,11 @@
 /prompts/
 /Настройки_ проги/
 /.git/
-/tests/
+/tests/*
+# Only these synthetic, fully mocked release checks are needed by the Preview build.
+!/tests/questionnaire-patient-isolation.test.cjs
+!/tests/private-object-metadata.test.cjs
+!/tests/materials-upload-boundaries.test.cjs
 /*.log
 /*.zip
 /.env*

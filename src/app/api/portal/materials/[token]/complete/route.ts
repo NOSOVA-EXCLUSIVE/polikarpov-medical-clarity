@@ -2,10 +2,6 @@ import { NextResponse } from "next/server";
 
 import { completeUploadSchema } from "@/features/questionnaire/schemas";
 import { attachMaterialsUpload } from "@/features/portal/materials-service";
-import {
-  assertPrivateObjectStorageIsConfigured,
-  privateObjectExists
-} from "@/lib/storage/s3";
 
 type RouteContext = {
   params: Promise<{ token: string }>;
@@ -17,16 +13,6 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const json = await request.json();
     const input = completeUploadSchema.parse(json);
-
-    assertPrivateObjectStorageIsConfigured();
-
-    const exists = await privateObjectExists(input.storageKey);
-
-    if (!exists) {
-      throw new Error(
-        "Файл не найден во временном хранилище. Попробуйте загрузить его еще раз."
-      );
-    }
 
     const result = await attachMaterialsUpload(params.token, input);
 

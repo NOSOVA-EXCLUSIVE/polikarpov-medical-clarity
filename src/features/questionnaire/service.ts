@@ -109,37 +109,20 @@ export async function submitQuestionnaire(
 
   try {
     result = await prisma.$transaction(async (tx) => {
-      const existingPatient = await tx.patient.findFirst({
-        where: {
+      // An anonymous submission cannot prove ownership of an existing patient
+      // through matching contacts. Keep its details on a new patient so prior
+      // applications retain their original patient relation and metadata.
+      const patient = await tx.patient.create({
+        data: {
+          fullName: input.patient.fullName,
           email: input.patient.email,
-          phone: input.patient.phone
+          phone: input.patient.phone,
+          preferredContact: input.patient.preferredContact,
+          country: input.patient.country,
+          city: input.patient.city,
+          timezone: input.patient.timezone
         }
       });
-
-      const patient = existingPatient
-        ? await tx.patient.update({
-            where: {
-              id: existingPatient.id
-            },
-            data: {
-              fullName: input.patient.fullName,
-              preferredContact: input.patient.preferredContact,
-              country: input.patient.country,
-              city: input.patient.city,
-              timezone: input.patient.timezone
-            }
-          })
-        : await tx.patient.create({
-            data: {
-              fullName: input.patient.fullName,
-              email: input.patient.email,
-              phone: input.patient.phone,
-              preferredContact: input.patient.preferredContact,
-              country: input.patient.country,
-              city: input.patient.city,
-              timezone: input.patient.timezone
-            }
-          });
 
       const application = await tx.application.create({
         data: {

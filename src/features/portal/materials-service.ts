@@ -1,28 +1,48 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
 
 import { getApplicationDisplayNumber } from "@/features/applications/display-number";
 import { sendPatientMaterialsSubmittedStaffEmail } from "@/features/messages/notifications";
 import { prisma } from "@/lib/db/prisma";
 import { encryptSensitiveField } from "@/lib/security/encryption";
 import { hashOpaqueToken } from "@/lib/security/tokens";
-import { buildPrivateStorageKey, createPrivateUploadUrl } from "@/lib/storage/s3";
+import { buildPrivateStorageKey, createPrivateUploadUrl, getPrivateObjectMetadata } from "@/lib/storage/s3";
 import { validateCompletedUpload, validatePresignUpload } from "@/features/questionnaire/upload-validation";
 import type {
   CompleteUploadInput,
   ExternalImagingLinkInput,
   PresignUploadInput
 } from "@/features/questionnaire/schemas";
+import {
+  assertMaterialsUploadTicket,
+  createMaterialsUploadDescriptorHmac,
+  getMaterialsUploadTicketId,
+  type MaterialsUploadScope
+} from "./materials-upload-binding";
+
+const MATERIALS_UPLOAD_URL_TTL_SECONDS = 900;
+
+const materialsUploadSelection = {
+  id: true,
+  originalName: true,
+  category: true,
+  sizeBytes: true,
+  durationSeconds: true
+} as const;
 
 function encryptOptional(value?: string) {
   return value?.trim() ? encryptSensitiveField(value.trim()) : null;
 }
 
-async function getValidMaterialsToken(rawToken: string) {
+async function getValidMaterialsToken(
+  rawToken: string,
+  db: Pick<typeof prisma, "accessToken"> = prisma
+) {
   const tokenHash = hashOpaqueToken(rawToken);
 
-  const token = await prisma.accessToken.findFirst({
+  const token = await db.accessToken.findFirst({
     where: {
       tokenHash,
       purpose: "MATERIALS",
@@ -39,7 +59,12 @@ async function getValidMaterialsToken(rawToken: string) {
     }
   });
 
-  if (!token || !token.requirement || token.requirement.status !== "OPEN") {
+  if (
+    !token ||
+    !token.requirement ||
+    token.requirement.status !== "OPEN" ||
+    token.requirement.applicationId !== token.applicationId
+  ) {
     throw new Error("Ссылка для дозагрузки недоступна или уже закрыта.");
   }
 
@@ -71,19 +96,61 @@ export async function getMaterialsPortalContext(rawToken: string) {
 export async function createMaterialsUploadUrl(rawToken: string, input: PresignUploadInput) {
   const token = await getValidMaterialsToken(rawToken);
   const { extension } = validatePresignUpload(input);
+  const ticketId = randomUUID();
+  const scope: MaterialsUploadScope = {
+    applicationId: token.applicationId,
+    requirementId: token.requirement.id,
+    tokenId: token.id
+  };
 
   const storageKey = buildPrivateStorageKey([
     "portal",
     "materials",
     token.applicationId,
+    token.requirement.id,
+    token.id,
     input.category.toLowerCase(),
-    `${Date.now()}-${randomUUID()}.${extension}`
+    `${ticketId}.${extension}`
   ]);
+
+  const preparedAt = new Date();
+  const descriptor: CompleteUploadInput = {
+    category: input.category,
+    originalName: input.filename,
+    mimeType: input.mimeType,
+    extension,
+    sizeBytes: input.sizeBytes,
+    durationSeconds: input.durationSeconds,
+    storageKey
+  };
+
+  // A failed signing call leaves only an inert ticket, never a visible upload or deleted object.
+  await prisma.auditEvent.create({
+    data: {
+      id: ticketId,
+      actorType: "PATIENT",
+      applicationId: token.applicationId,
+      entityType: "UPLOAD",
+      entityId: ticketId,
+      action: "materials_upload_prepared",
+      metadataJson: {
+        version: 1,
+        requirementId: token.requirement.id,
+        tokenId: token.id,
+        category: input.category,
+        descriptorHmac: createMaterialsUploadDescriptorHmac(rawToken, scope, descriptor),
+        expiresAt: token.expiresAt.toISOString(),
+        preparedAt: preparedAt.toISOString(),
+        uploadUrlTtlSeconds: MATERIALS_UPLOAD_URL_TTL_SECONDS
+      }
+    }
+  });
 
   const uploadUrl = await createPrivateUploadUrl({
     key: storageKey,
     contentType: input.mimeType,
-    maximumSizeInBytes: input.sizeBytes
+    maximumSizeInBytes: input.sizeBytes,
+    expiresInSeconds: MATERIALS_UPLOAD_URL_TTL_SECONDS
   });
 
   return {
@@ -96,46 +163,137 @@ export async function createMaterialsUploadUrl(rawToken: string, input: PresignU
 export async function attachMaterialsUpload(rawToken: string, input: CompleteUploadInput) {
   const token = await getValidMaterialsToken(rawToken);
   validateCompletedUpload(input);
-
-  const upload = await prisma.applicationUpload.create({
-    data: {
-      applicationId: token.applicationId,
-      category: input.category,
-      status: "ATTACHED",
-      originalName: input.originalName,
-      mimeType: input.mimeType,
-      extension: input.extension.toLowerCase(),
-      sizeBytes: BigInt(input.sizeBytes),
-      durationSeconds: input.durationSeconds,
-      storageKey: input.storageKey,
-      accessPasswordCiphertext: encryptOptional(input.accessPassword),
-      accessInstructionsCiphertext: encryptOptional(input.accessInstructions),
-      uploadedAt: new Date()
-    },
-    select: {
-      id: true,
-      originalName: true,
-      category: true,
-      sizeBytes: true,
-      durationSeconds: true
-    }
-  });
-
-  await prisma.auditEvent.create({
-    data: {
-      actorType: "PATIENT",
+  const scope: MaterialsUploadScope = {
+    applicationId: token.applicationId,
+    requirementId: token.requirement.id,
+    tokenId: token.id
+  };
+  const ticketId = getMaterialsUploadTicketId(scope, input);
+  const ticket = await prisma.auditEvent.findFirst({
+    where: {
+      id: ticketId,
       applicationId: token.applicationId,
       entityType: "UPLOAD",
-      entityId: upload.id,
-      action: "materials_upload_attached",
-      metadataJson: {
-        requirementId: token.requirementId,
-        category: input.category
-      }
-    }
+      entityId: ticketId,
+      action: "materials_upload_prepared"
+    },
+    select: { metadataJson: true }
+  });
+  assertMaterialsUploadTicket({
+    rawToken,
+    scope,
+    upload: input,
+    metadata: ticket?.metadataJson,
+    now: new Date()
   });
 
-  return upload;
+  // No client-supplied key reaches object storage before authorization and the prepared ticket.
+  let metadata: Awaited<ReturnType<typeof getPrivateObjectMetadata>>;
+  try {
+    metadata = await getPrivateObjectMetadata(input.storageKey);
+  } catch {
+    // Provider errors can contain private storage details; return only the flow's generic error.
+    throw new Error("Не удалось подтвердить загруженный файл в защищённом хранилище.");
+  }
+  // The local development adapter persists bytes only; Blob/S3 must provide their real MIME.
+  if (
+    metadata.sizeBytes !== input.sizeBytes ||
+    (metadata.contentType !== null && metadata.contentType !== input.mimeType)
+  ) {
+    throw new Error("Размер или тип файла не совпадает с подготовленной загрузкой.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // Match the requirement -> token lock order used by submission. These row locks do not
+    // alter either record, and prevent closing/revoking access during final attachment.
+    await tx.$queryRaw(Prisma.sql`
+      SELECT "id" FROM "ApplicationRequirement"
+      WHERE "id" = ${scope.requirementId} AND "applicationId" = ${scope.applicationId}
+      FOR UPDATE
+    `);
+    await tx.$queryRaw(Prisma.sql`
+      SELECT "id" FROM "AccessToken"
+      WHERE "id" = ${scope.tokenId} AND "applicationId" = ${scope.applicationId}
+        AND "requirementId" = ${scope.requirementId}
+      FOR UPDATE
+    `);
+
+    const currentToken = await getValidMaterialsToken(rawToken, tx);
+    if (
+      currentToken.id !== scope.tokenId ||
+      currentToken.applicationId !== scope.applicationId ||
+      currentToken.requirement.id !== scope.requirementId
+    ) {
+      throw new Error("Подготовленная загрузка не найдена или недоступна.");
+    }
+    assertMaterialsUploadTicket({
+      rawToken,
+      scope,
+      upload: input,
+      metadata: ticket?.metadataJson,
+      now: new Date()
+    });
+
+    const existing = await tx.applicationUpload.findUnique({
+      where: { storageKey: input.storageKey }
+    });
+    if (existing) {
+      if (
+        existing.applicationId !== scope.applicationId ||
+        existing.status !== "ATTACHED" ||
+        existing.category !== input.category ||
+        existing.originalName !== input.originalName ||
+        existing.mimeType !== input.mimeType ||
+        existing.extension !== input.extension.toLowerCase() ||
+        existing.sizeBytes !== BigInt(input.sizeBytes) ||
+        existing.durationSeconds !== (input.durationSeconds ?? null)
+      ) {
+        throw new Error("Подготовленная загрузка уже использована или изменилась.");
+      }
+      return {
+        id: existing.id,
+        originalName: existing.originalName,
+        category: existing.category,
+        sizeBytes: existing.sizeBytes,
+        durationSeconds: existing.durationSeconds
+      };
+    }
+
+    const upload = await tx.applicationUpload.create({
+      data: {
+        applicationId: token.applicationId,
+        category: input.category,
+        status: "ATTACHED",
+        originalName: input.originalName,
+        mimeType: input.mimeType,
+        extension: input.extension.toLowerCase(),
+        sizeBytes: BigInt(input.sizeBytes),
+        durationSeconds: input.durationSeconds,
+        storageKey: input.storageKey,
+        accessPasswordCiphertext: encryptOptional(input.accessPassword),
+        accessInstructionsCiphertext: encryptOptional(input.accessInstructions),
+        uploadedAt: new Date()
+      },
+      select: materialsUploadSelection
+    });
+
+    await tx.auditEvent.create({
+      data: {
+        actorType: "PATIENT",
+        applicationId: token.applicationId,
+        entityType: "UPLOAD",
+        entityId: upload.id,
+        action: "materials_upload_attached",
+        metadataJson: {
+          requirementId: token.requirementId,
+          category: input.category,
+          preparedTicketId: ticketId
+        }
+      }
+    });
+
+    return upload;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
 }
 
 export async function addMaterialsExternalLink(
