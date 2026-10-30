@@ -169,7 +169,7 @@ export async function confirmPreliminarySlot(tx: Tx, input: { caseId: string; st
   await assertCalendarIntervalFree(tx, { ...slot, excludePreliminarySlotId: slot.id, excludeCaseId: input.caseId });
   const changed = await tx.preliminarySlot.updateMany({ where: { id: slot.id, caseId: input.caseId, status: slot.status }, data: { status: "CONFIRMED" } });
   if (changed.count !== 1) fail("CALENDAR_SLOT_CHANGED");
-  return slot;
+  return { ...slot, status: "CONFIRMED" as const };
 }
 
 export async function releasePreliminarySlot(tx: Tx, input: { caseId: string; slotId?: string }) {
@@ -202,14 +202,15 @@ export async function getAvailablePreliminarySlots(caseId: string) {
   if (!record || ["ARCHIVED", "REJECTED"].includes(record.application.status) || !isManualAccessOpen(record, new Date())) fail("CALENDAR_CASE_UNAVAILABLE");
   if (!["REVIEW", "CALL_REQUESTED", "CALL_CONFIRMED"].includes(record.phase)) return [];
   const now = new Date();
-  const horizon = new Date(now.getTime() + 366 * 86_400_000);
-  const [slots, legacy, appointments, manual] = await Promise.all([
-    prisma.preliminarySlot.findMany({ where: { OR: [{ status: "AVAILABLE", caseId: null, startsAt: { gt: now, lt: horizon } }, { caseId }] }, orderBy: { startsAt: "asc" }, take: 2001 }),
-    prisma.calendarSlot.findMany({ where: { startsAt: { lt: horizon }, endsAt: { gt: now } }, select: { startsAt: true, endsAt: true } }),
-    prisma.appointment.findMany({ where: { status: "SCHEDULED", startsAt: { lt: horizon }, endsAt: { gt: now } }, select: { startsAt: true, endsAt: true } }),
-    prisma.manualCase.findMany({ where: { ...manualOverlap({ startsAt: now, endsAt: horizon }), id: { not: caseId } }, select: { callStartsAt: true, callEndsAt: true } })
-  ]);
+  const slots = await prisma.preliminarySlot.findMany({ where: { OR: [{ status: "AVAILABLE", caseId: null, startsAt: { gt: now } }, { caseId }] }, orderBy: { startsAt: "asc" }, take: 2001 });
   if (slots.length > 2000) fail("CALENDAR_TOO_MANY_SLOTS");
+  if (!slots.length) return [];
+  const range = { startsAt: new Date(Math.min(...slots.map((slot) => slot.startsAt.getTime()))), endsAt: new Date(Math.max(...slots.map((slot) => slot.endsAt.getTime()))) };
+  const [legacy, appointments, manual] = await Promise.all([
+    prisma.calendarSlot.findMany({ where: overlap(range), select: { startsAt: true, endsAt: true } }),
+    prisma.appointment.findMany({ where: { ...overlap(range), status: "SCHEDULED" }, select: { startsAt: true, endsAt: true } }),
+    prisma.manualCase.findMany({ where: { ...manualOverlap(range), id: { not: caseId } }, select: { callStartsAt: true, callEndsAt: true } })
+  ]);
   const occupied = [...legacy, ...appointments, ...manual.flatMap((entry) => entry.callStartsAt && entry.callEndsAt ? [{ startsAt: entry.callStartsAt, endsAt: entry.callEndsAt }] : [])];
   return slots.filter((slot) => slot.caseId === caseId || !occupied.some((entry) => intersects(slot, entry))).map((slot) => ({
     id: slot.id, startsAt: slot.startsAt.toISOString(), endsAt: slot.endsAt.toISOString(), timezone: slot.timezone,

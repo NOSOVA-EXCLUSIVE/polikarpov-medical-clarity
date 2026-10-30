@@ -15,11 +15,18 @@ if (process.env.VERCEL_ENV === "preview") {
   const checksums = new Map(names.map(name => [name, createHash("sha256")
     .update(fs.readFileSync(path.join(root, "prisma/migrations", name, "migration.sql"), "utf8").replace(/\r\n/g, "\n")).digest("hex")]));
   const client = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL } }, log: [] });
+  let phase = "source-check";
   const stop = () => { throw new Error("CALENDAR_PREVIEW_SCHEMA_CHECK_FAILED"); };
 
   async function state() {
-    const history = await client.$queryRaw`SELECT migration_name, checksum, finished_at, rolled_back_at FROM public._prisma_migrations ORDER BY migration_name`;
+    phase = "read-catalog";
     const physical = await client.$queryRaw`SELECT count(*)::int AS total, count(*) FILTER (WHERE table_name LIKE 'Manual%')::int AS manual, count(*) FILTER (WHERE table_name = 'PreliminarySlot')::int AS preliminary FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'`;
+    const ledger = await client.$queryRaw`SELECT to_regclass('public._prisma_migrations') IS NOT NULL AS present`;
+    console.log("CALENDAR_PREVIEW_CATALOG " + JSON.stringify({ publicTables: physical[0].total,
+      manualTables: physical[0].manual, preliminaryTables: physical[0].preliminary, migrationLedgerPresent: ledger[0].present }));
+    if (!ledger[0].present) stop();
+    phase = "read-history";
+    const history = await client.$queryRaw`SELECT migration_name, checksum, finished_at, rolled_back_at FROM public._prisma_migrations ORDER BY migration_name`;
     const knownHistory = history.every(row => names.includes(row.migration_name) && row.finished_at && !row.rolled_back_at && row.checksum === checksums.get(row.migration_name))
       && new Set(history.map(row => row.migration_name)).size === history.length;
     const applied = new Set(history.filter(row => row.finished_at && !row.rolled_back_at).map(row => row.migration_name));
@@ -47,6 +54,7 @@ if (process.env.VERCEL_ENV === "preview") {
       || before.physical.total !== (alreadyApplied ? 27 : 26) || before.physical.preliminary !== (alreadyApplied ? 1 : 0)) stop();
     const preserved = await preservationCounts();
     if (!alreadyApplied) {
+      phase = "apply-calendar";
       await client.$disconnect();
       const minimalEnv = { DATABASE_URL: process.env.DIRECT_URL, DIRECT_URL: process.env.DIRECT_URL,
         PRISMA_HIDE_UPDATE_MESSAGE: "1", CHECKPOINT_DISABLE: "1" };
@@ -68,6 +76,11 @@ if (process.env.VERCEL_ENV === "preview") {
       || preserved !== await preservationCounts()) stop();
     console.log("CALENDAR_PREVIEW_SCHEMA_VERIFIED " + JSON.stringify({ migrationApplied: true, existingRecordCountsUnchanged: true, productionTouched: false }));
   }
-  main().catch(() => { console.error("CALENDAR_PREVIEW_SCHEMA_CHECK_FAILED; publication stopped; no automatic retry or ledger repair."); process.exitCode = 1; })
+  main().catch(error => {
+    const code = typeof error?.code === "string" && /^(P\d{4}|ENOENT)$/.test(error.code) ? error.code : "CHECK_STOP";
+    const sqlState = typeof error?.meta?.code === "string" && /^[0-9A-Z]{5}$/.test(error.meta.code) ? error.meta.code : undefined;
+    console.error("CALENDAR_PREVIEW_SCHEMA_DIAGNOSTIC " + JSON.stringify({ phase, code, ...(sqlState ? { sqlState } : {}) }));
+    console.error("CALENDAR_PREVIEW_SCHEMA_CHECK_FAILED; publication stopped; no automatic retry or ledger repair."); process.exitCode = 1;
+  })
     .finally(() => client.$disconnect());
 }

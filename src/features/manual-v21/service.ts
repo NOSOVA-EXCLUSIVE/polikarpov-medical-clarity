@@ -183,7 +183,7 @@ export async function staffManualAction(input: { caseId: string; actor: Actor; a
           break;
         }
         const interval = await reservePreliminarySlot(tx, { caseId: record.id, slotId: call.slotId, now });
-        auditDetails = { startsAt: interval.startsAt.toISOString(), endsAt: interval.endsAt.toISOString(), timezone: interval.timezone, priorStartsAt: record.callStartsAt?.toISOString() ?? null, priorConfirmedAt: record.callConfirmedAt?.toISOString() ?? null };
+        auditDetails = { slotId: interval.id, priorSlotId: record.preliminarySlot?.id ?? null, startsAt: interval.startsAt.toISOString(), endsAt: interval.endsAt.toISOString(), timezone: interval.timezone, priorStartsAt: record.callStartsAt?.toISOString() ?? null, priorConfirmedAt: record.callConfirmedAt?.toISOString() ?? null };
         await tx.manualCase.update({ where: { id: record.id }, data: { phase: "CALL_REQUESTED", callStartsAt: interval.startsAt, callEndsAt: interval.endsAt, callTimezone: interval.timezone, callRequestedAt: now, callConfirmedAt: null, callCompletedAt: null } });
         break;
       }
@@ -364,7 +364,7 @@ export async function patientManualAction(input: { caseId: string; grantId: stri
         if (!["REVIEW", "CALL_REQUESTED"].includes(record.phase)) fail("CALL_STAGE_CLOSED");
         const call = manualCallSchema.parse(data);
         const interval = await reservePreliminarySlot(tx, { caseId: record.id, slotId: call.slotId, now });
-        auditDetails = { startsAt: interval.startsAt.toISOString(), endsAt: interval.endsAt.toISOString(), timezone: interval.timezone, priorStartsAt: record.callStartsAt?.toISOString() ?? null };
+        auditDetails = { slotId: interval.id, priorSlotId: record.preliminarySlot?.id ?? null, startsAt: interval.startsAt.toISOString(), endsAt: interval.endsAt.toISOString(), timezone: interval.timezone, priorStartsAt: record.callStartsAt?.toISOString() ?? null };
         if (interval.startsAt <= now) fail("FUTURE_CALL_REQUIRED");
         await tx.manualCase.update({ where: { id: record.id }, data: { phase: "CALL_REQUESTED", callStartsAt: interval.startsAt, callEndsAt: interval.endsAt, callTimezone: interval.timezone, callRequestedAt: now, callConfirmedAt: null } });
         break;
