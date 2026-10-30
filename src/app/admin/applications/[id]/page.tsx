@@ -125,6 +125,17 @@ export default async function ApplicationDetailPage({
     <AdminShell
       title={<span className="admin-page-title">Карточка заявки {application.displayNumber}</span>}
       description="Здесь можно проверить материалы, принять решение по кейсу, открыть или завершить сопровождение и работать с перепиской внутри системы."
+      actions={
+        <Link
+          className="button button--secondary"
+          href="/admin/calendar"
+          target="_blank"
+          rel="noopener noreferrer"
+          prefetch={false}
+        >
+          Календарь врача
+        </Link>
+      }
     >
       {rejectionNoticeMessage ?? noticeMessage ? (
         <div className="notice">
