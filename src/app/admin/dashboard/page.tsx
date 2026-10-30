@@ -15,6 +15,17 @@ export default async function AdminDashboardPage() {
     <AdminShell
       title={<span className="admin-page-title">Обзор заявок</span>}
       description={`Вы вошли как ${session.name}. Здесь видно, какие кейсы требуют первичного просмотра, дозапроса материалов или следующего решения.`}
+      actions={
+        <Link
+          className="button button--secondary"
+          href="/admin/calendar"
+          target="_blank"
+          rel="noopener noreferrer"
+          prefetch={false}
+        >
+          Календарь врача
+        </Link>
+      }
     >
       <div className="card-grid">
         <StatCard label="Открытые обращения v2.1" value={snapshot.counters.manualOpenCount} href="/admin/applications?manualPhase=OPEN" />
