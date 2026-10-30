@@ -58,10 +58,11 @@ export async function POST(request: Request) {
     const raw = JSON.parse(text);
     if (raw?.action === "open") {
       const input = open.parse(raw);
-      const slots = await openPreliminarySlots({ ...input, timezone: input.timezone ?? input.timeZone!, actor });
+      const slots = await openPreliminarySlots({ actor, dates: input.dates!, startTime: input.startTime!,
+        endTime: input.endTime!, durationMinutes: input.durationMinutes!, timezone: input.timezone ?? input.timeZone! });
       return NextResponse.json({ success: true, status: "saved", created: slots.length, createdCount: slots.length, slots }, { headers });
     }
     const input = change.parse(raw);
-    return NextResponse.json({ success: true, status: "saved", ...await changePreliminarySlot({ ...input, actor }) }, { headers });
+    return NextResponse.json({ success: true, status: "saved", ...await changePreliminarySlot({ actor, action: input.action!, slotId: input.slotId!, note: input.note }) }, { headers });
   } catch (error) { return failure(error); }
 }
