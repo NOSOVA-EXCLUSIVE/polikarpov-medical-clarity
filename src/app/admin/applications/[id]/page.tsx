@@ -608,13 +608,13 @@ export default async function ApplicationDetailPage({
         </article>
 
         <article className="card stack">
-          <h2 className="admin-section-title">Подготовить персональную ссылку</h2>
+          <h2 className="admin-section-title">{application.serviceSelection ? "Запись на предварительную беседу" : "Подготовить персональную ссылку"}</h2>
           <p className="muted">
-            Используйте это действие, когда материалов достаточно и пациента можно перевести к записи и оплате.
+            {application.serviceSelection ? "Отправьте пациенту персональную ссылку для выбора времени из открытых вами интервалов. Предварительная беседа проходит до окончательного предложения и оплаты." : "Используйте это действие, когда материалов достаточно и пациента можно перевести к записи и оплате."}
           </p>
           {application.serviceSelection ? (
             manualCase ? <div className="stack"><p>{manualPhaseLabels[manualCase.phase] ?? manualCase.phase}</p>
-              <Link className="button" href={`/admin/manual/${manualCase.id}`}>Открыть ручную запись и кабинет v2.1</Link></div>
+              <Link className="button" href={`/admin/manual/${manualCase.id}`}>Открыть запись и кабинет пациента</Link></div>
               : <ManualAdminActions applicationId={application.id}/>
           ) : (
           <OfferCreateForm

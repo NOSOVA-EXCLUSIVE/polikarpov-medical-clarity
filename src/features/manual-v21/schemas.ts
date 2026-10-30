@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const id = z.string().trim().min(1).max(160);
 const body = z.string().trim().min(1).max(12000);
-export const manualCallSchema = z.object({ startsAt: z.string().max(64), endsAt: z.string().max(64), timezone: z.string().min(1).max(100) });
+export const manualCallSchema = z.object({ slotId: id }).strict();
 export const manualAgreementSchema = z.object({
   serviceId: id,
   amountCents: z.coerce.number().int().positive().max(10000000),
@@ -22,7 +22,8 @@ export const manualPatientSchemas = {
 export const manualStaffSchemas = {
   "link-organizational-call": z.object({ sourceCaseId: id, sameTask: z.literal(true) }),
   "request-call": manualCallSchema,
-  "confirm-call": z.object({}),
+  "confirm-call": z.object({ slotId: id.optional() }).strict(),
+  "cancel-call": z.object({ reason: z.string().trim().min(3).max(1000), slotId: id.optional() }).strict(),
   "complete-call": z.object({}),
   "create-agreement": manualAgreementSchema,
   "record-payment": manualPaymentSchema,

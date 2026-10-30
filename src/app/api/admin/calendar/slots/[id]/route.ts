@@ -2,18 +2,16 @@ import { NextResponse } from "next/server";
 
 import { updateCalendarSlotSchema } from "@/features/booking/schemas";
 import { updateCalendarSlotStatus } from "@/features/booking/service";
-import { getStaffSession } from "@/lib/auth/session";
+import { assertManualSameOrigin, requireManualStaff } from "@/features/manual-v21/access";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 export async function POST(request: Request, context: RouteContext) {
-  const session = await getStaffSession();
-
-  if (!session) {
-    return NextResponse.redirect(new URL("/admin/login", request.url), 303);
-  }
+  let session: Awaited<ReturnType<typeof requireManualStaff>>;
+  try { assertManualSameOrigin(request); session = await requireManualStaff(); }
+  catch { return NextResponse.json({ error: "Требуется действующий вход врача и запрос с этого сайта." }, { status: 403 }); }
 
   const { id } = await context.params;
   const formData = await request.formData();

@@ -11,6 +11,7 @@
 !/tests/private-object-metadata.test.cjs
 !/tests/materials-upload-boundaries.test.cjs
 !/tests/intake-notifications.test.cjs
+!/tests/calendar-reservations.test.cjs
 /*.log
 /*.zip
 /.env*

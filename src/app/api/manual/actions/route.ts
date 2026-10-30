@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const action = String(form.get("action") || "");
     if (!ACTIONS.has(action)) return NextResponse.json({ error: "Неизвестное действие." }, { status: 400 });
     const data: Record<string, string | boolean> = {};
-    for (const name of ["startsAt", "endsAt", "timezone", "agreementId", "body", "contactId"]) {
+    for (const name of ["slotId", "agreementId", "body", "contactId"]) {
       const value = form.get(name);
       if (typeof value === "string" && value) data[name] = value;
     }
@@ -23,6 +23,9 @@ export async function POST(request: Request) {
       data.accepted = true;
     }
     await patientManualAction({ ...session, action, data });
+    if (request.headers.get("accept")?.includes("application/json")) {
+      return NextResponse.json({ status: "saved" }, { headers: { "Cache-Control": "private, no-store" } });
+    }
     const response = NextResponse.redirect(new URL("/manual/cabinet?notice=saved", request.url), 303);
     response.headers.set("Cache-Control", "private, no-store");
     return response;

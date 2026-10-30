@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 
 import { createCalendarSlotSchema } from "@/features/booking/schemas";
 import { createCalendarSlot } from "@/features/booking/service";
-import { getStaffSession } from "@/lib/auth/session";
+import { assertManualSameOrigin, requireManualStaff } from "@/features/manual-v21/access";
+import { localDateTimeToUtc } from "@/features/calendar/time";
 
 function calendarRedirect(request: Request, params: Record<string, string>) {
   const url = new URL("/admin/calendar", request.url);
@@ -14,37 +15,10 @@ function calendarRedirect(request: Request, params: Record<string, string>) {
   return NextResponse.redirect(url, 303);
 }
 
-function parseLocalDateTime(value: string) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
-
-  if (!match) {
-    return null;
-  }
-
-  const [, year, month, day, hours, minutes] = match;
-  const parsed = new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hours),
-    Number(minutes),
-    0,
-    0
-  );
-
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return parsed;
-}
-
 export async function POST(request: Request) {
-  const session = await getStaffSession();
-
-  if (!session) {
-    return NextResponse.redirect(new URL("/admin/login", request.url), 303);
-  }
+  let session: Awaited<ReturnType<typeof requireManualStaff>>;
+  try { assertManualSameOrigin(request); session = await requireManualStaff(); }
+  catch { return NextResponse.json({ error: "Требуется действующий вход врача и запрос с этого сайта." }, { status: 403 }); }
 
   const formData = await request.formData();
   const parsed = createCalendarSlotSchema.safeParse({
@@ -62,7 +36,11 @@ export async function POST(request: Request) {
     });
   }
 
-  const startsAt = parseLocalDateTime(parsed.data.startsAtLocal);
+  let startsAt: Date | null = null;
+  try {
+    const [date, time] = parsed.data.startsAtLocal.split("T");
+    startsAt = localDateTimeToUtc(date, time, parsed.data.timezone);
+  } catch { /* Invalid and ambiguous local times are rejected without shifting them. */ }
 
   if (!startsAt) {
     return calendarRedirect(request, {
@@ -80,13 +58,10 @@ export async function POST(request: Request) {
     });
 
     return calendarRedirect(request, { notice: "slot_created" });
-  } catch (error) {
+  } catch {
     return calendarRedirect(request, {
       error: "slot",
-      message:
-        error instanceof Error && error.message
-          ? error.message
-          : "Не удалось обновить календарь. Повторите попытку."
+      message: "Не удалось открыть интервал. Проверьте время, часовой пояс и пересечения с записями."
     });
   }
 }

@@ -1,34 +1,37 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { PreliminarySlotOptions } from "./preliminary-slot-options";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 export function ManualCallRequestForm() {
-  const [error, setError] = useState("");
-  const starts = useRef<HTMLInputElement>(null);
-  const ends = useRef<HTMLInputElement>(null);
-  const zone = useRef<HTMLInputElement>(null);
-  return <form action="/api/manual/actions" method="post" className="stack" onSubmit={(event) => {
-    const form = event.currentTarget;
-    const choice = (form.elements.namedItem("localStart") as HTMLInputElement).value;
-    const date = new Date(choice);
-    if (!Number.isFinite(date.getTime()) || date.getTime() <= Date.now()) {
-      event.preventDefault(); setError("Выберите время в будущем."); return;
-    }
-    if (starts.current && ends.current && zone.current) {
-      starts.current.value = date.toISOString();
-      ends.current.value = new Date(date.getTime() + 30 * 60 * 1000).toISOString();
-      zone.current.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    }
-  }}>
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [revision, setRevision] = useState(0);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!ready || busy) return;
+    const data = new FormData(event.currentTarget);
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch("/api/manual/actions", { method: "POST", body: data,
+        credentials: "same-origin", headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) throw new Error("BOOKING_NOT_CONFIRMED");
+      const result = await response.json();
+      if (result.status !== "saved") throw new Error("BOOKING_NOT_CONFIRMED");
+      setMessage("Выбранное время сохранено и ожидает подтверждения врача.");
+      router.refresh();
+    } catch {
+      setMessage("Не удалось подтвердить выбор. Возможно, время уже занято. Проверьте обновлённый список и выберите доступный интервал.");
+    } finally { setBusy(false); setRevision(value => value + 1); }
+  }
+  return <form action="/api/manual/actions" method="post" className="stack" onSubmit={submit}>
     <input type="hidden" name="action" value="request-call" />
-    <input type="hidden" name="startsAt" ref={starts} />
-    <input type="hidden" name="endsAt" ref={ends} />
-    <input type="hidden" name="timezone" ref={zone} />
-    <label className="field"><span>Удобное время предварительной беседы с врачом</span>
-      <input type="datetime-local" name="localStart" required /></label>
-    <p className="muted">Время указано по часовому поясу вашего устройства. Запрос на 30 минут — предложение времени;
-      окончательную дату и длительность подтверждает врач. Это не оплата и не начало услуги.</p>
-    {error ? <p role="alert">{error}</p> : null}
-    <div><button className="button" type="submit">Предложить время</button></div>
+    <PreliminarySlotOptions key={revision} onReadyChange={setReady} />
+    <p className="muted">Предварительная беседа проходит до окончательного предложения и оплаты. Выбор времени не начинает платную услугу.</p>
+    {message ? <p className="notice" role="status">{message}</p> : null}
+    <div><button className="button" type="submit" disabled={!ready || busy}>{busy ? "Сохраняем выбор…" : "Подтвердить выбор времени"}</button></div>
   </form>;
 }

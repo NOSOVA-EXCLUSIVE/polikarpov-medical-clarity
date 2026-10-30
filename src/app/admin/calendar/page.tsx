@@ -1,150 +1,46 @@
-import Link from "next/link";
-
-import { AdminCalendarCreateForm } from "@/components/admin/calendar-create-form";
+import { AdminCalendarMonth } from "@/components/admin/calendar-month";
+import { AdminCalendarOpenForm } from "@/components/admin/calendar-open-form";
 import { AdminShell } from "@/components/admin/shell";
-import { formatDateTime } from "@/features/admin/presentation";
-import { listCalendarSlotsForAdmin, mapSlotStatusLabel } from "@/features/booking/service";
-import { requireStaffSession } from "@/lib/auth/session";
+import { getAdminCalendarMonth } from "@/features/calendar/service";
+import { requireManualStaff } from "@/features/manual-v21/access";
+import { redirect } from "next/navigation";
 
-type SearchParams = {
-  notice?: string;
-  error?: string;
-  message?: string;
-};
-
-type PageProps = {
-  searchParams?: Promise<SearchParams>;
-};
+type SearchParams = { month?: string; timezone?: string; notice?: string; error?: string };
+type PageProps = { searchParams?: Promise<SearchParams> };
 
 export default async function AdminCalendarPage({ searchParams }: PageProps) {
-  await requireStaffSession();
+  try { await requireManualStaff(); }
+  catch (error) {
+    if (error && typeof error === "object" && "status" in error && error.status === 401) redirect("/admin/login");
+    return <AdminShell title="Расписание врача" description="Доступ к календарю ограничен">
+      <p className="notice" role="alert">Требуется действующая учётная запись врача или администратора.</p>
+    </AdminShell>;
+  }
   const params = (await searchParams) ?? {};
-  const slots = await listCalendarSlotsForAdmin();
+  let calendar: Awaited<ReturnType<typeof getAdminCalendarMonth>>;
+  try { calendar = await getAdminCalendarMonth({ month: params.month, timezone: params.timezone }); }
+  catch {
+    return <AdminShell title="Расписание врача" description="Календарь месяца">
+      <p className="notice" role="alert">Не удалось показать расписание. Проверьте выбранный месяц и часовой пояс или обновите страницу.</p>
+      <a className="button button--secondary" href="/admin/calendar">Открыть текущий месяц</a>
+    </AdminShell>;
+  }
+  const todayParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: calendar.timeZone, year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date());
+  const part = (type: string) => todayParts.find(item => item.type === type)?.value || "";
+  const today = `${part("year")}-${part("month")}-${part("day")}`;
 
-  const noticeMessage =
-    params.notice === "slot_created"
-      ? "Новый слот добавлен в календарь."
-      : params.notice === "slot_updated"
-        ? "Состояние слота обновлено."
-        : null;
-
-  return (
-    <AdminShell
-      title={<span className="admin-page-title">Календарь слотов</span>}
-      description="Здесь врач управляет доступными слотами для персональных ссылок на запись."
-    >
-      {noticeMessage ? (
-        <div className="notice">
-          <p>{noticeMessage}</p>
-        </div>
-      ) : null}
-
-      {params.error ? (
-        <div className="notice notice--danger">
-          <p>{params.message ?? "Не удалось обновить календарь. Проверьте данные и повторите попытку."}</p>
-        </div>
-      ) : null}
-
-      <section className="card stack">
-        <h2 className="admin-section-title">Добавить новый слот</h2>
-        <p className="muted">
-          Создавайте только те интервалы, которые реально готовы к записи через персональную ссылку.
-        </p>
-        <AdminCalendarCreateForm />
-      </section>
-
-      <section className="stack">
-        {slots.length === 0 ? <p className="muted">В календаре пока нет доступных слотов.</p> : null}
-        {slots.map((slot) => (
-          <article key={slot.id} className="card stack-sm">
-            <div className="card-meta">
-              <div className="stack-sm">
-                <strong>{formatDateTime(slot.startsAt)}</strong>
-                <p className="muted">Окончание: {formatDateTime(slot.endsAt)} · {slot.timezone}</p>
-              </div>
-              <span
-                className={`status ${
-                  slot.status === "HELD"
-                    ? "status--held"
-                    : slot.status === "BOOKED"
-                      ? "status--booked"
-                      : ""
-                }`.trim()}
-              >
-                {slot.status === "HELD"
-                  ? "Удержан пациентом"
-                  : slot.status === "BOOKED"
-                    ? "Забронирован"
-                    : mapSlotStatusLabel(slot.status)}
-              </span>
-            </div>
-
-            {slot.status === "HELD" && slot.heldOffer ? (
-              <div className="stack-sm">
-                <p className="muted">
-                  Статус: <strong>Удержан пациентом</strong>
-                </p>
-                <p className="muted">
-                  Пациент:{" "}
-                  <Link className="text-link" href={`/admin/applications/${slot.heldOffer.application.id}`}>
-                    {slot.heldOffer.application.patient.fullName}
-                  </Link>
-                </p>
-                <p className="muted">
-                  Заявка:{" "}
-                  <Link className="text-link" href={`/admin/applications/${slot.heldOffer.application.id}`}>
-                    {slot.heldOffer.application.displayNumber}
-                  </Link>
-                </p>
-              </div>
-            ) : null}
-
-            {slot.status === "BOOKED" && slot.bookedAppointment ? (
-              <div className="stack-sm">
-                <p className="muted">
-                  Статус: <strong>Забронирован</strong>
-                </p>
-                <p className="muted">
-                  Пациент:{" "}
-                  <Link className="text-link" href={`/admin/applications/${slot.bookedAppointment.application.id}`}>
-                    {slot.bookedAppointment.application.patient.fullName}
-                  </Link>
-                </p>
-                <p className="muted">
-                  Заявка:{" "}
-                  <Link className="text-link" href={`/admin/applications/${slot.bookedAppointment.application.id}`}>
-                    {slot.bookedAppointment.application.displayNumber}
-                  </Link>
-                </p>
-              </div>
-            ) : null}
-
-            {slot.blockedReason ? <p className="muted">Причина блокировки: {slot.blockedReason}</p> : null}
-            {slot.holdExpiresAt ? (
-              <p className="muted">Удержание действует до: {formatDateTime(slot.holdExpiresAt)}</p>
-            ) : null}
-
-            {slot.status === "AVAILABLE" ? (
-              <form action={`/api/admin/calendar/slots/${slot.id}`} className="stack-sm" method="post">
-                <input name="action" type="hidden" value="block" />
-                <input name="note" type="hidden" value="Слот временно заблокирован врачом." />
-                <button className="button button--secondary" type="submit">
-                  Заблокировать слот
-                </button>
-              </form>
-            ) : null}
-
-            {(slot.status === "BLOCKED" || slot.status === "HELD") && !slot.bookedAppointment ? (
-              <form action={`/api/admin/calendar/slots/${slot.id}`} className="stack-sm" method="post">
-                <input name="action" type="hidden" value="release" />
-                <button className="button button--secondary" type="submit">
-                  Вернуть в доступные
-                </button>
-              </form>
-            ) : null}
-          </article>
-        ))}
-      </section>
-    </AdminShell>
-  );
+  return <AdminShell
+    title={<span className="admin-page-title">Расписание врача</span>}
+    description="Открывайте удобное время для предварительных бесед и смотрите все записи на одном календаре."
+    actions={<a className="button button--secondary" href="#calendar-open-time">Открыть время</a>}
+  >
+    <div className="admin-calendar-page stack">
+      {params.notice === "slot_created" || params.notice === "slot_updated" ? <p className="notice" role="status">Расписание обновлено.</p> : null}
+      {params.error ? <p className="notice notice--danger" role="alert">Не удалось изменить расписание. Обновите страницу и проверьте состояние выбранного времени.</p> : null}
+      <AdminCalendarMonth calendar={calendar} today={today}/>
+      <AdminCalendarOpenForm key={`${calendar.month}-${calendar.timeZone}`} dates={calendar.days.filter(day => day.date >= today).map(day => day.date)} timeZone={calendar.timeZone}/>
+    </div>
+  </AdminShell>;
 }

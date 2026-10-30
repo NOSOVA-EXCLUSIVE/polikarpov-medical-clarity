@@ -24,6 +24,8 @@ import { env } from "@/lib/env/server";
 import { getStripe } from "@/lib/payments/stripe";
 import { hashOpaqueToken } from "@/lib/security/tokens";
 import { assertPreviewAllowedOperation } from "@/lib/preview/guard";
+import { assertCalendarIntervalFree, filterLegacySlotsForPatient, withCalendarTransaction } from "@/features/calendar/service";
+import { assertTimeZone } from "@/features/calendar/time";
 
 type StaffActor = {
   id: string;
@@ -206,75 +208,38 @@ async function resolveBookingAccess(rawToken: string): Promise<BookingAccess> {
 
 export async function releaseExpiredSlotHolds() {
   const now = new Date();
-  const expiredHeldSlots = await prisma.calendarSlot.findMany({
-    where: {
-      status: "HELD",
-      holdExpiresAt: { lte: now },
-      heldOfferId: { not: null },
-      bookedAppointmentId: null
-    },
-    select: {
-      id: true,
-      heldOfferId: true
+  return withCalendarTransaction(async (tx) => {
+    const expiredHeldSlots = await tx.calendarSlot.findMany({
+      where: { status: "HELD", holdExpiresAt: { lte: now }, heldOfferId: { not: null }, bookedAppointmentId: null },
+      select: { id: true, heldOfferId: true }
+    });
+    let releasedCount = 0;
+    for (const slot of expiredHeldSlots) {
+      const changed = await tx.calendarSlot.updateMany({
+        where: { id: slot.id, status: "HELD", holdExpiresAt: { lte: now }, heldOfferId: slot.heldOfferId, bookedAppointmentId: null },
+        data: { status: "AVAILABLE", holdExpiresAt: null, heldOfferId: null }
+      });
+      if (changed.count !== 1) continue;
+      releasedCount++;
+      if (slot.heldOfferId && !await tx.calendarSlot.findFirst({ where: { heldOfferId: slot.heldOfferId, status: "HELD" }, select: { id: true } })) {
+        await tx.offer.updateMany({ where: { id: slot.heldOfferId, status: "HELD" }, data: { status: "OPEN" } });
+      }
+      await tx.auditEvent.create({ data: { actorType: "SYSTEM", entityType: "SLOT", entityId: slot.id,
+        action: "slot_released", metadataJson: { reason: "hold_expired", offerId: slot.heldOfferId } } });
     }
+    return { releasedCount };
   });
-
-  if (expiredHeldSlots.length === 0) {
-    return { releasedCount: 0 };
-  }
-
-  const offerIds = [...new Set(expiredHeldSlots.map((slot) => slot.heldOfferId).filter(Boolean) as string[])];
-
-  await prisma.$transaction(async (tx) => {
-    await tx.calendarSlot.updateMany({
-      where: {
-        id: { in: expiredHeldSlots.map((slot) => slot.id) }
-      },
-      data: {
-        status: "AVAILABLE",
-        holdExpiresAt: null,
-        heldOfferId: null
-      }
-    });
-
-    await tx.offer.updateMany({
-      where: {
-        id: { in: offerIds },
-        status: "HELD"
-      },
-      data: {
-        status: "OPEN"
-      }
-    });
-  });
-
-  await Promise.all(
-    expiredHeldSlots.map((slot) =>
-      createSystemAudit({
-        entityType: "SLOT",
-        entityId: slot.id,
-        action: "slot_released",
-        metadataJson: {
-          reason: "hold_expired",
-          offerId: slot.heldOfferId ?? null
-        }
-      })
-    )
-  );
-
-  return {
-    releasedCount: expiredHeldSlots.length
-  };
 }
 
 async function expireOffer(offerId: string) {
   const now = new Date();
 
-  await prisma.$transaction(async (tx) => {
-    await tx.offer.update({
-      where: { id: offerId },
+  await withCalendarTransaction(async (tx) => {
+    const expired = await tx.offer.updateMany({
+      where: { id: offerId, status: { in: ["OPEN", "HELD"] }, expiresAt: { lte: now } },
       data: { status: "EXPIRED" }
     });
+    if (expired.count === 0) return;
 
     await tx.accessToken.updateMany({
       where: {
@@ -362,7 +327,7 @@ export async function getBookingPageContext(rawToken: string) {
     offer: access.offer,
     applicationDisplayNumber,
     patient: access.offer.application.patient,
-    slots: slots.map(mapSlotSummary),
+    slots: (await filterLegacySlotsForPatient(slots)).map(mapSlotSummary),
     heldSlot: currentHeldSlot ? mapSlotSummary(currentHeldSlot) : null,
     appointment: appointment
       ? {
@@ -381,7 +346,12 @@ export async function holdBookingSlot(rawToken: string, slotId: string) {
   const access = await resolveBookingAccess(rawToken);
   const nextHoldExpiresAt = holdExpiresAt();
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await withCalendarTransaction(async (tx) => {
+    const currentOffer = await tx.offer.findUnique({ where: { id: access.offer.id }, select: { status: true, expiresAt: true } });
+    const currentAccess = await tx.accessToken.findFirst({ where: { id: access.tokenId, purpose: "BOOKING", revokedAt: null, expiresAt: { gt: new Date() } }, select: { id: true } });
+    if (!currentAccess || !currentOffer || !["OPEN", "HELD"].includes(currentOffer.status) || currentOffer.expiresAt <= new Date()) {
+      throw paymentError("Ссылка или предложение больше недоступны.", 409);
+    }
     const targetSlot = await tx.calendarSlot.findUnique({
       where: { id: slotId },
       select: {
@@ -414,6 +384,8 @@ export async function holdBookingSlot(rawToken: string, slotId: string) {
     if (targetSlot.status === "HELD" && targetSlot.heldOfferId !== access.offer.id) {
       throw paymentError("Этот слот сейчас удерживается другим пациентом. Пожалуйста, выберите другой.", 409);
     }
+
+    await assertCalendarIntervalFree(tx, { startsAt: targetSlot.startsAt, endsAt: targetSlot.endsAt, excludeLegacySlotId: targetSlot.id });
 
     await tx.calendarSlot.updateMany({
       where: {
@@ -517,7 +489,9 @@ export async function createStripeCheckout(rawToken: string, slotId: string) {
   }
 
   try {
-    const payment = await prisma.$transaction(async (tx) => {
+    const payment = await withCalendarTransaction(async (tx) => {
+      const currentSlot = await tx.calendarSlot.findFirst({ where: { id: hold.slot.id, status: "HELD", heldOfferId: access.offer.id, bookedAppointmentId: null, holdExpiresAt: { gt: new Date() } }, select: { id: true } });
+      if (!currentSlot) throw paymentError("Удержание слота уже закончилось. Выберите время снова.", 409);
       if (checkoutExpiresAt > hold.heldUntil) {
         const extendedHold = await tx.calendarSlot.updateMany({
           where: {
@@ -676,6 +650,8 @@ async function ensureAppointmentForPayment(tx: Prisma.TransactionClient, payment
     throw paymentError("Для оплаты не найден удержанный слот.", 409);
   }
 
+  await assertCalendarIntervalFree(tx, { startsAt: heldSlot.startsAt, endsAt: heldSlot.endsAt, excludeLegacySlotId: heldSlot.id });
+
   return tx.appointment.create({
     data: {
       applicationId: payment.applicationId,
@@ -702,7 +678,7 @@ export async function finalizeStripeCheckoutSession(sessionId: string) {
 
   const now = new Date();
 
-  await prisma.$transaction(async (tx) => {
+  await withCalendarTransaction(async (tx) => {
     const paymentRecord = await tx.payment.findUnique({
       where: { id: payment.id },
       include: {
@@ -820,13 +796,14 @@ export async function markStripeCheckoutFailed(
     return payment;
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.payment.update({
-      where: { id: payment.id },
+  await withCalendarTransaction(async (tx) => {
+    const changed = await tx.payment.updateMany({
+      where: { id: payment.id, status: { not: "PAID" } },
       data: {
         status: nextStatus
       }
     });
+    if (changed.count !== 1) return;
 
     await tx.offer.updateMany({
       where: {
@@ -995,41 +972,16 @@ export async function createCalendarSlot(input: {
   }
 
   const endsAt = new Date(input.startsAt.getTime() + input.durationMinutes * 60 * 1000);
-
-  const overlap = await prisma.calendarSlot.findFirst({
-    where: {
-      startsAt: { lt: endsAt },
-      endsAt: { gt: input.startsAt }
-    },
-    select: { id: true }
+  assertTimeZone(input.timezone);
+  if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0 || input.durationMinutes > 1440) throw paymentError("Проверьте длительность слота.", 400);
+  return withCalendarTransaction(async (tx) => {
+    if (input.startsAt <= new Date()) throw paymentError("Нельзя создать слот в прошлом.", 409);
+    await assertCalendarIntervalFree(tx, { startsAt: input.startsAt, endsAt });
+    const slot = await tx.calendarSlot.create({ data: { startsAt: input.startsAt, endsAt, timezone: input.timezone, status: "AVAILABLE" } });
+    await tx.auditEvent.create({ data: { actorType: "USER", actorUserId: input.actor.id, entityType: "SLOT", entityId: slot.id,
+      action: "slot_created", metadataJson: { startsAt: slot.startsAt.toISOString(), endsAt: slot.endsAt.toISOString(), timezone: slot.timezone } } });
+    return slot;
   });
-
-  if (overlap) {
-    throw paymentError("Этот интервал пересекается с уже существующим слотом.", 409);
-  }
-
-  const slot = await prisma.calendarSlot.create({
-    data: {
-      startsAt: input.startsAt,
-      endsAt,
-      timezone: input.timezone,
-      status: "AVAILABLE"
-    }
-  });
-
-  await createStaffAudit({
-    actor: input.actor,
-    entityType: "SLOT",
-    entityId: slot.id,
-    action: "slot_created",
-    metadataJson: {
-      startsAt: slot.startsAt.toISOString(),
-      endsAt: slot.endsAt.toISOString(),
-      timezone: slot.timezone
-    }
-  });
-
-  return slot;
 }
 
 export async function updateCalendarSlotStatus(input: {
@@ -1038,77 +990,29 @@ export async function updateCalendarSlotStatus(input: {
   action: "block" | "release";
   note?: string;
 }) {
-  const slot = await prisma.calendarSlot.findUnique({
-    where: { id: input.slotId }
-  });
-
-  if (!slot) {
-    throw paymentError("Слот не найден.", 404);
-  }
-
-  if (input.action === "block") {
-    if (slot.status !== "AVAILABLE") {
-      throw paymentError("Заблокировать можно только доступный слот.", 409);
+  return withCalendarTransaction(async (tx) => {
+    const slot = await tx.calendarSlot.findUnique({ where: { id: input.slotId } });
+    if (!slot) throw paymentError("Слот не найден.", 404);
+    if (slot.bookedAppointmentId || slot.status === "BOOKED") throw paymentError("Подтверждённую запись нельзя освободить как простой слот.", 409);
+    if (input.action === "block") {
+      if (slot.status !== "AVAILABLE") throw paymentError("Заблокировать можно только доступный слот.", 409);
+      const changed = await tx.calendarSlot.updateMany({ where: { id: slot.id, status: "AVAILABLE", bookedAppointmentId: null },
+        data: { status: "BLOCKED", blockedReason: input.note?.trim() || "Слот заблокирован вручную." } });
+      if (changed.count !== 1) throw paymentError("Состояние слота изменилось.", 409);
+      await tx.auditEvent.create({ data: { actorType: "USER", actorUserId: input.actor.id, entityType: "SLOT", entityId: slot.id,
+        action: "slot_blocked", metadataJson: { note: input.note?.trim() || "Слот заблокирован вручную." } } });
+    } else {
+      if (slot.status !== "BLOCKED" && slot.status !== "HELD") throw paymentError("Освободить можно только заблокированный или удержанный слот.", 409);
+      await assertCalendarIntervalFree(tx, { startsAt: slot.startsAt, endsAt: slot.endsAt, excludeLegacySlotId: slot.id });
+      const changed = await tx.calendarSlot.updateMany({ where: { id: slot.id, status: slot.status, heldOfferId: slot.heldOfferId, bookedAppointmentId: null },
+        data: { status: "AVAILABLE", blockedReason: null, holdExpiresAt: null, heldOfferId: null } });
+      if (changed.count !== 1) throw paymentError("Состояние слота изменилось.", 409);
+      if (slot.heldOfferId) await tx.offer.updateMany({ where: { id: slot.heldOfferId, status: "HELD" }, data: { status: "OPEN" } });
+      await tx.auditEvent.create({ data: { actorType: "USER", actorUserId: input.actor.id, entityType: "SLOT", entityId: slot.id,
+        action: "slot_released", metadataJson: { previousStatus: slot.status } } });
     }
-
-    const updated = await prisma.calendarSlot.update({
-      where: { id: slot.id },
-      data: {
-        status: "BLOCKED",
-        blockedReason: input.note?.trim() || "Слот заблокирован вручную."
-      }
-    });
-
-    await createStaffAudit({
-      actor: input.actor,
-      entityType: "SLOT",
-      entityId: updated.id,
-      action: "slot_blocked",
-      metadataJson: {
-        note: updated.blockedReason
-      }
-    });
-
-    return updated;
-  }
-
-  if (slot.status !== "BLOCKED" && slot.status !== "HELD") {
-    throw paymentError("Освободить можно только заблокированный или удержанный слот.", 409);
-  }
-
-  const updated = await prisma.calendarSlot.update({
-    where: { id: slot.id },
-    data: {
-      status: "AVAILABLE",
-      blockedReason: null,
-      holdExpiresAt: null,
-      heldOfferId: null
-    }
+    return tx.calendarSlot.findUniqueOrThrow({ where: { id: slot.id } });
   });
-
-  if (slot.heldOfferId) {
-    await prisma.offer.updateMany({
-      where: {
-        id: slot.heldOfferId,
-        status: "HELD"
-      },
-      data: {
-        status: "OPEN"
-      }
-    });
-  }
-
-  await createStaffAudit({
-    actor: input.actor,
-    entityType: "SLOT",
-    entityId: updated.id,
-    action: "slot_released",
-    metadataJson: {
-      previousStatus: slot.status
-    }
-  });
-
-  return updated;
 }
 
 export function mapSlotStatusLabel(status: SlotStatus) {

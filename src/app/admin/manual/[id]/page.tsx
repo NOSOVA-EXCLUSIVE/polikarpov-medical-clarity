@@ -8,6 +8,7 @@ import { getManualContext } from "@/features/manual-v21/service";
 import { manualPhaseLabels } from "@/features/manual-v21/presentation";
 import { prisma } from "@/lib/db/prisma";
 import { readServiceSelectionSnapshot } from "@/features/questionnaire/service-selection";
+import { getApplicationDisplayNumber } from "@/features/applications/display-number";
 
 export const dynamic = "force-dynamic";
 const date = (value: Date | null) => value ? value.toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) + " МСК" : "—";
@@ -18,10 +19,12 @@ export default async function ManualAdminPage({ params }: { params: Promise<{ id
   const context = await getManualContext(id).catch(() => null);
   if (!context) notFound();
   const agreement = context.currentAgreement;
+  const displayNumber = await getApplicationDisplayNumber({ applicationId: context.applicationId }) ?? context.reference;
   const receipt = await prisma.auditEvent.findFirst({ where: { applicationId: context.applicationId, action: "service_selection_recorded" }, orderBy: { createdAt: "asc" }, select: { metadataJson: true } });
   const organizational = readServiceSelectionSnapshot(receipt?.metadataJson)?.kind === "organizational_selection";
-  return <AdminShell title={`Обращение ${context.reference}`} description="Ручной маршрут v2.1. Онлайн-оплата отключена.">
+  return <AdminShell title={`Обращение ${displayNumber}`} description="Запись на предварительную беседу, персональное предложение и кабинет пациента.">
     <Link className="text-link" href={`/admin/applications/${context.applicationId}`}>← Анкета и исходные материалы</Link>
+    <Link className="text-link" href="/admin/calendar">Календарь месяца →</Link>
     <section className="card stack">
       <h2>Порядок работы</h2>
       <p>Предварительная беседа с врачом → окончательное предложение → принятие пациентом → фиксация фактической оплаты → отдельное начало работы врачом.</p>
@@ -45,6 +48,7 @@ export default async function ManualAdminPage({ params }: { params: Promise<{ id
       <p>Ответы — до трёх рабочих дней. После завершения история доступна 30 календарных дней.</p>
     </section> : null}
     <ManualAdminActions applicationId={context.applicationId} caseId={context.id} phase={context.phase}
+      slotId={context.preliminarySlot?.id}
       organizational={organizational}
       doctor={actor.role === "DOCTOR"} agreementId={agreement?.id ?? null} serviceId={agreement?.serviceId ?? null}
       contacts={context.contacts.map(c => ({ id: c.id, ordinal: c.ordinal, status: c.status }))}/>

@@ -27,6 +27,7 @@ import {
 import { syncThreadLifecycle } from "@/features/messages/service";
 import { decryptSensitiveField } from "@/lib/security/encryption";
 import { createOpaqueToken, hashOpaqueToken } from "@/lib/security/tokens";
+import { releasePreliminarySlot, withCalendarTransaction } from "@/features/calendar/service";
 
 type StaffActor = {
   id: string;
@@ -765,12 +766,24 @@ export async function rejectApplication(input: {
       submittedAt: existing.submittedAt
     })) ?? existing.id;
 
-  const application = await prisma.application.update({
-    where: { id: input.applicationId },
-    data: {
-      status: "REJECTED",
-      reviewedAt: new Date()
+  const application = await withCalendarTransaction(async tx => {
+    const user = await tx.user.findUnique({ where: { id: input.actor.id }, select: { isActive: true, role: true } });
+    if (!user?.isActive || !["DOCTOR", "ADMIN"].includes(user.role)) throw new Error("STAFF_ACCESS_DENIED");
+    const manual = await tx.manualCase.findUnique({ where: { applicationId: input.applicationId }, include: { preliminarySlot: true } });
+    if (manual && !manual.callCompletedAt) {
+      const released = await releasePreliminarySlot(tx, { caseId: manual.id });
+      if (released || manual.callStartsAt) {
+        await tx.auditEvent.create({ data: { actorType: "USER", actorUserId: input.actor.id,
+          applicationId: input.applicationId, entityType: "APPLICATION", entityId: input.applicationId,
+          action: "preliminary_call_cancelled_on_rejection", metadataJson: { caseId: manual.id,
+            slotId: released?.id ?? null, priorStartsAt: manual.callStartsAt?.toISOString() ?? null,
+            priorEndsAt: manual.callEndsAt?.toISOString() ?? null, reason: input.note } } });
+        await tx.manualCase.update({ where: { id: manual.id }, data: { version: { increment: 1 },
+          phase: "REVIEW", callStartsAt: null, callEndsAt: null, callTimezone: null,
+          callRequestedAt: null, callConfirmedAt: null } });
+      }
     }
+    return tx.application.update({ where: { id: input.applicationId }, data: { status: "REJECTED", reviewedAt: new Date() } });
   });
 
   await createAuditLog({

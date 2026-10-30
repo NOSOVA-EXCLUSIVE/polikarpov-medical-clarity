@@ -3,8 +3,10 @@
 import { createContext, useContext, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { paidServicesV21 } from "@/features/products/services-v21";
+import { PreliminarySlotOptions } from "@/components/manual/preliminary-slot-options";
 
 type Props = { applicationId: string; caseId?: string; phase?: string; doctor?: boolean;
+  slotId?: string;
   organizational?: boolean;
   agreementId?: string | null; serviceId?: string | null;
   contacts?: { id: string; ordinal: number; status: string }[] };
@@ -13,6 +15,10 @@ const errors: Record<string, string> = {
   DOCTOR_ACTION_REQUIRED: "Это действие подтверждает врач. Войдите в учётную запись врача.",
   FULL_QUESTIONNAIRE_REQUIRED: "Для платной услуги нужна полная анкета с согласиями. Организационного запроса недостаточно.",
   CALL_SLOT_CONFLICT: "На это время уже подтверждена другая беседа или консультация.",
+  CALL_TIME_UNAVAILABLE: "Выбранное время уже занято. Обновите расписание и выберите другой интервал.",
+  CALENDAR_SLOT_UNAVAILABLE: "Выбранное время уже занято. Обновите расписание и выберите другой интервал.",
+  CALENDAR_SLOT_CHANGED: "Запись изменилась. Обновите страницу и проверьте новое время перед подтверждением.",
+  CALENDAR_INTERVAL_OCCUPIED: "Это время пересекается с другой записью. Выберите свободный интервал.",
   CATALOG_AMOUNT_MISMATCH: "Стоимость не соответствует каталогу и подтверждённому снижению цены.",
   DISCOUNT_SOURCE_INVALID: "Не подтверждены условия снижения цены после первичной оценки.",
   DISCOUNT_ALREADY_USED: "Снижение цены по этой первичной оценке уже использовано.",
@@ -39,6 +45,7 @@ export function ManualAdminActions(props: Props) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [accessUrl, setAccessUrl] = useState("");
+  const [createdCaseId, setCreatedCaseId] = useState("");
   const [selectedService, setSelectedService] = useState(props.serviceId ?? paidServicesV21[0].id);
   const service = paidServicesV21.find(s => s.id === selectedService)!;
   const contacts = props.contacts ?? [];
@@ -50,11 +57,6 @@ export function ManualAdminActions(props: Props) {
     const values = new FormData(event.currentTarget);
     const data: Record<string, unknown> = {};
     for (const [key, value] of values) if (typeof value === "string" && value) data[key] = value;
-    if (action === "request-call") {
-      data.startsAt = new Date(String(data.startsAt)).toISOString();
-      data.endsAt = new Date(String(data.endsAt)).toISOString();
-      data.timezone = zone;
-    }
     if (action === "record-payment") {
       data.receivedAt = new Date(String(data.receivedAt)).toISOString();
       data.confirmed = data.confirmed === "on";
@@ -75,11 +77,12 @@ export function ManualAdminActions(props: Props) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.code ?? "MANUAL_ACTION_FAILED");
       if (result.accessUrl) setAccessUrl(result.accessUrl);
+      if (result.caseId) setCreatedCaseId(result.caseId);
       setNotice(result.delivery === "captured" ? "Ссылка создана. Тестовое письмо перехвачено, не доставлено." :
         result.delivery === "sent" ? "Персональная ссылка отправлена пациенту." :
         result.delivery === "failed" ? "Ссылка создана, письмо не отправлено. Передайте её пациенту согласованным способом." : "Изменение сохранено.");
-      if (action === "create" && result.caseId) router.push(`/admin/manual/${result.caseId}`);
-      else router.refresh();
+      // Keep the new private link and delivery result visible after the first send.
+      if (action !== "create") router.refresh();
     } catch (error) {
       const code = error instanceof Error ? error.message : "MANUAL_ACTION_FAILED";
       setNotice(errors[code] ?? "Действие не выполнено: проверьте этап обращения и обязательные поля. Состояние можно уточнить после обновления страницы.");
@@ -87,27 +90,37 @@ export function ManualAdminActions(props: Props) {
   }
   const state = { busy, doctor: Boolean(props.doctor), submit };
   if (!props.caseId) return <ActionContext.Provider value={state}><div className="stack">
-    <p>Для каталога v2.1 используется отдельный ручной маршрут. Условия прежних обращений сохраняются.</p>
-    <Form action="create" title="Подготовить ручное обращение v2.1"/>
+    <p>Пациент получит персональный вход и сможет выбрать время предварительной беседы из открытых вами интервалов.</p>
+    <Form action="create" title="Отправить пациенту ссылку для записи"><input type="hidden" name="sendLink" value="on"/></Form>
     {notice ? <p role="status" className="notice">{notice}</p> : null}
+    {createdCaseId ? <a className="button button--secondary" href={`/admin/manual/${createdCaseId}`}>Открыть запись и кабинет пациента</a> : null}
+    {accessUrl ? <div className="notice stack-sm"><strong>Персональная ссылка пациента</strong>
+      <input aria-label="Персональная ссылка пациента" value={accessUrl} readOnly onFocus={event => event.currentTarget.select()}/>
+      <small>Ссылка конфиденциальна. Не пересылайте её третьим лицам.</small></div> : null}
   </div></ActionContext.Provider>;
   return <ActionContext.Provider value={state}><section className="stack">
     {notice ? <p role="status" className="notice">{notice}</p> : null}
-    <Form action="reissue-access" title="Создать новую персональную ссылку">
+    <Form action="reissue-access" title="Отправить пациенту ссылку для записи">
       <p>Ссылка предназначена только владельцу обращения. Прежние ссылки будут отозваны. Не пересылайте её третьим лицам.</p>
-      <label><input type="checkbox" name="sendLink"/> Отправить ссылку на email пациента</label>
+      <input type="hidden" name="sendLink" value="on"/>
     </Form>
     {accessUrl ? <div className="notice stack-sm"><strong>Новая персональная ссылка</strong>
       <input aria-label="Персональная ссылка пациента" value={accessUrl} readOnly onFocus={e => e.currentTarget.select()}/>
       <small>Ссылка доступа конфиденциальна. Она не добавляется в адрес страницы администратора.</small></div> : null}
     {["REVIEW", "CALL_REQUESTED", "CALL_CONFIRMED"].includes(props.phase ?? "") ? <>
-      <Form action="request-call" title="Предложить или перенести предварительную беседу с врачом">
-        <p>Время на вашем устройстве: {zone}. После изменения времени требуется новое подтверждение врача.</p>
-        <label className="field"><span>Начало</span><input name="startsAt" type="datetime-local" required/></label>
-        <label className="field"><span>Окончание</span><input name="endsAt" type="datetime-local" required/></label>
+      <Form action="request-call" title="Сохранить выбранное время беседы">
+        <p>Сначала откройте интервалы в календаре. При переносе прежняя бронь освобождается только после сохранения новой.</p>
+        <PreliminarySlotOptions staffCaseId={props.caseId}/>
       </Form>
-      {props.phase === "CALL_REQUESTED" ? <Form action="confirm-call" title="Подтвердить время беседы" doctorOnly/> : null}
+      <a className="text-link" href="/admin/calendar">Открыть календарь месяца →</a>
+      {props.phase === "CALL_REQUESTED" ? <Form action="confirm-call" title="Подтвердить время беседы" doctorOnly>
+        {props.slotId ? <input type="hidden" name="slotId" value={props.slotId}/> : null}
+      </Form> : null}
       {props.phase === "CALL_CONFIRMED" ? <Form action="complete-call" title="Подтвердить, что беседа проведена" doctorOnly/> : null}
+      {["CALL_REQUESTED", "CALL_CONFIRMED"].includes(props.phase ?? "") ? <Form action="cancel-call" title="Отменить запись и освободить время" doctorOnly>
+        {props.slotId ? <input type="hidden" name="slotId" value={props.slotId}/> : null}
+        <label className="field"><span>Причина отмены для истории обращения</span><input name="reason" minLength={3} maxLength={1000} required/></label>
+      </Form> : null}
     </> : null}
     {!props.organizational && ["REVIEW", "CALL_REQUESTED"].includes(props.phase ?? "") ? <Form action="link-organizational-call" title="Учесть уже проведённую организационную беседу" doctorOnly>
       <p>Используйте только после полной новой анкеты пациента, если тот же вопрос уже уточнён на организационной беседе. Исходное обращение сохраняется.</p>

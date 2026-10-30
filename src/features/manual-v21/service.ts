@@ -6,8 +6,9 @@ import { prisma } from "@/lib/db/prisma";
 import { createOpaqueToken, hashOpaqueToken } from "@/lib/security/tokens";
 import { getServiceV21 } from "@/features/products/services-v21";
 import { readServiceSelectionSnapshot } from "@/features/questionnaire/service-selection";
-import { addCalendarDays, canOpenManualContact, getManualPolicy, isManualAccessOpen, parseCallInterval, parseManualPolicy } from "./policy";
+import { addCalendarDays, canOpenManualContact, getManualPolicy, isManualAccessOpen, parseManualPolicy } from "./policy";
 import { manualAgreementSchema, manualCallSchema, manualPatientSchemas, manualPaymentSchema, manualStaffSchemas } from "./schemas";
+import { confirmPreliminarySlot, releasePreliminarySlot, reservePreliminarySlot, withCalendarTransaction } from "@/features/calendar/service";
 
 type Actor = { id: string; role?: string; email?: string; name?: string };
 type Tx = Prisma.TransactionClient;
@@ -18,6 +19,7 @@ const caseInclude = {
   receipts: { orderBy: { createdAt: "asc" as const } },
   contacts: { orderBy: { ordinal: "asc" as const } },
   messages: { orderBy: { createdAt: "asc" as const } },
+  preliminarySlot: true,
   deliverables: { where: { status: "READY" }, orderBy: { createdAt: "asc" as const } }
 } as const;
 
@@ -116,11 +118,13 @@ async function lockedCase(tx: Tx, caseId: string) {
 }
 
 async function ensureNoCallConflict(tx: Tx, caseId: string, startsAt: Date, endsAt: Date) {
-  const [manual, legacy] = await Promise.all([
-    tx.manualCase.findFirst({ where: { id: { not: caseId }, callConfirmedAt: { not: null }, callCompletedAt: null, callStartsAt: { lt: endsAt }, callEndsAt: { gt: startsAt } }, select: { id: true } }),
-    tx.appointment.findFirst({ where: { status: "SCHEDULED", startsAt: { lt: endsAt }, endsAt: { gt: startsAt } }, select: { id: true } })
-  ]);
-  if (manual || legacy) fail("CALL_TIME_UNAVAILABLE");
+  await confirmPreliminarySlot(tx, { caseId, startsAt, endsAt });
+}
+
+function manualTransaction<T>(action: string, work: (tx: Tx) => Promise<T>) {
+  return ["request-call", "confirm-call", "cancel-call", "link-organizational-call"].includes(action)
+    ? withCalendarTransaction(work)
+    : prisma.$transaction(work, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 async function addMessage(tx: Tx, record: { id: string }, body: string, role: string, senderUserId?: string, contactId?: string, kind: "MESSAGE" | "OPENING" | "REPLY" | "RESULT" = "MESSAGE") {
@@ -136,7 +140,7 @@ export async function staffManualAction(input: { caseId: string; actor: Actor; a
   if (!schema) fail("MANUAL_ACTION_INVALID");
   const data = schema.parse(input.data ?? {});
   const now = new Date();
-  return prisma.$transaction(async (tx) => {
+  return manualTransaction(input.action, async (tx) => {
     const actor = await requireActor(tx, input.actor);
     const record = await lockedCase(tx, input.caseId);
     const agreement = record.currentAgreement;
@@ -162,6 +166,7 @@ export async function staffManualAction(input: { caseId: string; actor: Actor; a
         if (sourceSelection?.kind !== "organizational_selection" || sourceSelection.id !== "service-selection") fail("ORGANIZATIONAL_CALL_SOURCE_REQUIRED");
         if (!source.callCompletedAt || !source.callConfirmedAt || !source.callStartsAt || !source.callEndsAt || !source.callTimezone) fail("COMPLETED_ORGANIZATIONAL_CALL_REQUIRED");
         if (source.application.patient.email.trim().toLowerCase() !== record.application.patient.email.trim().toLowerCase()) fail("ORGANIZATIONAL_CALL_PATIENT_MISMATCH");
+        await releasePreliminarySlot(tx, { caseId: record.id });
         await tx.manualCase.update({ where: { id: record.id }, data: {
           phase: "CALL_COMPLETED", callRequestedAt: source.callRequestedAt, callConfirmedAt: source.callConfirmedAt,
           callCompletedAt: source.callCompletedAt, callStartsAt: source.callStartsAt, callEndsAt: source.callEndsAt,
@@ -173,17 +178,36 @@ export async function staffManualAction(input: { caseId: string; actor: Actor; a
       case "request-call": {
         if (!["REVIEW", "CALL_REQUESTED", "CALL_CONFIRMED"].includes(record.phase)) fail("CALL_STAGE_CLOSED");
         const call = manualCallSchema.parse(data);
-        const interval = parseCallInterval({ startsAt: call.startsAt!, endsAt: call.endsAt!, timezone: call.timezone! });
+        if (record.preliminarySlot?.id === call.slotId && ["PENDING", "CONFIRMED"].includes(record.preliminarySlot.status)) {
+          auditDetails = { slotId: call.slotId, unchanged: true };
+          break;
+        }
+        const interval = await reservePreliminarySlot(tx, { caseId: record.id, slotId: call.slotId, now });
         auditDetails = { startsAt: interval.startsAt.toISOString(), endsAt: interval.endsAt.toISOString(), timezone: interval.timezone, priorStartsAt: record.callStartsAt?.toISOString() ?? null, priorConfirmedAt: record.callConfirmedAt?.toISOString() ?? null };
         await tx.manualCase.update({ where: { id: record.id }, data: { phase: "CALL_REQUESTED", callStartsAt: interval.startsAt, callEndsAt: interval.endsAt, callTimezone: interval.timezone, callRequestedAt: now, callConfirmedAt: null, callCompletedAt: null } });
         break;
       }
       case "confirm-call": {
         requireDoctor(actor);
+        const values = manualStaffSchemas["confirm-call"].parse(data);
+        if ((record.preliminarySlot && values.slotId !== record.preliminarySlot.id) || (!record.preliminarySlot && values.slotId)) fail("CALENDAR_SLOT_CHANGED");
         if (record.phase === "CALL_CONFIRMED") break;
         if (record.phase !== "CALL_REQUESTED" || !record.callStartsAt || !record.callEndsAt) fail("CALL_REQUEST_REQUIRED");
         await ensureNoCallConflict(tx, record.id, record.callStartsAt, record.callEndsAt);
         await tx.manualCase.update({ where: { id: record.id }, data: { phase: "CALL_CONFIRMED", callConfirmedAt: now } });
+        break;
+      }
+      case "cancel-call": {
+        requireDoctor(actor);
+        if (!["REVIEW", "CALL_REQUESTED", "CALL_CONFIRMED"].includes(record.phase) || !record.callStartsAt) fail("CALL_REQUEST_REQUIRED");
+        const values = manualStaffSchemas["cancel-call"].parse(data);
+        if (record.preliminarySlot && values.slotId !== record.preliminarySlot.id) fail("CALENDAR_SLOT_CHANGED");
+        const released = await releasePreliminarySlot(tx, { caseId: record.id, slotId: values.slotId });
+        auditDetails = { slotId: released?.id ?? null, reason: values.reason,
+          priorStartsAt: record.callStartsAt.toISOString(), priorEndsAt: record.callEndsAt?.toISOString() ?? null,
+          priorConfirmedAt: record.callConfirmedAt?.toISOString() ?? null };
+        await tx.manualCase.update({ where: { id: record.id }, data: { phase: "REVIEW", callRequestedAt: null,
+          callConfirmedAt: null, callCompletedAt: null, callStartsAt: null, callEndsAt: null, callTimezone: null } });
         break;
       }
       case "complete-call": {
@@ -321,7 +345,7 @@ export async function staffManualAction(input: { caseId: string; actor: Actor; a
     }
     await event(tx, record, input.action.replaceAll("-", "_"), actor.id, auditDetails);
     return tx.manualCase.findUniqueOrThrow({ where: { id: record.id }, include: caseInclude });
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  });
 }
 
 export async function patientManualAction(input: { caseId: string; grantId: string; action: string; data?: unknown }) {
@@ -329,7 +353,7 @@ export async function patientManualAction(input: { caseId: string; grantId: stri
   if (!schema) fail("MANUAL_ACTION_INVALID");
   const data = schema.parse(input.data ?? {});
   const now = new Date();
-  return prisma.$transaction(async (tx) => {
+  return manualTransaction(input.action, async (tx) => {
     await checkGrant(tx, input);
     const record = await lockedCase(tx, input.caseId);
     if (["ARCHIVED", "REJECTED"].includes(record.application.status)) fail("APPLICATION_NOT_ELIGIBLE");
@@ -339,7 +363,7 @@ export async function patientManualAction(input: { caseId: string; grantId: stri
       case "request-call": {
         if (!["REVIEW", "CALL_REQUESTED"].includes(record.phase)) fail("CALL_STAGE_CLOSED");
         const call = manualCallSchema.parse(data);
-        const interval = parseCallInterval({ startsAt: call.startsAt!, endsAt: call.endsAt!, timezone: call.timezone! });
+        const interval = await reservePreliminarySlot(tx, { caseId: record.id, slotId: call.slotId, now });
         auditDetails = { startsAt: interval.startsAt.toISOString(), endsAt: interval.endsAt.toISOString(), timezone: interval.timezone, priorStartsAt: record.callStartsAt?.toISOString() ?? null };
         if (interval.startsAt <= now) fail("FUTURE_CALL_REQUIRED");
         await tx.manualCase.update({ where: { id: record.id }, data: { phase: "CALL_REQUESTED", callStartsAt: interval.startsAt, callEndsAt: interval.endsAt, callTimezone: interval.timezone, callRequestedAt: now, callConfirmedAt: null } });
@@ -374,5 +398,5 @@ export async function patientManualAction(input: { caseId: string; grantId: stri
     }
     await event(tx, record, input.action.replaceAll("-", "_"), undefined, auditDetails);
     return tx.manualCase.findUniqueOrThrow({ where: { id: record.id }, include: caseInclude });
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  });
 }

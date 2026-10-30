@@ -94,6 +94,13 @@ enum SlotStatus {
   BLOCKED
 }
 
+enum PreliminarySlotStatus {
+  AVAILABLE
+  PENDING
+  CONFIRMED
+  BLOCKED
+}
+
 enum AppointmentStatus {
   SCHEDULED
   COMPLETED
@@ -301,8 +308,24 @@ model ManualCase {
   messages             ManualMessage[]
   grants               ManualGrant[]
   deliverables         ManualDeliverable[]
+  preliminarySlot      PreliminarySlot?
 
   @@index([phase, createdAt])
+}
+
+// Free preliminary conversations have no Offer, Appointment or Payment dependency.
+model PreliminarySlot {
+  id        String @id @default(cuid())
+  startsAt  DateTime
+  endsAt    DateTime
+  timezone  String
+  status    PreliminarySlotStatus @default(AVAILABLE)
+  caseId    String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  case      ManualCase? @relation(fields: [caseId], references: [id], onDelete: Restrict)
+
+  @@index([status, startsAt])
 }
 
 model ManualAgreement {

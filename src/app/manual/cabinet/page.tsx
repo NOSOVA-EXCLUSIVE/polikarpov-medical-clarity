@@ -4,6 +4,7 @@ import { ManualDeliverableViewer } from "@/components/manual/deliverable-viewer"
 import { requireManualPatient } from "@/features/manual-v21/access";
 import { getManualContext } from "@/features/manual-v21/service";
 import { addCalendarDays, canOpenManualContact, parseManualPolicy } from "@/features/manual-v21/policy";
+import { getApplicationDisplayNumber } from "@/features/applications/display-number";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,8 @@ const PHASES: Record<string, string> = {
   OFFERED: "Персональное предложение готово", ACCEPTED: "Условия приняты",
   PAID: "Оплата подтверждена, ожидается начало работы", ACTIVE: "Работа начата", COMPLETED: "Работа завершена"
 };
-function date(value: Date | null | undefined) {
-  return value ? new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Moscow" }).format(value) + " (МСК)" : "—";
+function date(value: Date | null | undefined, timeZone = "Europe/Moscow") {
+  return value ? new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short", timeZone }).format(value) + ` (${timeZone})` : "—";
 }
 function TextForm({ action, title, children, contactId }: {
   action: "message" | "open-contact"; title: string; children?: ReactNode; contactId?: string;
@@ -44,6 +45,7 @@ export default async function ManualCabinetPage({ searchParams }: {
   }
   const flash = (await searchParams) || {};
   const agreement = context.currentAgreement;
+  const displayNumber = await getApplicationDisplayNumber({ applicationId: context.applicationId }) ?? context.reference;
   const open = context.contacts.find((contact) => contact.status === "OPEN");
   const done = context.contacts.filter((contact) => contact.status === "ANSWERED").length;
   const policy = agreement ? parseManualPolicy(agreement.policyJson) : null;
@@ -54,7 +56,7 @@ export default async function ManualCabinetPage({ searchParams }: {
   const scope = Array.isArray(agreement?.scopeJson) ? agreement.scopeJson.filter((item): item is string => typeof item === "string") : [];
   return <main className="section functional-page"><div className="container stack" style={{ overflowWrap: "anywhere" }}>
     <section className="card stack">
-      <p className="eyebrow">Личный кабинет · обращение {context.reference}</p>
+      <p className="eyebrow">Личный кабинет · обращение {displayNumber}</p>
       <h1>{agreement?.title || "Уточнение формата помощи"}</h1>
       <p>{PHASES[context.phase] || context.phase}</p>
       <p className="muted">Персональная ссылка для входа действует одни сутки. Если она истекла, врач может выдать новую
@@ -62,7 +64,7 @@ export default async function ManualCabinetPage({ searchParams }: {
       <p className="muted">Кабинет принадлежит только этому обращению. При экстренных симптомах обратитесь за очной помощью.</p>
       {flash.notice === "saved" ? <p className="notice" role="status">Изменения сохранены.</p> : null}
       <div className="two-column">
-        <article><strong>Предварительная беседа с врачом</strong><p>{date(context.callStartsAt)}</p>
+        <article><strong>Предварительная беседа с врачом</strong><p>{date(context.callStartsAt, context.callTimezone || "Europe/Moscow")}</p>
           <p className="muted">{context.callConfirmedAt ? "Время подтверждено врачом." : "Время окончательно подтверждает врач."}</p></article>
         <article><strong>Начало работы</strong><p>{date(context.workStartedAt)}</p>
           <p className="muted">Беседа, принятие условий и оплата сами по себе не запускают срок услуги.</p></article>
@@ -76,7 +78,7 @@ export default async function ManualCabinetPage({ searchParams }: {
 
     {["REVIEW", "CALL_REQUESTED"].includes(context.phase) ? <section className="card stack">
       <h2>Предварительная беседа с врачом</h2>
-      <p>Беседа проходит до окончательного предложения и оплаты. Бесплатный подбор формата носит организационный характер.</p>
+      <p>Выберите время из интервалов, открытых врачом. Беседа проходит до окончательного предложения и оплаты. Бесплатный подбор формата носит организационный характер.</p>
       <ManualCallRequestForm />
     </section> : null}
 
