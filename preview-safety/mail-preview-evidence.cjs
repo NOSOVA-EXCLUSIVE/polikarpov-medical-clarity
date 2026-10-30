@@ -16,7 +16,7 @@ if (process.env.VERCEL_ENV === "preview" &&
 
 async function inspectEvidence() {
   const guard = require("./core.cjs");
-  guard.assertPreviewIsolation();
+  const context = guard.assertPreviewIsolation();
   guard.assertPreviewAllowedOperation("database");
   guard.assertPreviewAllowedOperation("storage:blob");
   guard.assertPreviewDatabaseUrl(process.env.DIRECT_URL);
@@ -92,8 +92,12 @@ async function inspectEvidence() {
       seenCaptureIds.add(metadata.captureId);
       const key = `preview-mail/${metadata.captureId}.json`;
       guard.assertPreviewStorageKey(key);
+      // SDK pathname construction preserves token store-ID case. Use the exact
+      // already pinned canonical hostname, validating it before the request too.
+      const blobUrl = `https://${context.pins.blobHostname}/${key}`;
+      guard.assertPreviewBlobUrl(blobUrl, key);
       stage = `${fixture.kind.toUpperCase()}_${recipient.toUpperCase()}_BLOB`;
-      const result = await get(key, {
+      const result = await get(blobUrl, {
         access: "private", token: process.env.BLOB_READ_WRITE_TOKEN,
         useCache: false, abortSignal: AbortSignal.timeout(10000)
       });
@@ -101,7 +105,8 @@ async function inspectEvidence() {
       guard.assertPreviewBlobUrl(result.blob.url, key);
       ensure(result.blob.pathname === key &&
         /^application\/json(?:;|$)/i.test(result.blob.contentType) &&
-        Number.isSafeInteger(result.blob.size) && result.blob.size > 0 && result.blob.size <= 256 * 1024);
+        // SDK reports zero if Content-Length is absent; bound actual bytes below.
+        Number.isSafeInteger(result.blob.size) && result.blob.size >= 0 && result.blob.size <= 256 * 1024);
       const artifact = await readJson(result.stream);
       stage = `${fixture.kind.toUpperCase()}_${recipient.toUpperCase()}_CONTENT`;
       const expectedKeys = ["deliveryMode", "captureId", "capturedAt", "from", "replyTo", "to", "subject", "htmlBody", "textBody"];
@@ -165,6 +170,7 @@ async function readJson(stream) {
       ensure(size <= 256 * 1024);
       chunks.push(Buffer.from(item.value));
     }
+    ensure(size > 0);
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } finally {
     await reader.cancel().catch(() => {});
