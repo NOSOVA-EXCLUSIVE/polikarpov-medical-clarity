@@ -12,12 +12,13 @@ if (process.env.VERCEL_ENV === "preview") {
   const testFiles = [
     "tests/questionnaire-patient-isolation.test.cjs",
     "tests/private-object-metadata.test.cjs",
-    "tests/materials-upload-boundaries.test.cjs"
+    "tests/materials-upload-boundaries.test.cjs",
+    "tests/intake-notifications.test.cjs"
   ];
 
   // No inherited credentials, database/storage configuration, NODE_OPTIONS,
   // cookies, email settings or application environment reach the test process.
-  // These three tests load source through explicit mocked boundaries only.
+  // These four tests load source through explicit mocked boundaries only.
   const result = spawnSync(process.execPath, ["--test", "--test-concurrency=1", ...testFiles], {
     cwd: root,
     env: { NODE_ENV: "test", TZ: "UTC" },
@@ -32,6 +33,6 @@ if (process.env.VERCEL_ENV === "preview") {
     console.error("Preview release regressions failed or exceeded their 60-second limit.");
     process.exitCode = 1;
   } else {
-    console.log("Preview release regressions passed (three explicit synthetic test files).");
+    console.log("Preview release regressions passed (four explicit synthetic test files).");
   }
 }

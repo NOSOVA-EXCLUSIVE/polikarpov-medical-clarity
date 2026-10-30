@@ -32,9 +32,8 @@ export async function POST(request: Request) {
       displayNumber = await getApplicationDisplayNumber({ applicationId: saved.id, submittedAt: saved.submittedAt }) || displayNumber;
     } catch { /* The durable application ID remains a usable reference. */ }
     try {
-      const { sendQuestionnaireSubmittedStaffEmail } = await import("@/features/messages/notifications");
-      const delivery = await sendQuestionnaireSubmittedStaffEmail({ applicationId: saved.id, applicationDisplayNumber: displayNumber, patientName: input.name, patientEmail: input.email, patientPhone: input.phone, preferredContact: input.preferredContact, telegramUsername: contact?.telegramUsername, city: "", country: input.country, timezone: input.timezone, requestedProductCode: null, serviceSelection: selection });
-      await prisma.auditEvent.create({ data: { actorType: "SYSTEM", applicationId: saved.id, entityType: "APPLICATION", entityId: saved.id, action: "organizational_staff_notification", metadataJson: { status: delivery.status, provider: delivery.provider, ...(delivery.captureId ? { captureId: delivery.captureId } : {}) } } });
+      const { notifyIntakeReceived } = await import("@/features/messages/intake-notifications");
+      await notifyIntakeReceived({ kind: "organizational", staff: { applicationId: saved.id, applicationDisplayNumber: displayNumber, patientName: input.name, patientEmail: input.email, patientPhone: input.phone, preferredContact: input.preferredContact, telegramUsername: contact?.telegramUsername, city: "", country: input.country, timezone: input.timezone, requestedProductCode: null, serviceSelection: selection } });
     } catch { /* Notification errors never turn a saved inquiry into a failed submission. */ }
     const response = NextResponse.json({ success: true, displayNumber });
     response.cookies.set("pmc-intake-consent", "", { httpOnly: true, sameSite: "strict", path: "/", maxAge: 0 });

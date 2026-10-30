@@ -23,7 +23,8 @@ function loadService(prisma, notifications) {
     "@/features/products/services-v21": "src/features/products/services-v21.ts",
     "@/features/questionnaire/status": "src/features/questionnaire/status.ts",
     "@/features/questionnaire/upload-validation": "src/features/questionnaire/upload-validation.ts",
-    "@/features/uploads/policies": "src/features/uploads/policies.ts"
+    "@/features/uploads/policies": "src/features/uploads/policies.ts",
+    "@/features/messages/intake-notifications": "src/features/messages/intake-notifications.ts"
   };
   const permitted = {
     "server-only": {},
@@ -49,8 +50,11 @@ function loadService(prisma, notifications) {
     "@/features/messages/notifications": {
       sendQuestionnaireSubmittedStaffEmail: async (input) => {
         notifications.push(structuredClone(input));
-        return { status: "captured", provider: "capture", manualFallbackRequired: false };
-      }
+        return { status: "captured", provider: "capture", captureId: "synthetic-staff-capture", manualFallbackRequired: false };
+      },
+      sendIntakeReceivedPatientEmail: async () => ({
+        status: "captured", provider: "capture", captureId: "synthetic-patient-capture", manualFallbackRequired: false
+      })
     }
   };
   function load(relative) {

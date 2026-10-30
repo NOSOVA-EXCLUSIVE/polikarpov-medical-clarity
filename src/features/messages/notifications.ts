@@ -169,6 +169,27 @@ export async function sendQuestionnaireSubmittedStaffEmail(input: {
   });
 }
 
+export async function sendIntakeReceivedPatientEmail(input: {
+  patientEmail: string;
+  applicationDisplayNumber: string;
+}) {
+  const bodies = withPatientEmailSignature({
+    textBody: [
+      `Ваше обращение №${input.applicationDisplayNumber} получено.`,
+      "Врач рассмотрит переданные сведения и свяжется с Вами для согласования дальнейших шагов."
+    ].join("\n\n"),
+    htmlBody: [
+      `<p>Ваше обращение №${escapeEmailHtml(input.applicationDisplayNumber)} получено.</p>`,
+      "<p>Врач рассмотрит переданные сведения и свяжется с Вами для согласования дальнейших шагов.</p>"
+    ].join("")
+  });
+  return sendEmailSafely({
+    to: input.patientEmail,
+    subject: "Polikarpov Medical Clarity — обращение получено",
+    ...bodies
+  });
+}
+
 export async function sendMaterialsRequestEmail(input: {
   patientName: string;
   patientEmail: string;

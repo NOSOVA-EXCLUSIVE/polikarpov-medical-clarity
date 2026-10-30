@@ -27,7 +27,7 @@ import {
 } from "@/features/questionnaire/status";
 import { validateQuestionnaireUploads } from "@/features/questionnaire/upload-validation";
 import { prisma } from "@/lib/db/prisma";
-import { sendQuestionnaireSubmittedStaffEmail } from "@/features/messages/notifications";
+import { notifyIntakeReceived } from "@/features/messages/intake-notifications";
 import { encryptSensitiveField } from "@/lib/security/encryption";
 
 function getTokenHashSecret() {
@@ -405,9 +405,10 @@ export async function submitQuestionnaire(
     // The application is already available to staff through its saved ID.
   }
 
-  let staffNotification: Awaited<ReturnType<typeof sendQuestionnaireSubmittedStaffEmail>>;
-  try {
-    staffNotification = await sendQuestionnaireSubmittedStaffEmail({
+  await notifyIntakeReceived({
+    kind: "questionnaire",
+    recordAudit: !result.storagePath,
+    staff: {
       applicationId: result.applicationId,
       applicationDisplayNumber: displayNumber,
       patientName: input.patient.fullName,
@@ -420,44 +421,8 @@ export async function submitQuestionnaire(
       requestedProductCode,
       serviceSelection,
       useQueueLink: Boolean(result.storagePath)
-    });
-  } catch {
-    staffNotification = {
-      status: "failed",
-      manualFallbackRequired: true,
-      provider: isPreviewIsolationRequired() ? "capture" : "postmark",
-      errorMessage: "Notification delivery could not be confirmed."
-    };
-  }
-
-  if (!result.storagePath) {
-    await prisma.auditEvent.create({
-      data: {
-        actorType: "SYSTEM",
-        applicationId: result.applicationId,
-        entityType: "APPLICATION",
-        entityId: result.applicationId,
-        action:
-          staffNotification.status === "sent"
-            ? "questionnaire_staff_email_sent"
-            : staffNotification.status === "captured"
-              ? "questionnaire_staff_email_captured"
-              : "questionnaire_staff_email_failed",
-        metadataJson: {
-          provider: staffNotification.provider,
-          captureId: staffNotification.captureId ?? null,
-          manualFallbackRequired: staffNotification.manualFallbackRequired,
-          errorMessage:
-            staffNotification.status === "failed"
-              ? staffNotification.errorMessage ?? null
-              : null
-        }
-      }
-    }).catch(() => {
-      // Do not ask the patient to resubmit an application already committed.
-      console.warn("Questionnaire saved; notification audit temporarily unavailable.");
-    });
-  }
+    }
+  });
 
   return {
     ...result,

@@ -10,6 +10,7 @@
 !/tests/questionnaire-patient-isolation.test.cjs
 !/tests/private-object-metadata.test.cjs
 !/tests/materials-upload-boundaries.test.cjs
+!/tests/intake-notifications.test.cjs
 /*.log
 /*.zip
 /.env*

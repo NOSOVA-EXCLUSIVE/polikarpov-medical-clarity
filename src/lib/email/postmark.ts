@@ -83,7 +83,7 @@ export async function sendTransactionalEmail(input: {
   }
   const envelope = getDefaultEmailEnvelope();
 
-  await getPostmarkClient().sendEmail({
+  const acceptance = await getPostmarkClient().sendEmail({
     From: envelope.from,
     ReplyTo: envelope.replyTo,
     To: Array.isArray(input.to) ? input.to.join(",") : input.to,
@@ -91,5 +91,9 @@ export async function sendTransactionalEmail(input: {
     HtmlBody: input.htmlBody,
     TextBody: input.textBody
   });
+  if (acceptance?.ErrorCode !== 0 || typeof acceptance.MessageID !== "string" || !acceptance.MessageID.trim()) {
+    throw new Error("Email provider acceptance was not confirmed.");
+  }
+  // "sent" means accepted by Postmark, not confirmed delivery to an inbox.
   return { status: "sent", provider: "postmark" };
 }
