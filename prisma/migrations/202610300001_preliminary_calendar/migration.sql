@@ -1,5 +1,9 @@
 -- Additive calendar only. Existing offers, payments, appointments and slots are retained.
 BEGIN;
+SET LOCAL search_path = public;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '30s';
+SELECT pg_advisory_xact_lock(1296251221, 20261030);
 
 CREATE TYPE "PreliminarySlotStatus" AS ENUM ('AVAILABLE', 'PENDING', 'CONFIRMED', 'BLOCKED');
 
