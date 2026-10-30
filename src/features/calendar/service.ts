@@ -42,7 +42,7 @@ function validInterval(interval: Interval) {
 }
 
 const overlap = (interval: Interval) => ({ startsAt: { lt: interval.endsAt }, endsAt: { gt: interval.startsAt } });
-const manualOverlap = (interval: Interval) => ({
+const manualOverlap = (interval: Interval): Prisma.ManualCaseWhereInput => ({
   callStartsAt: { lt: interval.endsAt }, callEndsAt: { gt: interval.startsAt },
   application: { status: { notIn: ["ARCHIVED", "REJECTED"] } }
 });
