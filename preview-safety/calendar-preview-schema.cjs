@@ -2,7 +2,8 @@
 
 // Executed only by the pinned synthetic Vercel Preview build, never locally or in production.
 // Unmanaged synthetic fixtures require a separate explicit owner decision; never repair their ledger.
-const ALLOW_UNMANAGED_SYNTHETIC_CALENDAR = false;
+// Owner explicitly approved this exact synthetic-only DDL path on 30 October 2026.
+const ALLOW_UNMANAGED_SYNTHETIC_CALENDAR = true;
 if (process.env.VERCEL_ENV === "preview") {
   const { assertPreviewIsolation } = require("./core.cjs");
   assertPreviewIsolation();
