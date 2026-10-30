@@ -7075,3 +7075,39 @@ input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
   align-items: end;
   gap: 0.75rem;
 }
+
+/* Footer contacts sit below the existing divider, on the legal links' right axis. */
+:where(.public-site) .site-footer__bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: stretch;
+  gap: 1.5rem;
+  width: 100%;
+}
+:where(.public-site) .site-footer__bottom-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.8rem;
+  min-width: 0;
+}
+:where(.public-site) .site-footer__bottom-right > .site-footer__contacts {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  margin: 0;
+  padding-top: 0;
+}
+:where(.public-site) .site-footer__bottom-right > .site-footer__backtop {
+  align-self: flex-end;
+  margin: 0;
+}
+@media (max-width: 980px) {
+  :where(.public-site) .site-footer__bottom {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
+  }
+  :where(.public-site) .site-footer__bottom-right {
+    gap: 0.65rem;
+  }
+}

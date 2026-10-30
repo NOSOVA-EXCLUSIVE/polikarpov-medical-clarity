@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { DEFAULT_OG_IMAGE_PATH, getSiteUrl, SITE_NAME } from "@/lib/seo";
+import { DEFAULT_OG_IMAGE_PATH, DEFAULT_OG_IMAGE_SIZE, getSiteUrl, SITE_NAME } from "@/lib/seo";
 
 import "./globals.css";
 import { inlineGlobalStyles } from "./inline-global-styles";
@@ -24,8 +24,7 @@ export const metadata: Metadata = {
     images: [
       {
         url: DEFAULT_OG_IMAGE_PATH,
-        width: 1200,
-        height: 630,
+        ...DEFAULT_OG_IMAGE_SIZE,
         alt: SITE_NAME
       }
     ],

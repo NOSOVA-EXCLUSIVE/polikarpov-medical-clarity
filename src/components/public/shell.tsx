@@ -79,6 +79,32 @@ export function PublicFooter() {
               <span className="site-footer__divider">·</span>
               <Link href="/legal/consent">Информированное согласие</Link>
             </nav>
+          </div>
+        </div>
+
+        <div className="site-footer__bottom">
+          <div className="site-footer__legal-meta">
+            <p className="site-footer__copyright">© Polikarpov Medical Clarity. Все права защищены</p>
+            <p className="site-footer__legal-note">Дистанционный формат не предназначен для экстренной помощи и не заменяет необходимый очный приём.</p>
+            <details className="site-footer__format-details">
+              <summary>Подробнее о формате и ограничениях</summary>
+              <p className="site-footer__legal-note">
+              Дистанционный формат взаимодействия носит информационно-консультационный характер,
+              не является экстренной медицинской помощью и не заменяет очный приём врача, когда
+              он необходим. Polikarpov Medical Clarity не проводит судебно-медицинские экспертизы и
+              не оформляет процессуальные экспертные заключения; материалы сервиса носят
+              дистанционный информационно-аналитический характер.
+              </p>
+            </details>
+              <Link href="/documents#legal-info" className="site-footer__legal-link">
+                Юридическая информация и формат работы
+              </Link>
+            <div className="site-footer__business">
+              <p>{PRACTICE_LEGAL_LINES[0]}</p>
+              <p>Аккредитация 7723 030707278 / 7524 032299059</p>
+            </div>
+          </div>
+          <div className="site-footer__bottom-right">
             <nav className="site-footer__contacts" aria-label="Контакты">
               <a
                 className="site-footer__contact"
@@ -126,34 +152,10 @@ export function PublicFooter() {
                 </svg>
               </a>
             </nav>
+            <a className="site-footer__backtop" href="#top">
+              Наверх
+            </a>
           </div>
-        </div>
-
-        <div className="site-footer__bottom">
-          <div className="site-footer__legal-meta">
-            <p className="site-footer__copyright">© Polikarpov Medical Clarity. Все права защищены</p>
-            <p className="site-footer__legal-note">Дистанционный формат не предназначен для экстренной помощи и не заменяет необходимый очный приём.</p>
-            <details className="site-footer__format-details">
-              <summary>Подробнее о формате и ограничениях</summary>
-              <p className="site-footer__legal-note">
-              Дистанционный формат взаимодействия носит информационно-консультационный характер,
-              не является экстренной медицинской помощью и не заменяет очный приём врача, когда
-              он необходим. Polikarpov Medical Clarity не проводит судебно-медицинские экспертизы и
-              не оформляет процессуальные экспертные заключения; материалы сервиса носят
-              дистанционный информационно-аналитический характер.
-              </p>
-            </details>
-              <Link href="/documents#legal-info" className="site-footer__legal-link">
-                Юридическая информация и формат работы
-              </Link>
-            <div className="site-footer__business">
-              <p>{PRACTICE_LEGAL_LINES[0]}</p>
-              <p>Аккредитация 7723 030707278 / 7524 032299059</p>
-            </div>
-          </div>
-          <a className="site-footer__backtop" href="#top">
-            Наверх
-          </a>
         </div>
       </div>
     </footer>
