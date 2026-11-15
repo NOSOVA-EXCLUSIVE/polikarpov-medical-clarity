@@ -440,9 +440,13 @@ function organizationalFixture(options = {}) {
       "content-type": "application/json",
       origin: "https://example.invalid",
       "x-vercel-ip-country": "ES",
-      "x-vercel-ip-city": "SYNTHETIC_PRIVATE_CITY",
+      "x-vercel-ip-country-region": "AN",
+      "x-vercel-ip-city": "M%C3%A1laga",
       "x-pmc-intake-channel": "telegram",
-      "x-pmc-intake-campaign": "professional-profile"
+      "x-pmc-intake-campaign": "professional-profile",
+      "x-pmc-intake-link-tag": "telegram-post",
+      "x-pmc-intake-landing-page": "/services/second-opinion",
+      "x-pmc-intake-referrer-url": "https://t.me/EvgeniyPolikarpov?private=synthetic#synthetic"
     }),
     json: async () => input
   };
@@ -459,24 +463,47 @@ test("organizational intake stays saved and returns its number when both notific
   assert.equal(f.state.applications.length, 1);
   const intake = f.state.intakeAudit.find((event) => event.action === "application_intake_source_recorded");
   assert.equal(intake.applicationId, f.state.applications[0].id);
-  assert.deepEqual(intake.metadataJson, { channel: "telegram", campaign: "professional-profile", networkCountry: "ES" });
+  assert.deepEqual(intake.metadataJson, {
+    channel: "telegram",
+    campaign: "professional-profile",
+    linkTag: "telegram-post",
+    landingPage: "/services/second-opinion",
+    referrerUrl: "https://t.me/EvgeniyPolikarpov",
+    networkCountry: "ES",
+    networkRegion: "AN",
+    networkCity: "Málaga"
+  });
   assert.deepEqual(f.state.notificationCalls.sort(), ["patient", "staff"]);
   assert.equal(f.state.audit.length, 2);
   assert.equal(f.state.audit.every(event => event.metadataJson.status === "failed"), true);
   assert.equal(Object.hasOwn(response.body, "emailSent"), false);
 });
 
+function loadIntakeSource() {
+  const catalog = loadSource("src/features/products/services-v21.ts", {});
+  const routes = loadSource("src/lib/public-site-routes.ts", {
+    "@/features/products/services-v21": catalog
+  });
+  return loadSource("src/features/questionnaire/intake-source.ts", {
+    "@/lib/public-site-routes": routes
+  });
+}
+
+const emptyIntakeSource = {
+  channel: null, campaign: null, landingPage: null, linkTag: null, referrerUrl: null,
+  networkCountry: null, networkRegion: null, networkCity: null
+};
+
 function loadIntakeSourceServer(env, previewContext = null) {
-  const source = loadSource("src/features/questionnaire/intake-source.ts", {});
   return loadSource("src/features/questionnaire/intake-source-server.ts", {
     "server-only": {},
     "@/lib/preview/guard": { assertPreviewIsolation: () => previewContext },
-    "@/features/questionnaire/intake-source": source
+    "@/features/questionnaire/intake-source": loadIntakeSource()
   }, { process: { env } });
 }
 
 test("intake attribution drops arbitrary source data and allows country only in production or isolated Preview", () => {
-  const source = loadSource("src/features/questionnaire/intake-source.ts", {});
+  const source = loadIntakeSource();
   const launchLink = new URL("https://www.polikarpovclarity.com/?utm_source=Telegram&utm_campaign=website-launch&email=private%40example.invalid");
   assert.deepEqual(structuredClone(source.readTaggedIntakeSource(launchLink)), {
     channel: "telegram", campaign: "website-launch"
@@ -490,22 +517,42 @@ test("intake attribution drops arbitrary source data and allows country only in 
   const headers = new Headers({
     "x-pmc-intake-channel": "telegram",
     "x-pmc-intake-campaign": "private@example.invalid",
-    "x-vercel-ip-country": "ES"
+    "x-vercel-ip-country": "ES",
+    "x-vercel-ip-country-region": "AN",
+    "x-vercel-ip-city": "M%C3%A1laga"
   });
   const previewSource = loadIntakeSourceServer({ VERCEL: "1", VERCEL_ENV: "preview" });
   assert.deepEqual(structuredClone(previewSource.readApplicationIntakeSource(headers)), {
-    channel: "telegram", campaign: null, networkCountry: null
+    ...emptyIntakeSource, channel: "telegram"
   });
   const isolatedSource = loadIntakeSourceServer({ VERCEL: "1", VERCEL_ENV: "preview" }, { appUrl: "https://test.vercel.app" });
   assert.deepEqual(structuredClone(isolatedSource.readApplicationIntakeSource(headers)), {
-    channel: "telegram", campaign: null, networkCountry: "ES"
+    ...emptyIntakeSource, channel: "telegram", networkCountry: "ES", networkRegion: "AN", networkCity: "Málaga"
   });
   const productionSource = loadIntakeSourceServer({ VERCEL: "1", VERCEL_ENV: "production" });
   headers.set("x-vercel-ip-country", "AA");
+  headers.set("x-vercel-ip-city", "A%0ADo%20not%20store");
+  headers.set("x-pmc-intake-landing-page", "/portal/private-identifier");
+  headers.set("x-pmc-intake-referrer-url", "https://username:credential@example.org/");
   headers.set("x-pmc-intake-channel", "https://example.invalid/private");
   const invalid = productionSource.readApplicationIntakeSource(headers);
-  assert.deepEqual(structuredClone(invalid), { channel: null, campaign: null, networkCountry: null });
+  assert.deepEqual(structuredClone(invalid), emptyIntakeSource);
   assert.equal(productionSource.applicationIntakeSourceEvents("synthetic-case", invalid).length, 0);
+});
+
+test("new submissions ignore legacy QR values while old audit events remain readable", () => {
+  const server = loadIntakeSourceServer({ VERCEL: "1", VERCEL_ENV: "production" });
+  const headers = new Headers({
+    "x-pmc-intake-channel": "qr",
+    "x-pmc-intake-campaign": "qr-card",
+    "x-pmc-intake-landing-page": "/doctor"
+  });
+  assert.deepEqual(structuredClone(server.readApplicationIntakeSource(headers)), {
+    ...emptyIntakeSource, landingPage: "/doctor"
+  });
+  assert.deepEqual(structuredClone(server.parseApplicationIntakeSource({ channel: "qr", campaign: "qr-card" })), {
+    ...emptyIntakeSource, channel: "qr", campaign: "qr-card"
+  });
 });
 
 test("organizational persistence failure sends no notifications and reports no successful intake", async () => {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ApplicationIntakeSummary } from "@/components/admin/application-intake-summary";
 import { OfferCreateForm } from "@/components/admin/offer-create-form";
 import { ManualAdminActions } from "@/components/admin/manual-actions";
 import { AdminShell, DefinitionList } from "@/components/admin/shell";
@@ -27,8 +28,6 @@ import {
   uploadStatusLabel
 } from "@/features/admin/presentation";
 import { getApplicationDetail } from "@/features/admin/service";
-import { intakeNetworkCountryLabel } from "@/features/questionnaire/intake-source-server";
-import type { IntakeSource } from "@/features/questionnaire/intake-source";
 import { describeServiceSelection } from "@/features/questionnaire/service-selection";
 import { canStaffReplyToThread } from "@/features/messages/service";
 import { defaultOfferByProductCode } from "@/features/products/catalog";
@@ -36,27 +35,6 @@ import { requireStaffSession } from "@/lib/auth/session";
 import { createPrivateDownloadUrl } from "@/lib/storage/s3";
 import { getManualCase } from "@/features/manual-v21/service";
 import { manualPhaseLabels } from "@/features/manual-v21/presentation";
-
-const intakeChannelLabels: Record<NonNullable<IntakeSource["channel"]>, string> = {
-  google: "Google",
-  bing: "Bing",
-  yandex: "Яндекс",
-  duckduckgo: "DuckDuckGo",
-  telegram: "Telegram",
-  whatsapp: "WhatsApp",
-  instagram: "Instagram",
-  facebook: "Facebook",
-  linkedin: "LinkedIn",
-  email: "Email",
-  qr: "QR-код",
-  referral: "Другой сайт"
-};
-
-const intakeCampaignLabels: Record<NonNullable<IntakeSource["campaign"]>, string> = {
-  "professional-profile": "Профессиональный профиль",
-  "website-launch": "Запуск сайта",
-  "qr-card": "Визитка с QR-кодом"
-};
 
 const redFlagLabels: Record<string, string> = {
   hasFever: "Температура или признаки воспаления",
@@ -149,15 +127,18 @@ export default async function ApplicationDetailPage({
       title={<span className="admin-page-title">Карточка заявки {application.displayNumber}</span>}
       description="Здесь можно проверить материалы, принять решение по кейсу, открыть или завершить сопровождение и работать с перепиской внутри системы."
       actions={
-        <Link
-          className="button button--secondary"
-          href="/admin/calendar"
-          target="_blank"
-          rel="noopener noreferrer"
-          prefetch={false}
-        >
-          Календарь врача
-        </Link>
+        <div className="application-header-actions">
+          <ApplicationIntakeSummary patient={application.patient} source={application.intakeSource} />
+          <Link
+            className="button button--secondary"
+            href="/admin/calendar"
+            target="_blank"
+            rel="noopener noreferrer"
+            prefetch={false}
+          >
+            Календарь врача
+          </Link>
+        </div>
       }
     >
       {rejectionNoticeMessage ?? noticeMessage ? (
@@ -262,19 +243,6 @@ export default async function ApplicationDetailPage({
               { label: "Email", value: application.patient.email },
               { label: "Телефон", value: application.patient.phone },
               ...(application.organizationalContact ? [{ label: "Telegram", value: application.organizationalContact.telegramUsername }] : []),
-              { label: "Страна / город из анкеты", value: [application.patient.country, application.patient.city].filter(Boolean).join(", ") },
-              { label: "Часовой пояс", value: application.patient.timezone },
-              { label: "Страна сети при отправке (приблизительно)", value: intakeNetworkCountryLabel(application.intakeSource.networkCountry) },
-              {
-                label: "Источник перехода (по метке или сайту)",
-                value: application.intakeSource.channel
-                  ? intakeChannelLabels[application.intakeSource.channel]
-                  : "Нет данных"
-              },
-              ...(application.intakeSource.campaign ? [{
-                label: "Кампания",
-                value: intakeCampaignLabels[application.intakeSource.campaign]
-              }] : []),
               {
                 label: "Формат материалов",
                 value: imagingSourceTypeLabel(application.imagingSourceType)

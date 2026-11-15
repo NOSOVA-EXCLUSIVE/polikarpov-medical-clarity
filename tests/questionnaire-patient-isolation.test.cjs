@@ -26,6 +26,7 @@ function loadService(prisma, notifications) {
     "@/features/questionnaire/status": "src/features/questionnaire/status.ts",
     "@/features/questionnaire/upload-validation": "src/features/questionnaire/upload-validation.ts",
     "@/features/uploads/policies": "src/features/uploads/policies.ts",
+    "@/lib/public-site-routes": "src/lib/public-site-routes.ts",
     "@/features/messages/intake-notifications": "src/features/messages/intake-notifications.ts"
   };
   const permitted = {
@@ -185,7 +186,11 @@ function fixture({ failApplicationCreate = false } = {}) {
 test("matching anonymous contacts cannot mutate or reuse an existing patient and prior case", async () => {
   const f = fixture();
   const submitted = input();
-  const intakeSource = { channel: "telegram", campaign: "professional-profile", networkCountry: "ES" };
+  const intakeSource = {
+    channel: "telegram", campaign: "professional-profile", linkTag: "telegram-post",
+    landingPage: "/doctor", referrerUrl: "https://t.me", networkCountry: "ES",
+    networkRegion: "AN", networkCity: "Málaga"
+  };
   const result = await f.service.submitQuestionnaire(submitted, { ...request(), intakeSource });
   const application = f.state.applications.find((entry) => entry.id === result.applicationId);
   const patient = f.state.patients.find((entry) => entry.id === application.patientId);

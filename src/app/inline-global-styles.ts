@@ -95,6 +95,58 @@ h1 {
   letter-spacing: -0.02em;
 }
 
+.application-header-actions {
+  display: grid;
+  grid-template-areas: "calendar summary";
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+  width: 100%;
+}
+
+.application-header-actions > .button {
+  grid-area: calendar;
+  justify-self: start;
+}
+
+.application-intake-summary {
+  grid-area: summary;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.72rem 1.25rem;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-strong);
+  overflow-wrap: anywhere;
+}
+
+.application-intake-summary dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.application-intake-summary dd {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .application-header-actions {
+    grid-template-areas: "summary" "calendar";
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .application-intake-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .admin-section-title {
   font-size: clamp(1.28rem, 1.45vw, 1.44rem);
   line-height: 1.2;

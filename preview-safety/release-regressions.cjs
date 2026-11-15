@@ -14,6 +14,7 @@ if (process.env.VERCEL_ENV === "preview") {
     "tests/private-object-metadata.test.cjs",
     "tests/materials-upload-boundaries.test.cjs",
     "tests/intake-notifications.test.cjs",
+    "tests/intake-source.test.cjs",
     "tests/calendar-reservations.test.cjs"
   ];
 
