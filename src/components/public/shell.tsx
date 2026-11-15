@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { PRACTICE_LEGAL_LINES } from "@/features/legal/practice";
+import { PRACTICE_DOCTOR_NAME } from "@/features/legal/practice";
 import { ContactMenu } from "@/components/public/contact-menu";
 
 type SectionProps = {
@@ -100,7 +100,7 @@ export function PublicFooter() {
                 Юридическая информация и формат работы
               </Link>
             <div className="site-footer__business">
-              <p>{PRACTICE_LEGAL_LINES[0]}</p>
+              <p>Врач: {PRACTICE_DOCTOR_NAME}</p>
               <p>Аккредитация 7723 030707278 / 7524 032299059</p>
             </div>
           </div>
