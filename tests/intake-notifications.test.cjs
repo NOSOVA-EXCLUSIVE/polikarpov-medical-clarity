@@ -363,7 +363,7 @@ test("Preview uses private synthetic capture and cannot instantiate a Postmark s
 });
 
 function organizationalFixture(options = {}) {
-  const state = { saved: false, applications: [], notificationCalls: [], audit: [], cookies: [] };
+  const state = { saved: false, applications: [], notificationCalls: [], audit: [], intakeAudit: [], cookies: [] };
   const input = {
     name: "Synthetic organizational intake", email: "patient@example.invalid", phone: "",
     preferredContact: "EMAIL", country: "Synthetic country", timezone: "UTC",
@@ -376,7 +376,14 @@ function organizationalFixture(options = {}) {
       state.applications.push(application);
       return application;
     } },
-    auditEvent: { updateMany: async () => ({ count: 1 }), update: async () => ({}), createMany: async () => ({ count: 2 }) }
+    auditEvent: {
+      updateMany: async () => ({ count: 1 }),
+      update: async () => ({}),
+      createMany: async ({ data }) => {
+        state.intakeAudit.push(...structuredClone(data));
+        return { count: data.length };
+      }
+    }
   };
   const prisma = {
     $transaction: async work => {
@@ -407,6 +414,7 @@ function organizationalFixture(options = {}) {
     }
   });
   class SyntheticZodError extends Error {}
+  const intakeSource = loadIntakeSourceServer({ VERCEL: "1", VERCEL_ENV: "production" });
   const route = loadSource("src/app/api/organizational-inquiry/route.ts", {
     "next/server": { NextResponse: { json: (body, init = {}) => ({
       body: structuredClone(body), status: init.status || 200,
@@ -417,6 +425,7 @@ function organizationalFixture(options = {}) {
       requireIntakeConsent: async () => ({ receiptId: "synthetic-consent" }),
       intakeConsentErrorResponse: () => null
     },
+    "@/features/questionnaire/intake-source-server": intakeSource,
     "@/features/questionnaire/service-selection": { buildServiceSelectionSnapshot: () => ({ id: "service-selection" }) },
     "@/features/questionnaire/organizational-inquiry": {
       organizationalInquirySchema: { parse: value => value }, createOrganizationalContactMetadata: () => null
@@ -427,7 +436,14 @@ function organizationalFixture(options = {}) {
   });
   const request = {
     url: "https://example.invalid/api/organizational-inquiry",
-    headers: { get: name => name === "content-type" ? "application/json" : name === "origin" ? "https://example.invalid" : null },
+    headers: new Headers({
+      "content-type": "application/json",
+      origin: "https://example.invalid",
+      "x-vercel-ip-country": "ES",
+      "x-vercel-ip-city": "SYNTHETIC_PRIVATE_CITY",
+      "x-pmc-intake-channel": "telegram",
+      "x-pmc-intake-campaign": "professional-profile"
+    }),
     json: async () => input
   };
   return { state, route, request };
@@ -441,10 +457,55 @@ test("organizational intake stays saved and returns its number when both notific
   assert.equal(response.body.displayNumber, "PMC-SYNTHETIC-031");
   assert.equal(f.state.saved, true);
   assert.equal(f.state.applications.length, 1);
+  const intake = f.state.intakeAudit.find((event) => event.action === "application_intake_source_recorded");
+  assert.equal(intake.applicationId, f.state.applications[0].id);
+  assert.deepEqual(intake.metadataJson, { channel: "telegram", campaign: "professional-profile", networkCountry: "ES" });
   assert.deepEqual(f.state.notificationCalls.sort(), ["patient", "staff"]);
   assert.equal(f.state.audit.length, 2);
   assert.equal(f.state.audit.every(event => event.metadataJson.status === "failed"), true);
   assert.equal(Object.hasOwn(response.body, "emailSent"), false);
+});
+
+function loadIntakeSourceServer(env, previewContext = null) {
+  const source = loadSource("src/features/questionnaire/intake-source.ts", {});
+  return loadSource("src/features/questionnaire/intake-source-server.ts", {
+    "server-only": {},
+    "@/lib/preview/guard": { assertPreviewIsolation: () => previewContext },
+    "@/features/questionnaire/intake-source": source
+  }, { process: { env } });
+}
+
+test("intake attribution drops arbitrary source data and allows country only in production or isolated Preview", () => {
+  const source = loadSource("src/features/questionnaire/intake-source.ts", {});
+  const launchLink = new URL("https://www.polikarpovclarity.com/?utm_source=Telegram&utm_campaign=website-launch&email=private%40example.invalid");
+  assert.deepEqual(structuredClone(source.readTaggedIntakeSource(launchLink)), {
+    channel: "telegram", campaign: "website-launch"
+  });
+  const spoofedReferrer = "https://google.com.example.invalid/path?email=private%40example.invalid";
+  assert.deepEqual(structuredClone(source.readIntakeReferrer(spoofedReferrer, launchLink)), {
+    channel: "referral", campaign: null
+  });
+  assert.equal(source.readIntakeReferrer("https://polikarpovclarity.ru/", launchLink), null);
+
+  const headers = new Headers({
+    "x-pmc-intake-channel": "telegram",
+    "x-pmc-intake-campaign": "private@example.invalid",
+    "x-vercel-ip-country": "ES"
+  });
+  const previewSource = loadIntakeSourceServer({ VERCEL: "1", VERCEL_ENV: "preview" });
+  assert.deepEqual(structuredClone(previewSource.readApplicationIntakeSource(headers)), {
+    channel: "telegram", campaign: null, networkCountry: null
+  });
+  const isolatedSource = loadIntakeSourceServer({ VERCEL: "1", VERCEL_ENV: "preview" }, { appUrl: "https://test.vercel.app" });
+  assert.deepEqual(structuredClone(isolatedSource.readApplicationIntakeSource(headers)), {
+    channel: "telegram", campaign: null, networkCountry: "ES"
+  });
+  const productionSource = loadIntakeSourceServer({ VERCEL: "1", VERCEL_ENV: "production" });
+  headers.set("x-vercel-ip-country", "AA");
+  headers.set("x-pmc-intake-channel", "https://example.invalid/private");
+  const invalid = productionSource.readApplicationIntakeSource(headers);
+  assert.deepEqual(structuredClone(invalid), { channel: null, campaign: null, networkCountry: null });
+  assert.equal(productionSource.applicationIntakeSourceEvents("synthetic-case", invalid).length, 0);
 });
 
 test("organizational persistence failure sends no notifications and reports no successful intake", async () => {

@@ -27,6 +27,8 @@ import {
   uploadStatusLabel
 } from "@/features/admin/presentation";
 import { getApplicationDetail } from "@/features/admin/service";
+import { intakeNetworkCountryLabel } from "@/features/questionnaire/intake-source-server";
+import type { IntakeSource } from "@/features/questionnaire/intake-source";
 import { describeServiceSelection } from "@/features/questionnaire/service-selection";
 import { canStaffReplyToThread } from "@/features/messages/service";
 import { defaultOfferByProductCode } from "@/features/products/catalog";
@@ -34,6 +36,27 @@ import { requireStaffSession } from "@/lib/auth/session";
 import { createPrivateDownloadUrl } from "@/lib/storage/s3";
 import { getManualCase } from "@/features/manual-v21/service";
 import { manualPhaseLabels } from "@/features/manual-v21/presentation";
+
+const intakeChannelLabels: Record<NonNullable<IntakeSource["channel"]>, string> = {
+  google: "Google",
+  bing: "Bing",
+  yandex: "Яндекс",
+  duckduckgo: "DuckDuckGo",
+  telegram: "Telegram",
+  whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+  email: "Email",
+  qr: "QR-код",
+  referral: "Другой сайт"
+};
+
+const intakeCampaignLabels: Record<NonNullable<IntakeSource["campaign"]>, string> = {
+  "professional-profile": "Профессиональный профиль",
+  "website-launch": "Запуск сайта",
+  "qr-card": "Визитка с QR-кодом"
+};
 
 const redFlagLabels: Record<string, string> = {
   hasFever: "Температура или признаки воспаления",
@@ -239,8 +262,19 @@ export default async function ApplicationDetailPage({
               { label: "Email", value: application.patient.email },
               { label: "Телефон", value: application.patient.phone },
               ...(application.organizationalContact ? [{ label: "Telegram", value: application.organizationalContact.telegramUsername }] : []),
-              { label: "Страна / город", value: `${application.patient.country}, ${application.patient.city}` },
+              { label: "Страна / город из анкеты", value: [application.patient.country, application.patient.city].filter(Boolean).join(", ") },
               { label: "Часовой пояс", value: application.patient.timezone },
+              { label: "Страна сети при отправке (приблизительно)", value: intakeNetworkCountryLabel(application.intakeSource.networkCountry) },
+              {
+                label: "Источник перехода (по метке или сайту)",
+                value: application.intakeSource.channel
+                  ? intakeChannelLabels[application.intakeSource.channel]
+                  : "Нет данных"
+              },
+              ...(application.intakeSource.campaign ? [{
+                label: "Кампания",
+                value: intakeCampaignLabels[application.intakeSource.campaign]
+              }] : []),
               {
                 label: "Формат материалов",
                 value: imagingSourceTypeLabel(application.imagingSourceType)

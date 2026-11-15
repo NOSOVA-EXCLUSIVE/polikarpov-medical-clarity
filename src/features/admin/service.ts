@@ -14,6 +14,7 @@ import {
   getApplicationDisplayNumber
 } from "@/features/applications/display-number";
 import { prisma } from "@/lib/db/prisma";
+import { APPLICATION_INTAKE_SOURCE_ACTION, parseApplicationIntakeSource } from "@/features/questionnaire/intake-source-server";
 import { readServiceSelectionSnapshot } from "@/features/questionnaire/service-selection";
 import { readOrganizationalContactMetadata } from "@/features/questionnaire/organizational-inquiry";
 import { manualPhaseLabels } from "@/features/manual-v21/presentation";
@@ -446,11 +447,23 @@ export async function getApplicationDetail(applicationId: string) {
     return null;
   }
 
-  const serviceSelectionEvent = await prisma.auditEvent.findFirst({
-    where: { applicationId: application.id, action: "service_selection_recorded" },
-    orderBy: { createdAt: "desc" },
-    select: { metadataJson: true }
-  });
+  const [serviceSelectionEvent, intakeSourceEvent] = await Promise.all([
+    prisma.auditEvent.findFirst({
+      where: { applicationId: application.id, action: "service_selection_recorded" },
+      orderBy: { createdAt: "desc" },
+      select: { metadataJson: true }
+    }),
+    prisma.auditEvent.findFirst({
+      where: {
+        applicationId: application.id,
+        actorType: "SYSTEM",
+        action: APPLICATION_INTAKE_SOURCE_ACTION
+      },
+      orderBy: { createdAt: "desc" },
+      select: { metadataJson: true }
+    })
+  ]);
+  const intakeSource = parseApplicationIntakeSource(intakeSourceEvent?.metadataJson);
   const serviceSelection = readServiceSelectionSnapshot(serviceSelectionEvent?.metadataJson);
   const organizationalContactEvent = serviceSelection?.kind === "organizational_selection"
     ? await prisma.auditEvent.findFirst({
@@ -472,6 +485,7 @@ export async function getApplicationDetail(applicationId: string) {
       ...appendManualBookingState(application),
       serviceSelection,
       organizationalContact,
+      intakeSource,
       displayNumber
     };
   }
@@ -600,6 +614,7 @@ export async function getApplicationDetail(applicationId: string) {
     ...appendManualBookingState(refreshedApplication),
     serviceSelection,
     organizationalContact,
+    intakeSource,
     displayNumber
   };
 }

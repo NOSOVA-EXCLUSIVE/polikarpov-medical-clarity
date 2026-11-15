@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getIntakeSourceHeaders } from "@/components/public/intake-source-capture";
 import { TimezoneInput } from "@/components/questionnaire/timezone-input";
 
 import type {
@@ -670,7 +671,7 @@ export function QuestionnaireForm({
       const preferredContactLabel = getPreferredContactLabel(state.patient.preferredContact);
       const response = await fetch("/api/questionnaire", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getIntakeSourceHeaders() },
         body: JSON.stringify(payload)
       });
       const json = await readJsonResponse<SubmitSuccessResponse | SubmitErrorResponse>(response);

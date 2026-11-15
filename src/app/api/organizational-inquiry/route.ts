@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireIntakeConsent, intakeConsentErrorResponse } from "@/features/questionnaire/intake-consent";
+import { applicationIntakeSourceEvents, readApplicationIntakeSource } from "@/features/questionnaire/intake-source-server";
 import { buildServiceSelectionSnapshot } from "@/features/questionnaire/service-selection";
 import { createOrganizationalContactMetadata, organizationalInquirySchema } from "@/features/questionnaire/organizational-inquiry";
 
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
     const receipt = await requireIntakeConsent(request);
     if (!(request.headers.get("content-type") ?? "").includes("application/json")) return NextResponse.json({ success: false, error: "Ожидается заполненная форма." }, { status: 400 });
     const input = organizationalInquirySchema.parse(await request.json());
+    const intakeSource = readApplicationIntakeSource(request.headers);
     const contact = createOrganizationalContactMetadata(input);
     const selection = buildServiceSelectionSnapshot("service-selection")!;
     const { prisma } = await import("@/lib/db/prisma");
@@ -21,6 +23,7 @@ export async function POST(request: Request) {
       const application = await tx.application.create({ data: { patientId: patient.id, requestedProductCode: null, status: "NEW", chiefComplaint: `Организационная задача: ${input.task}`, reviewNoteForDoctor: input.materials ? `Перечень материалов: ${input.materials}` : null } });
       await tx.auditEvent.update({ where: { id: receipt.receiptId }, data: { action: "intake_data_consent_accepted", applicationId: application.id } });
       await tx.auditEvent.createMany({ data: [
+        ...applicationIntakeSourceEvents(application.id, intakeSource),
         { actorType: "SYSTEM", applicationId: application.id, entityType: "APPLICATION", entityId: application.id, action: "service_selection_recorded", metadataJson: selection },
         { actorType: "PATIENT", applicationId: application.id, entityType: "APPLICATION", entityId: application.id, action: "organizational_inquiry_submitted", metadataJson: { kind: "organizational_selection", serviceSelection: selection, consent: receipt, containsMedicalFiles: false, paymentRequired: false, ...(contact ? { contact } : {}) } }
       ] });

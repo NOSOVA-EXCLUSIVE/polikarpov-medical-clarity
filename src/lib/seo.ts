@@ -7,6 +7,10 @@ export const DEFAULT_SITE_URL = "http://localhost:3000";
 export const DEFAULT_OG_IMAGE_PATH = "/images/medical-clarity-social-wide.png";
 export const DEFAULT_OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 
+export const privatePageMetadata: Metadata = {
+  robots: { index: false, follow: false }
+};
+
 type IndexingMode = {
   index: boolean;
   follow: boolean;

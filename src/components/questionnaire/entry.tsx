@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { PageHero, Section } from "@/components/public/shell";
+import { getIntakeSourceHeaders } from "@/components/public/intake-source-capture";
 import { QuestionnaireForm } from "@/components/questionnaire/form";
 import { TimezoneInput } from "@/components/questionnaire/timezone-input";
 import { organizationalSelection } from "@/features/products/services-v21";
@@ -53,7 +54,11 @@ function OrganizationalInquiryForm() {
     setDraft(values);
     setBusy(true); setError("");
     try {
-      const response = await fetch("/api/organizational-inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) });
+      const response = await fetch("/api/organizational-inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getIntakeSourceHeaders() },
+        body: JSON.stringify(values)
+      });
       const body = await response.json();
       if (response.status === 403 && body?.error?.code === "INTAKE_CONSENT_REQUIRED") { setReady(false); setAccepted(false); }
       if (!response.ok || !body.success) throw new Error(responseMessage(body, "Не удалось сохранить обращение."));

@@ -11,6 +11,7 @@ import {
   IntakeConsentRequiredError,
   type IntakeConsentReceipt
 } from "@/features/questionnaire/intake-consent";
+import { applicationIntakeSourceEvents, type ApplicationIntakeSource } from "@/features/questionnaire/intake-source-server";
 import { buildServiceSelectionSnapshot, resolveRequestedProductCode } from "@/features/questionnaire/service-selection";
 import { isPreviewIsolationRequired } from "@/lib/preview/guard";
 import {
@@ -80,7 +81,12 @@ function canUseLocalQuestionnaireFilesystem() {
 
 export async function submitQuestionnaire(
   input: QuestionnaireSubmitInput,
-  requestMeta: { ip?: string | null; userAgent?: string | null; intakeConsent: IntakeConsentReceipt }
+  requestMeta: {
+    ip?: string | null;
+    userAgent?: string | null;
+    intakeConsent: IntakeConsentReceipt;
+    intakeSource?: ApplicationIntakeSource;
+  }
 ) {
   validateQuestionnaireUploads(input.uploads);
   if (!requestMeta.intakeConsent) throw new IntakeConsentRequiredError();
@@ -213,6 +219,7 @@ export async function submitQuestionnaire(
 
       await tx.auditEvent.createMany({
         data: [
+          ...applicationIntakeSourceEvents(application.id, requestMeta.intakeSource),
           {
             actorType: "PATIENT",
             applicationId: application.id,

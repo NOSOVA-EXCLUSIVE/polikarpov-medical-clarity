@@ -18,6 +18,8 @@ function loadService(prisma, notifications) {
   const cache = new Map();
   const mapped = {
     "@/features/legal/versions": "src/features/legal/versions.ts",
+    "@/features/questionnaire/intake-source": "src/features/questionnaire/intake-source.ts",
+    "@/features/questionnaire/intake-source-server": "src/features/questionnaire/intake-source-server.ts",
     "@/features/questionnaire/lead-flow": "src/features/questionnaire/lead-flow.ts",
     "@/features/questionnaire/service-selection": "src/features/questionnaire/service-selection.ts",
     "@/features/products/services-v21": "src/features/products/services-v21.ts",
@@ -183,7 +185,8 @@ function fixture({ failApplicationCreate = false } = {}) {
 test("matching anonymous contacts cannot mutate or reuse an existing patient and prior case", async () => {
   const f = fixture();
   const submitted = input();
-  const result = await f.service.submitQuestionnaire(submitted, request());
+  const intakeSource = { channel: "telegram", campaign: "professional-profile", networkCountry: "ES" };
+  const result = await f.service.submitQuestionnaire(submitted, { ...request(), intakeSource });
   const application = f.state.applications.find((entry) => entry.id === result.applicationId);
   const patient = f.state.patients.find((entry) => entry.id === application.patientId);
   assert.notEqual(patient.id, "patient-old");
@@ -198,6 +201,9 @@ test("matching anonymous contacts cannot mutate or reuse an existing patient and
   assert.equal(application.uploads.create[0].storageKey, submitted.uploads[0].storageKey);
   const snapshot = f.state.auditEvents.find((event) => event.applicationId === application.id && event.action === "questionnaire_snapshot_saved");
   assert.deepEqual(snapshot.metadataJson.patient, submitted.patient);
+  const source = f.state.auditEvents.find((event) => event.action === "application_intake_source_recorded");
+  assert.equal(source.applicationId, application.id);
+  assert.deepEqual(source.metadataJson, intakeSource);
   assert.equal(result.preferredContact, submitted.patient.preferredContact);
   assert.equal(result.workflowHooks.communication.primaryChannel, submitted.patient.preferredContact);
   assert.equal(f.notifications.length, 1);

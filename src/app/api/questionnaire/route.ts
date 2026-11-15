@@ -7,6 +7,7 @@ import {
   IntakeConsentRequiredError,
   requireIntakeConsent
 } from "@/features/questionnaire/intake-consent";
+import { readApplicationIntakeSource } from "@/features/questionnaire/intake-source-server";
 
 import { questionnaireSubmitSchema } from "@/features/questionnaire/schemas";
 import { hasBlockingRedFlags } from "@/features/questionnaire/status";
@@ -57,7 +58,8 @@ export async function POST(request: Request) {
     const result = await submitQuestionnaire(input, {
       ip: request.headers.get("x-forwarded-for"),
       userAgent: request.headers.get("user-agent"),
-      intakeConsent
+      intakeConsent,
+      intakeSource: readApplicationIntakeSource(request.headers)
     });
 
     const response = NextResponse.json({
